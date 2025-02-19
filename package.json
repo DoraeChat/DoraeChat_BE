@@ -1,0 +1,35 @@
+{
+  "name": "doraechat_be",
+  "version": "1.0.0",
+  "description": "Do An Mon Cong Nghe Moi",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "dev": "node src/index.js"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@types/express": "^5.0.0",
+    "axios": "^1.7.9",
+    "bcryptjs": "^3.0.2",
+    "cloudinary": "^2.5.1",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.7",
+    "express": "^4.21.2",
+    "express-fileupload": "^1.5.1",
+    "express-session": "^1.18.1",
+    "express-useragent": "^1.0.15",
+    "formidable": "^3.5.2",
+    "googleapis": "^144.0.0",
+    "jsonwebtoken": "^9.0.2",
+    "mongoose": "^8.10.1",
+    "multer": "^1.4.5-lts.1",
+    "nodemailer": "^6.10.0",
+    "redis": "^4.7.0",
+    "socket.io": "^4.8.1"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.9"
+  }
+}

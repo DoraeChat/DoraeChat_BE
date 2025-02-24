@@ -1,8 +1,8 @@
 const mongoose = require('mongoose');
 const Schema = mongoose.Schema;
 const bcrypt = require('bcryptjs');
-const CustomError = require('../exception/CustomError');
-const NotFoundError = require('../exception/NotFoundError');
+const CustomError = require('../exceptions/CustomError');
+const NotFoundError = require('../exceptions/NotFoundError');
 const dateUtils = require('../utils/dateUtils');
 
 const userSchema = new Schema(
@@ -116,7 +116,13 @@ userSchema.statics.getById = async (_id, message = 'User') => {
     return { _id, name, username, dateOfBirth: dateUtils.toObject(dateOfBirth), gender, avatar, avatarColor, coverImage, phoneBooks };
 };
 
-userSchema.statics.existsByUsername = async (username) => await this.exists({ username, isActived: true });
+userSchema.statics.existsByUsername = async function (username) {
+    if (!username || typeof username !== 'string') {
+        throw new Error('Username không hợp lệ');
+    }
+    const exists = await this.exists({ username: username.toLowerCase() });
+    return exists;
+};
 
 userSchema.statics.findByUsername = async (username, message = 'User') => {
     const user = await this.findOne({ username, isActived: true }).lean();

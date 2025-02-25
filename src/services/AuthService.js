@@ -27,22 +27,17 @@ class AuthService {
         return true;
     }
 
-    async saveContact(email, sessionId) {
+    async validate(email) {
         const validateEmail = await this.validateEmail(email);
         if (validateEmail !== true) {
-            throw new CustomError(validateEmail);
+            throw new CustomError(validateEmail.message, 400);
         } else {
-            await redis.set(`temp_contact_${sessionId}`, { contact: email });
-            return { message: 'Đã lưu thông tin liên lạc', sessionId };
+            return { message: 'Email hợp lệ để đăng ký' };
         }
     }
 
     async saveUserInfo(submitInformation) {
-        const { contact, sessionId, firstName, lastName, password, dateOfBirth, gender, bio } = submitInformation;
-        const tempContact = await redis.get(`temp_contact_${sessionId}`);
-        if (!tempContact || tempContact.contact !== contact) {
-            throw new Error('Liên lạc không hợp lệ hoặc đã hết hạn', 400);
-        }
+        const { contact, firstName, lastName, password, dateOfBirth, gender, bio } = submitInformation;
 
         const username = `${firstName.toLowerCase()}.${lastName.toLowerCase()}`;
         const fullName = `${firstName} ${lastName}`;
@@ -55,25 +50,22 @@ class AuthService {
             gender,
             bio
         });
-
+        const result = await this.validateEmail(contact);
+        if (result !== true) {
+            throw new CustomError(result.message, 400);
+        }
         await user.save();
-        return { message: 'Đã lưu thông tin người dùng', sessionId };
+        return { message: 'Đã lưu thông tin người dùng' };
     }
 
-    async generateAndSendOTP(email, sessionId) {
-        const tempContact = await redis.get(`temp_contact_${sessionId}`);
-        if (!tempContact || tempContact.contact !== email) {
-            console.log(tempContact);
-            console.log(email);
-            throw new Error('Liên lạc không hợp lệ hoặc đã hết hạn', 400);
-        }
-
-        let otpData = await redis.get(`otp_${sessionId}`);
+    async generateAndSendOTP(email) {
+        let otpData = await redis.get(email);
+        console.log(otpData);
         if (!otpData) {
             const otp = otplib.authenticator.generate(6);
             const expiresAt = new Date(Date.now() + 2 * 60 * 1000);
-
-            await redis.set(`otp_${sessionId}`, { otp, expiresAt }, parseInt(process.env.OTP_EXPIRATION));
+            const expiresMinutes = parseInt(process.env.OTP_EXPIRE_MINUTES);
+            await redis.set(email, { otp, expiresAt }, expiresMinutes);
             await this.transporter.sendMail({
                 from: process.env.GOOGLE_USERNAME,
                 to: email,
@@ -81,12 +73,12 @@ class AuthService {
                 text: `Mã xác minh của bạn là: ${otp}`,
             });
         }
-        return { message: 'Đã gửi OTP qua email', sessionId };
+        return { message: 'Đã gửi OTP qua email' };
     }
 
-    async verifyOTP(email, sessionId, otp) {
+    async verifyOTP(email, otp) {
 
-        const otpData = await redis.get(`otp_${sessionId}`);
+        const otpData = await redis.get(email);
         if (!otpData) {
             throw new Error('OTP không tồn tại');
         }
@@ -100,10 +92,9 @@ class AuthService {
             throw new CustomError('Không tìm thấy người dùng', 404);
         }
         await User.updateOne({ username: email.toLowerCase() }, { isActived: true });
-        await redis.set(`temp_contact_${sessionId}`, null);
-        await redis.set(`otp_${sessionId}`, null);
+        await redis.set(email, null);
 
-        return { message: 'Xác minh OTP thành công', sessionId };
+        return { message: 'Xác minh OTP thành công', email };
     }
 
 }

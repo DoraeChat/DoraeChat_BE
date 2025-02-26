@@ -13,7 +13,7 @@ stickerSchema.index({ name: 1 });
 
 stickerSchema.statics.getById = async (_id) => {
     if (!ObjectId.isValid(_id)) throw new NotFoundError('Invalid Sticker Group ID');
-    const stickerGroup = await this.findById(_id).lean();
+    const stickerGroup = await Sticker.findById(_id).lean();
     if (!stickerGroup) throw new NotFoundError('Sticker group');
     return stickerGroup;
 };

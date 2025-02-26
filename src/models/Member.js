@@ -28,7 +28,7 @@ memberSchema.index({ conversationId: 1 });
 
 memberSchema.statics.getByConversationIdAndUserId = async (conversationId, userId, message = 'Conversation') => {
     if (!ObjectId.isValid(conversationId) || !ObjectId.isValid(userId)) throw new NotFoundError('Invalid conversationId or userId');
-    const member = await this.findOne({
+    const member = await Member.findOne({
         conversationId,
         userId,
     }).lean();
@@ -38,7 +38,7 @@ memberSchema.statics.getByConversationIdAndUserId = async (conversationId, userI
 
 memberSchema.statics.existsByConversationIdAndUserId = async (conversationId, userId) => {
     if (!ObjectId.isValid(conversationId) || !ObjectId.isValid(userId)) throw new NotFoundError('Invalid conversationId or userId');
-    const member = await this.findOne({
+    const member = await Member.findOne({
         conversationId,
         userId,
     }).lean();
@@ -47,7 +47,7 @@ memberSchema.statics.existsByConversationIdAndUserId = async (conversationId, us
 
 memberSchema.statics.getListInfosByConversationId = async (conversationId) => {
     if (!ObjectId.isValid(conversationId)) throw new NotFoundError('Invalid conversationId');
-    const users = await this.aggregate([
+    const users = await Member.aggregate([
         { $match: { conversationId: new ObjectId(conversationId) } },
         {
             $lookup: {

@@ -73,14 +73,15 @@ userSchema.index({ username: 1, isActived: 1 });
 userSchema.index({ isActived: 1, isDeleted: 1 });
 
 userSchema.pre('save', async function (next) {
-    if (!this.isModified('password')) return next();
+    const user = this;
+    if (!user.isModified('password')) return next();
     const saltRounds = parseInt(process.env.BCRYPT_SALT_ROUNDS) || 10;
-    this.password = await bcrypt.hash(this.password, saltRounds);
+    user.password = await bcrypt.hash(user.password, saltRounds);
     next();
 });
 
 userSchema.statics.findByCredentials = async (username, password) => {
-    const user = await this.findOne(
+    const user = await User.findOne(
         {
             username,
             isActived: true,
@@ -93,10 +94,10 @@ userSchema.statics.findByCredentials = async (username, password) => {
     return user;
 };
 
-userSchema.statics.existsById = async (_id) => await this.exists({ _id, isActived: true });
+userSchema.statics.existsById = async (_id) => await User.exists({ _id, isActived: true });
 
 userSchema.statics.checkByIds = async (ids, message = 'User') => {
-    const users = await this.find(
+    const users = await User.find(
         {
             _id: { $in: ids },
             isActived: true,
@@ -106,7 +107,7 @@ userSchema.statics.checkByIds = async (ids, message = 'User') => {
 };
 
 userSchema.statics.getById = async (_id, message = 'User') => {
-    const user = await this.findOne(
+    const user = await User.findOne(
         {
             _id,
             isActived: true
@@ -116,29 +117,29 @@ userSchema.statics.getById = async (_id, message = 'User') => {
     return { _id, name, username, dateOfBirth: dateUtils.toObject(dateOfBirth), gender, avatar, avatarColor, coverImage, phoneBooks };
 };
 
-userSchema.statics.existsByUsername = async function (username) {
+userSchema.statics.existsByUsername = async (username) => {
     if (!username || typeof username !== 'string') {
         throw new Error('Username không hợp lệ');
     }
-    const exists = await this.exists({ username: username.toLowerCase() });
+    const exists = await User.exists({ username: username.toLowerCase() });
     return exists;
 };
 
 userSchema.statics.findByUsername = async (username, message = 'User') => {
-    const user = await this.findOne({ username, isActived: true }).lean();
+    const user = await User.findOne({ username, isActived: true }).lean();
     if (!user) throw new NotFoundError(message);
     const { _id, name, dateOfBirth, gender, avatar, avatarColor, coverImage } = user;
     return { _id, name, username, dateOfBirth: dateUtils.toObject(dateOfBirth), gender, avatar, avatarColor, coverImage };
 };
 
 userSchema.statics.checkById = async (_id, message = 'User') => {
-    const user = await this.findOne({ _id, isActived: true });
+    const user = await User.findOne({ _id, isActived: true });
     if (!user) throw new NotFoundError(message);
     return user;
 };
 
 userSchema.statics.getSummaryById = async (_id, message = 'User') => {
-    const user = await this.findOne({ _id, isActived: true }).select('_id name avatar avatarColor').lean();
+    const user = await User.findOne({ _id, isActived: true }).select('_id name avatar avatarColor').lean();
     if (!user) throw new NotFoundError(message);
     return user;
 };

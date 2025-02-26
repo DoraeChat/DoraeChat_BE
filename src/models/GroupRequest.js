@@ -15,7 +15,7 @@ const groupRequestSchema = new Schema(
 groupRequestSchema.index({ senderId: 1, receiverId: 1, conversationId: 1 }, { unique: true });
 
 groupRequestSchema.statics.findGroupRequest = async (senderId, receiverId, conversationId) => {
-    return this.findOne({
+    return GroupRequest.findOne({
         senderId,
         receiverId,
         conversationId,
@@ -24,19 +24,19 @@ groupRequestSchema.statics.findGroupRequest = async (senderId, receiverId, conve
 
 groupRequestSchema.statics.existsByIds = async (senderId, receiverId, conversationId) => {
     if (!ObjectId.isValid(senderId) || !ObjectId.isValid(receiverId) || !ObjectId.isValid(conversationId)) throw new NotFoundError('Invalid ID');
-    const isExists = await this.findGroupRequest(senderId, receiverId, conversationId);
+    const isExists = await GroupRequest.findGroupRequest(senderId, receiverId, conversationId);
     return !!isExists;
 };
 
 groupRequestSchema.statics.checkByIds = async (senderId, receiverId, conversationId, message = 'Group Invite') => {
     if (!ObjectId.isValid(senderId) || !ObjectId.isValid(receiverId) || !ObjectId.isValid(conversationId)) throw new NotFoundError('Invalid ID');
-    const isExists = await this.findGroupRequest(senderId, receiverId, conversationId);
+    const isExists = await GroupRequest.findGroupRequest(senderId, receiverId, conversationId);
     if (!isExists) throw new NotFoundError(message);
 };
 
 groupRequestSchema.statics.deleteByIds = async (senderId, receiverId, conversationId, message = 'Group Invite') => {
     if (!ObjectId.isValid(senderId) || !ObjectId.isValid(receiverId) || !ObjectId.isValid(conversationId)) throw new NotFoundError('Invalid ID');
-    const { deletedCount } = await this.deleteOne({
+    const { deletedCount } = await GroupRequest.deleteOne({
         senderId,
         receiverId,
         conversationId,

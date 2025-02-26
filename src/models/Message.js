@@ -260,7 +260,7 @@ messageSchema.statics.getByIdOfGroup = async function (_id) {
         ...getBaseGroupMessagePipeline()
     ];
 
-    const messages = await this.aggregate(pipeline);
+    const messages = await Message.aggregate(pipeline);
     if (messages.length > 0) return messages[0];
     throw new NotFoundError('Message');
 };
@@ -294,20 +294,20 @@ messageSchema.statics.getByIdOfIndividual = async function (_id) {
         }
     ];
 
-    const messages = await this.aggregate(pipeline);
+    const messages = await Message.aggregate(pipeline);
     if (messages.length > 0) return messages[0];
     throw new NotFoundError('Message');
 };
 
 messageSchema.statics.countUnread = async function (time, conversationId) {
-    return await this.countDocuments({
+    return await Message.countDocuments({
         createdAt: { $gt: time },
         conversationId
     }).lean();
 };
 
 messageSchema.statics.getById = async function (_id, message = 'Message') {
-    const messageResult = await this.findById(_id).lean();
+    const messageResult = await Message.findById(_id).lean();
     if (!messageResult) throw new NotFoundError(message);
     return messageResult;
 };
@@ -317,7 +317,7 @@ messageSchema.statics.getByIdAndConversationId = async function (
     conversationId,
     message = 'Message'
 ) {
-    const messageResult = await this.findOne({
+    const messageResult = await Message.findOne({
         _id,
         conversationId,
     }).lean();
@@ -331,7 +331,7 @@ messageSchema.statics.getByIdAndChannelId = async function (
     channelId,
     message = 'Message'
 ) {
-    const messageResult = await this.findOne({
+    const messageResult = await Message.findOne({
         _id,
         channelId,
     }).lean();
@@ -344,7 +344,7 @@ messageSchema.statics.countDocumentsByConversationIdAndUserId = async function (
     conversationId,
     userId
 ) {
-    return await this.countDocuments({
+    return await Message.countDocuments({
         conversationId,
         deletedUserIds: {
             $nin: [userId],
@@ -369,7 +369,7 @@ messageSchema.statics.getListByConversationIdAndUserIdOfGroup = async function (
         ...getPaginationStages(skip, limit)
     ];
 
-    return await this.aggregate(pipeline);
+    return await Message.aggregate(pipeline);
 };
 
 messageSchema.statics.getListByConversationIdAndTypeAndUserId = async function (
@@ -391,7 +391,7 @@ messageSchema.statics.getListByConversationIdAndTypeAndUserId = async function (
         ...getPaginationStages(skip, limit)
     ];
 
-    return await this.aggregate(pipeline);
+    return await Message.aggregate(pipeline);
 };
 
 messageSchema.statics.getListByChannelIdAndUserId = async function (
@@ -411,7 +411,7 @@ messageSchema.statics.getListByChannelIdAndUserId = async function (
         ...getPaginationStages(skip, limit)
     ];
 
-    return await this.aggregate(pipeline);
+    return await Message.aggregate(pipeline);
 };
 
 messageSchema.statics.getListByConversationIdAndUserIdOfIndividual = async function (
@@ -450,7 +450,7 @@ messageSchema.statics.getListByConversationIdAndUserIdOfIndividual = async funct
         ...getPaginationStages(skip, limit)
     ];
 
-    return await this.aggregate(pipeline);
+    return await Message.aggregate(pipeline);
 };
 
 messageSchema.statics.getListFilesByTypeAndConversationId = async function (
@@ -460,7 +460,7 @@ messageSchema.statics.getListFilesByTypeAndConversationId = async function (
     skip,
     limit
 ) {
-    return await this.find(
+    return await Message.find(
         {
             conversationId,
             type,

@@ -14,24 +14,24 @@ const friendRequestSchema = new Schema(
 friendRequestSchema.index({ senderId: 1, receiverId: 1 }, { unique: true });
 
 friendRequestSchema.statics.findFriendRequest = async (senderId, receiverId) => {
-    return this.findOne({ senderId, receiverId }).lean();
+    return FriendRequest.findOne({ senderId, receiverId }).lean();
 };
 
 friendRequestSchema.statics.existsByIds = async (senderId, receiverId) => {
     if (!ObjectId.isValid(senderId) || !ObjectId.isValid(receiverId)) throw new NotFoundError('Invalid User ID');
-    const isExists = await this.findFriendRequest(senderId, receiverId);
+    const isExists = await FriendRequest.findFriendRequest(senderId, receiverId);
     return !!isExists;
 };
 
 friendRequestSchema.statics.checkByIds = async (senderId, receiverId, message = 'Invite') => {
     if (!ObjectId.isValid(senderId) || !ObjectId.isValid(receiverId)) throw new NotFoundError('Invalid User ID');
-    const isExists = await this.findFriendRequest(senderId, receiverId);
+    const isExists = await FriendRequest.findFriendRequest(senderId, receiverId);
     if (!isExists) throw new NotFoundError(message);
 };
 
 friendRequestSchema.statics.deleteByIds = async (senderId, receiverId, message = 'Invite') => {
     if (!ObjectId.isValid(senderId) || !ObjectId.isValid(receiverId)) throw new NotFoundError('Invalid User ID');
-    const { deletedCount } = await this.deleteOne({ senderId, receiverId });
+    const { deletedCount } = await FriendRequest.deleteOne({ senderId, receiverId });
     if (deletedCount === 0) throw new NotFoundError(message);
 };
 

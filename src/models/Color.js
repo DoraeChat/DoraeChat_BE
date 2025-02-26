@@ -17,7 +17,7 @@ colorSchema.index({ code: 1 });
 
 colorSchema.statics.checkById = async (colorId, message = 'Color') => {
     if (!ObjectId.isValid(colorId)) throw new NotFoundError(`${message} ID không hợp lệ`);
-    const isExists = await this.findById(colorId).lean();
+    const isExists = await Color.findById(colorId).lean();
     if (!isExists) throw new NotFoundError(message);
     return isExists;
 };

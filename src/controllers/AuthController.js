@@ -60,6 +60,23 @@ class AuthController {
         }
     }
 
+    async resendOTP(req, res) {
+        try {
+            const { contact } = req.body;
+            const result = await AuthService.resendOTP(contact);
+            res.status(200).json(result);
+        } catch (error) {
+            console.error('Lỗi trong resendOTP:', error);
+            let status = 500;
+            let errorMessage = 'Lỗi máy chủ nội bộ';
+            if (error instanceof CustomError) {
+                status = error.status || 500;
+                errorMessage = error.cleanMessage;
+            }
+            res.status(status).json({ error: errorMessage });
+        }
+    }
+
 }
 
 module.exports = new AuthController();

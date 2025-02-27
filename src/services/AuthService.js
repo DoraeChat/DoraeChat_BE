@@ -63,9 +63,8 @@ class AuthService {
         console.log(otpData);
         if (!otpData) {
             const otp = otplib.authenticator.generate(6);
-            const expiresAt = new Date(Date.now() + 2 * 60 * 1000);
             const expiresMinutes = parseInt(process.env.OTP_EXPIRE_MINUTES);
-            await redis.set(email, { otp, expiresAt }, expiresMinutes);
+            await redis.set(email, otp, expiresMinutes);
             await this.transporter.sendMail({
                 from: process.env.GOOGLE_USERNAME,
                 to: email,
@@ -76,8 +75,24 @@ class AuthService {
         return { message: 'Đã gửi OTP qua email' };
     }
 
-    async verifyOTP(email, otp) {
+    async resendOTP(email) {
+        const otpData = await redis.get(email);
+        if (!otpData) {
+            throw new CustomError('OTP không tồn tại', 400);
+        }
+        const otp = otplib.authenticator.generate(6);
+        const expiresMinutes = parseInt(process.env.OTP_EXPIRE_MINUTES);
+        await redis.set(email, otp, expiresMinutes);
+        await this.transporter.sendMail({
+            from: process.env.GOOGLE_USERNAME,
+            to: email,
+            subject: 'Mã xác minh DORA',
+            text: `Mã xác minh của bạn là: ${otp}`,
+        });
+        return { message: 'Đã gửi lại OTP qua email' };
+    }
 
+    async verifyOTP(email, otp) {
         const otpData = await redis.get(email);
         if (!otpData) {
             throw new Error('OTP không tồn tại');

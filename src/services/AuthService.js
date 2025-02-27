@@ -16,21 +16,22 @@ class AuthService {
     }
 
     async validate(email) {
-        const validateEmail = await userValidate.validateEmail(email);
-        if (validateEmail !== true) {
+        if (!userValidate.validateEmail(email)) {
             throw new CustomError("Email không hợp lệ", 400);
-        } else {
-            const exists = await User.existsByUsername(email);
-            if (exists) {
-                console.log(exists);
-                throw new CustomError("Email đã đăng ký", 400);
-            }
         }
+
+        const exists = await User.existsByUsername(email);
+        if (exists) {
+            throw new CustomError("Email đã đăng ký", 400);
+        }
+
         return { message: 'Email hợp lệ để đăng ký' };
     }
 
     async saveUserInfo(submitInformation) {
         const { contact, firstName, lastName, password, dateOfBirth, gender, bio } = submitInformation;
+
+        await this.validate(contact);
 
         const user = new User({
             username: contact,
@@ -38,96 +39,112 @@ class AuthService {
             password,
             dateOfBirth: new Date(dateOfBirth),
             gender,
-            bio
+            bio,
+            isActived: false
         });
-        const result = await this.validateEmail(contact);
-        if (result !== true) {
-            throw new CustomError(result.message, 400);
-        }
+
         await user.save();
         return { message: 'Đã lưu thông tin người dùng' };
     }
 
     async generateAndSendOTP(email) {
-        let otpData = await redis.get(email);
-        console.log(otpData);
-        if (!otpData) {
-            const otp = otplib.authenticator.generate(6);
-            const expiresMinutes = parseInt(process.env.OTP_EXPIRE_MINUTES);
-            await redis.set(email, otp, expiresMinutes);
-            await this.transporter.sendMail({
-                from: process.env.GOOGLE_USERNAME,
-                to: email,
-                subject: 'Mã xác minh DORA',
-                text: `Mã xác minh của bạn là: ${otp}`,
-            });
-        }
-        return { message: 'Đã gửi OTP qua email' };
-    }
+        const secret = otplib.authenticator.generateSecret();
+        const otp = otplib.authenticator.generate(secret);
 
-    async resendOTP(email) {
-        const otpData = await redis.get(email);
-        if (!otpData) {
-            throw new CustomError('OTP không tồn tại', 400);
-        }
-        const otp = otplib.authenticator.generate(6);
-        const expiresMinutes = parseInt(process.env.OTP_EXPIRE_MINUTES);
-        await redis.set(email, otp, expiresMinutes);
+        const expiresMinutes = parseInt(process.env.OTP_EXPIRE_MINUTES) || 120;
+        const expiresAt = new Date(Date.now() + expiresMinutes * 60 * 1000);
+
+        const otpData = {
+            otp,
+            expiresAt: expiresAt.toISOString()
+        };
+
+        await redis.set(email, otpData, expiresMinutes);
+
         await this.transporter.sendMail({
             from: process.env.GOOGLE_USERNAME,
             to: email,
             subject: 'Mã xác minh DORA',
             text: `Mã xác minh của bạn là: ${otp}`,
+            html: `<div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+                   <h2 style="color: #4a86e8;">DORA Chat - Xác minh tài khoản</h2>
+                   <p>Xin chào,</p>
+                   <p>Mã xác minh của bạn là:</p>
+                   <h1 style="font-size: 32px; letter-spacing: 5px; background: #f0f0f0; padding: 10px; text-align: center;">${otp}</h1>
+                   <p>Mã này sẽ hết hạn sau ${expiresMinutes / 60} phút.</p>
+                   <p>Nếu bạn không yêu cầu mã này, vui lòng bỏ qua email này.</p>
+                   </div>`
         });
-        return { message: 'Đã gửi lại OTP qua email' };
+
+        return { message: 'Đã gửi OTP qua email' };
+    }
+
+    async resendOTP(email) {
+        const user = await User.findOne({ username: email.toLowerCase() });
+        if (!user) {
+            throw new CustomError('Người dùng không hợp lệ', 404);
+        }
+
+        return this.generateAndSendOTP(email);
     }
 
     async verifyOTP(email, otp) {
         const otpData = await redis.get(email);
         if (!otpData) {
-            throw new CustomError('OTP không tồn tại', 400);
+            throw new CustomError('OTP không tồn tại hoặc đã hết hạn', 400);
         }
 
-        if (otpData.otp !== otp || new Date() > otpData.expiresAt) {
+        if (otpData.otp !== otp || new Date() > new Date(otpData.expiresAt)) {
             throw new CustomError('OTP không hợp lệ hoặc đã hết hạn', 400);
         }
 
-        const user = User.findOne({ username: email.toLowerCase() });
+        const user = await User.findOne({ username: email.toLowerCase() });
         if (!user) {
             throw new CustomError('Không tìm thấy người dùng', 404);
         }
+
         await User.updateOne({ username: email.toLowerCase() }, { isActived: true });
-        await redis.set(email, null);
+        await redis.set(email, null, 1);
 
         return { message: 'Xác minh OTP thành công', email };
     }
 
-
     async login(username, password, source) {
-        if (!source || typeof source !== 'string') throw new CustomError('Nguồn không hợp lệ', 400);
-
-        userValidate.validateLogin(username, password);
-
-        const user = await User.findByCredentials(username, password, '_id username');
-        if (!user) throw new CustomError('Thông tin đăng nhập không hợp lệ', 401);
-        else {
-            const tokens = await this.generateAndUpdateAccessTokenAndRefreshToken(user._id, source);
-
-            return {
-                user: { username: user.username },
-                ...tokens
-            };
+        if (!source || typeof source !== 'string') {
+            throw new CustomError('Nguồn không hợp lệ', 400);
         }
 
+        try {
+            userValidate.validateLogin(username, password);
+        } catch (error) {
+            throw new CustomError('Thông tin đăng nhập không hợp lệ', 400);
+        }
+
+        const user = await User.findByCredentials(username, password);
+        if (!user) {
+            throw new CustomError('Thông tin đăng nhập không hợp lệ', 401);
+        }
+
+        const tokens = await this.generateAndUpdateAccessTokenAndRefreshToken(user._id, source);
+
+        return {
+            user: {
+                _id: user._id,
+                username: user.username,
+                name: user.name
+            },
+            ...tokens
+        };
     }
 
     async generateAndUpdateAccessTokenAndRefreshToken(_id, source) {
         try {
-            const token = await tokenUtils.generateToken(
+            const token = tokenUtils.generateToken(
                 { _id, source },
                 process.env.JWT_LIFE_ACCESS_TOKEN
             );
-            const refreshToken = await tokenUtils.generateToken(
+
+            const refreshToken = tokenUtils.generateToken(
                 { _id, source },
                 process.env.JWT_LIFE_REFRESH_TOKEN
             );

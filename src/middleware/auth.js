@@ -18,8 +18,7 @@ const auth = async (req, res, next) => {
 
         const user = await User.findOne({
             _id: data._id,
-            isActived: true,
-            isDeleted: false,
+            isActived: true
         });
 
         if (!user) {

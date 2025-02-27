@@ -1,3 +1,5 @@
+const CustomError = require('../exceptions/CustomError');
+
 const userValidate = {
     validateEmail: (email) => {
         if (!email) return false;
@@ -11,7 +13,7 @@ const userValidate = {
             !this.validateUsername(username) ||
             !this.validatePassword(password)
         )
-            throw new MyError('Info login invalid');
+            throw new CustomError('Info login invalid', 400);
     },
     validateUsername: function (username) {
         if (
@@ -28,6 +30,50 @@ const userValidate = {
 
         return true;
     },
+    validateDateOfBirth: (date) => {
+        if (!date) return false;
+
+        const { day, month, year } = date;
+
+        if (!day || !month || !year) return false;
+
+        if (year < 1900) return false;
+
+        const dateTempt = new Date(`${year}-${month}-${day}`);
+        if (dateTempt.toDateString() === 'Invalid Date') return false;
+
+        const fullyear = dateTempt.getFullYear();
+        dateTempt.setFullYear(fullyear + 10);
+
+        if (dateTempt > new Date()) return false;
+
+        return true;
+    },
+
+    validateOTP: (otp) => {
+        if (!otp) return false;
+        const regex = /^[0-9]{6}$/g;
+
+        return regex.test(otp);
+    },
+
+    validateConfirmAccount: function (username, otpPhone) {
+        if (!this.validateUsername(username) || !this.validateOTP(otpPhone))
+            throw new CustomError('Info confirm account invalid', 400);
+    },
+
+    validateSubmitInfo: function (submitInformation) {
+        const { contact, firstName, lastName, password, dateOfBirth, gender, bio } = submitInformation;
+        if (!this.validateUsername(contact)) throw new CustomError('Contact invalid', 400);
+        if (!this.validatePassword(password)) throw new CustomError('Password invalid', 400);
+        if (!this.validateDateOfBirth(dateOfBirth)) throw new CustomError('Date of birth invalid', 400);
+        if (!firstName || firstName.length < 0 || firstName.length > 50)
+            throw new CustomError('First name invalid', 400);
+        if (!lastName || lastName.length < 0 || lastName.length > 50)
+            throw new CustomError('Last name invalid', 400);
+        if (!bio || bio.length < 0 || bio.length > 500) throw new CustomError('Bio invalid', 400);
+
+    }
 };
 
 module.exports = userValidate;

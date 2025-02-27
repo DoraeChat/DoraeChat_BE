@@ -32,7 +32,6 @@ const userSchema = new Schema(
             default: 'white',
         },
         coverImage: String,
-        type: Boolean,
         dateOfBirth: {
             type: Date,
             default: () => new Date('2000-01-01'),
@@ -57,10 +56,6 @@ const userSchema = new Schema(
         otp: String,
         otpTime: Date,
         isActived: Boolean,
-        isDeleted: {
-            type: Boolean,
-            default: false,
-        },
         timeRevokeToken: {
             type: Date,
             default: () => new Date(),
@@ -70,7 +65,7 @@ const userSchema = new Schema(
 );
 
 userSchema.index({ username: 1, isActived: 1 });
-userSchema.index({ isActived: 1, isDeleted: 1 });
+userSchema.index({ isActived: 1 });
 
 userSchema.pre('save', async function (next) {
     const user = this;
@@ -85,8 +80,7 @@ userSchema.statics.findByCredentials = async (username, password) => {
         const user = await User.findOne(
             {
                 username,
-                isActived: true,
-                isDeleted: false
+                isActived: true
             },
         ).select('+password');
 
@@ -108,8 +102,7 @@ userSchema.statics.checkByIds = async (ids, message = 'User') => {
     const users = await User.find(
         {
             _id: { $in: ids },
-            isActived: true,
-            isDeleted: false
+            isActived: true
         }).lean();
     if (users.length !== ids.length) throw new NotFoundError(message);
 };

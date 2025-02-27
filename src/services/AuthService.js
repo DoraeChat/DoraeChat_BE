@@ -16,6 +16,12 @@ class AuthService {
     }
 
     async validate(email) {
+        if (!email) {
+            throw new CustomError("Email không được để trống", 400);
+        }
+
+        email = email.toLowerCase().trim();
+
         if (!userValidate.validateEmail(email)) {
             throw new CustomError("Email không hợp lệ", 400);
         }
@@ -29,135 +35,262 @@ class AuthService {
     }
 
     async saveUserInfo(submitInformation) {
-        const { contact, firstName, lastName, password, dateOfBirth, gender, bio } = submitInformation;
+        try {
+            // Kiểm tra toàn bộ thông tin đầu vào
+            userValidate.validateSubmitInfo(submitInformation);
 
-        await this.validate(contact);
+            const { contact, firstName, lastName, password, dateOfBirth, gender, bio } = submitInformation;
+            const normalizedContact = contact.toLowerCase().trim();
 
-        const user = new User({
-            username: contact,
-            name: firstName + ' ' + lastName,
-            password,
-            dateOfBirth: new Date(dateOfBirth),
-            gender,
-            bio,
-            isActived: false
-        });
+            // Kiểm tra email có tồn tại chưa
+            const exists = await User.existsByUsername(normalizedContact);
+            if (exists) {
+                throw new CustomError("Email đã đăng ký", 400);
+            }
 
-        await user.save();
-        return { message: 'Đã lưu thông tin người dùng' };
+            // Tạo đối tượng user
+            const user = new User({
+                username: normalizedContact,
+                name: `${firstName.trim()} ${lastName.trim()}`,
+                password,
+                dateOfBirth: new Date(`${dateOfBirth.year}-${dateOfBirth.month}-${dateOfBirth.day}`),
+                gender,
+                bio,
+                isActived: false
+            });
+
+            await user.save();
+            return { message: 'Đã lưu thông tin người dùng' };
+        } catch (error) {
+            if (error instanceof CustomError) throw error;
+            throw new CustomError(`Lỗi khi lưu thông tin: ${error.message}`, 400);
+        }
     }
 
     async generateAndSendOTP(email) {
-        const secret = otplib.authenticator.generateSecret();
-        const otp = otplib.authenticator.generate(secret);
+        try {
+            email = email.toLowerCase().trim();
 
-        const expiresMinutes = parseInt(process.env.OTP_EXPIRE_MINUTES) || 120;
-        const expiresAt = new Date(Date.now() + expiresMinutes * 60 * 1000);
+            // Kiểm tra người dùng tồn tại
+            const user = await User.findOne({ username: email });
+            if (!user) {
+                throw new CustomError('Không tìm thấy người dùng', 404);
+            }
 
-        const otpData = {
-            otp,
-            expiresAt: expiresAt.toISOString()
-        };
+            // Tạo OTP an toàn
+            const secret = otplib.authenticator.generateSecret();
+            const otp = otplib.authenticator.generate(secret);
 
-        await redis.set(email, otpData, expiresMinutes);
+            // Thời gian hết hạn
+            const expiresMinutes = parseInt(process.env.OTP_EXPIRE_MINUTES) || 120;
+            const expiresAt = new Date(Date.now() + expiresMinutes * 60 * 1000);
 
-        await this.transporter.sendMail({
-            from: process.env.GOOGLE_USERNAME,
-            to: email,
-            subject: 'Mã xác minh DORA',
-            text: `Mã xác minh của bạn là: ${otp}`,
-            html: `<div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-                   <h2 style="color: #4a86e8;">DORA Chat - Xác minh tài khoản</h2>
-                   <p>Xin chào,</p>
-                   <p>Mã xác minh của bạn là:</p>
-                   <h1 style="font-size: 32px; letter-spacing: 5px; background: #f0f0f0; padding: 10px; text-align: center;">${otp}</h1>
-                   <p>Mã này sẽ hết hạn sau ${expiresMinutes / 60} phút.</p>
-                   <p>Nếu bạn không yêu cầu mã này, vui lòng bỏ qua email này.</p>
-                   </div>`
-        });
+            // Lưu vào Redis
+            const otpData = {
+                otp,
+                expiresAt: expiresAt.toISOString()
+            };
 
-        return { message: 'Đã gửi OTP qua email' };
+            // Redis.set nhận tham số đơn vị giây
+            await redis.set(email, otpData, expiresMinutes);
+
+            // Gửi OTP qua email
+            await this.transporter.sendMail({
+                from: process.env.GOOGLE_USERNAME,
+                to: email,
+                subject: 'Mã xác minh DORA',
+                text: `Mã xác minh của bạn là: ${otp}`,
+                html: `<div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+                       <h2 style="color: #4a86e8;">DORA Chat - Xác minh tài khoản</h2>
+                       <p>Xin chào,</p>
+                       <p>Mã xác minh của bạn là:</p>
+                       <h1 style="font-size: 32px; letter-spacing: 5px; background: #f0f0f0; padding: 10px; text-align: center;">${otp}</h1>
+                       <p>Mã này sẽ hết hạn sau ${expiresMinutes / 60} phút.</p>
+                       <p>Nếu bạn không yêu cầu mã này, vui lòng bỏ qua email này.</p>
+                       </div>`
+            });
+
+            return { message: 'Đã gửi OTP qua email' };
+        } catch (error) {
+            if (error instanceof CustomError) throw error;
+            throw new CustomError(`Lỗi khi gửi OTP: ${error.message}`, 500);
+        }
     }
 
     async resendOTP(email) {
-        const user = await User.findOne({ username: email.toLowerCase() });
+        email = email.toLowerCase().trim();
+
+        // Kiểm tra người dùng tồn tại
+        const user = await User.findOne({ username: email });
         if (!user) {
-            throw new CustomError('Người dùng không hợp lệ', 404);
+            throw new CustomError('Không tìm thấy người dùng', 404);
         }
 
         return this.generateAndSendOTP(email);
     }
 
     async verifyOTP(email, otp) {
-        const otpData = await redis.get(email);
-        if (!otpData) {
-            throw new CustomError('OTP không tồn tại hoặc đã hết hạn', 400);
+        try {
+            if (!email || !otp) {
+                throw new CustomError('Email và OTP không được để trống', 400);
+            }
+
+            email = email.toLowerCase().trim();
+
+            // Kiểm tra OTP có đúng định dạng không
+            if (!userValidate.validateConfirmAccount(email, otp)) {
+                throw new CustomError('Thông tin xác nhận không đúng định dạng', 400);
+            }
+
+            // Lấy OTP từ Redis
+            const otpData = await redis.get(email);
+            if (!otpData) {
+                throw new CustomError('OTP không tồn tại hoặc đã hết hạn', 400);
+            }
+
+            // So sánh OTP và kiểm tra hết hạn
+            if (otpData.otp !== otp) {
+                throw new CustomError('OTP không chính xác', 400);
+            }
+
+            if (new Date() > new Date(otpData.expiresAt)) {
+                throw new CustomError('OTP đã hết hạn', 400);
+            }
+
+            // Tìm và kích hoạt người dùng
+            const user = await User.findOne({ username: email });
+            if (!user) {
+                throw new CustomError('Không tìm thấy người dùng', 404);
+            }
+
+            // Kích hoạt tài khoản
+            await User.updateOne({ username: email }, { isActived: true });
+
+            // Xóa OTP khỏi Redis
+            await redis.set(email, null, 1);
+
+            return {
+                message: 'Xác minh OTP thành công',
+                email,
+                userId: user._id
+            };
+        } catch (error) {
+            if (error instanceof CustomError) throw error;
+            throw new CustomError(`Lỗi khi xác thực OTP: ${error.message}`, 400);
         }
-
-        if (otpData.otp !== otp || new Date() > new Date(otpData.expiresAt)) {
-            throw new CustomError('OTP không hợp lệ hoặc đã hết hạn', 400);
-        }
-
-        const user = await User.findOne({ username: email.toLowerCase() });
-        if (!user) {
-            throw new CustomError('Không tìm thấy người dùng', 404);
-        }
-
-        await User.updateOne({ username: email.toLowerCase() }, { isActived: true });
-        await redis.set(email, null, 1);
-
-        return { message: 'Xác minh OTP thành công', email };
     }
 
     async login(username, password, source) {
-        if (!source || typeof source !== 'string') {
-            throw new CustomError('Nguồn không hợp lệ', 400);
-        }
-
         try {
+            if (!source || typeof source !== 'string') {
+                throw new CustomError('Nguồn không hợp lệ', 400);
+            }
+
+            // Giới hạn độ dài của source
+            source = source.substring(0, 255);
+
+            username = username.toLowerCase().trim();
+
+            // Xác thực thông tin đăng nhập
             userValidate.validateLogin(username, password);
+
+            const user = await User.findByCredentials(username, password);
+            if (!user) {
+                throw new CustomError('Thông tin đăng nhập không hợp lệ', 401);
+            }
+
+            // Kiểm tra tài khoản đã được kích hoạt chưa
+            if (!user.isActived) {
+                throw new CustomError('Tài khoản chưa được kích hoạt', 401);
+            }
+
+            // Tạo token
+            const tokens = await this.generateAndUpdateAccessTokenAndRefreshToken(user._id, source);
+
+            return {
+                user: {
+                    _id: user._id,
+                    username: user.username,
+                    name: user.name,
+                    avatar: user.avatar,
+                    gender: user.gender
+                },
+                ...tokens
+            };
         } catch (error) {
-            throw new CustomError('Thông tin đăng nhập không hợp lệ', 400);
+            if (error instanceof CustomError) throw error;
+            throw new CustomError(`Lỗi đăng nhập: ${error.message}`, 401);
         }
-
-        const user = await User.findByCredentials(username, password);
-        if (!user) {
-            throw new CustomError('Thông tin đăng nhập không hợp lệ', 401);
-        }
-
-        const tokens = await this.generateAndUpdateAccessTokenAndRefreshToken(user._id, source);
-
-        return {
-            user: {
-                _id: user._id,
-                username: user.username,
-                name: user.name
-            },
-            ...tokens
-        };
     }
 
     async generateAndUpdateAccessTokenAndRefreshToken(_id, source) {
         try {
+            // Tạo access token
             const token = tokenUtils.generateToken(
                 { _id, source },
                 process.env.JWT_LIFE_ACCESS_TOKEN
             );
 
+            // Tạo refresh token
             const refreshToken = tokenUtils.generateToken(
                 { _id, source },
                 process.env.JWT_LIFE_REFRESH_TOKEN
             );
 
+            // Xóa token cũ từ cùng nguồn
             await User.updateOne({ _id }, { $pull: { refreshTokens: { source } } });
+
+            // Thêm token mới
             await User.updateOne(
                 { _id },
-                { $push: { refreshTokens: { token: refreshToken, source } } }
+                { $push: { refreshTokens: { token: refreshToken, source, createdAt: new Date() } } }
             );
 
             return { token, refreshToken };
         } catch (error) {
-            throw new CustomError(`Lỗi tạo token: ${error.message}`, 400);
+            throw new CustomError(`Lỗi tạo token: ${error.message}`, 500);
+        }
+    }
+
+    async refreshToken(refreshToken, source) {
+        try {
+            if (!refreshToken || !source) {
+                throw new CustomError('Thiếu thông tin token hoặc nguồn', 400);
+            }
+
+            source = source.substring(0, 255);
+
+            // Xác thực refresh token
+            const decoded = tokenUtils.verifyToken(refreshToken);
+            if (!decoded || !decoded._id) {
+                throw new CustomError('Token không hợp lệ', 401);
+            }
+
+            // Tìm user có token
+            const user = await User.findOne({
+                _id: decoded._id,
+                'refreshTokens.token': refreshToken,
+                'refreshTokens.source': source
+            });
+
+            if (!user) {
+                throw new CustomError('Token không hợp lệ hoặc đã hết hạn', 401);
+            }
+
+            // Tạo token mới
+            const tokens = await this.generateAndUpdateAccessTokenAndRefreshToken(user._id, source);
+
+            return {
+                user: {
+                    _id: user._id,
+                    username: user.username,
+                    name: user.name
+                },
+                ...tokens
+            };
+        } catch (error) {
+            if (error instanceof CustomError) throw error;
+            throw new CustomError('Không thể làm mới token', 401);
         }
     }
 }

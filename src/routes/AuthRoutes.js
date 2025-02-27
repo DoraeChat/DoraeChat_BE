@@ -6,5 +6,6 @@ router.post('/contact', AuthController.registerContact);
 router.post('/information', AuthController.submitInformation);
 router.post('/verify-otp', AuthController.verifyOTP);
 router.post('/resend-otp', AuthController.resendOTP);
+router.post('/login', AuthController.login);
 
 module.exports = router;

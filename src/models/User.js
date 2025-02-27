@@ -81,19 +81,27 @@ userSchema.pre('save', async function (next) {
 });
 
 userSchema.statics.findByCredentials = async (username, password) => {
-    const user = await User.findOne(
-        {
-            username,
-            isActived: true,
-            isDeleted: false
-        }).select('+password');
-    if (!user) throw new NotFoundError('User');
+    try {
+        const user = await User.findOne(
+            {
+                username,
+                isActived: true,
+                isDeleted: false
+            },
+        ).select('+password');
 
-    const isPasswordMatch = await bcrypt.compare(password, user.password);
-    if (!isPasswordMatch) throw new CustomError('Password invalid');
-    return user;
+        if (!user) throw new CustomError('Thông tin đăng nhập không hợp lệ', 401);
+
+        const isPasswordMatch = await bcrypt.compare(password, user.password);
+        if (!isPasswordMatch) throw new CustomError('Thông tin đăng nhập không hợp lệ', 401);
+
+        const userData = user.toObject();
+        delete userData.password;
+        return userData;
+    } catch (error) {
+        throw error instanceof CustomError ? error : new CustomError('Thông tin đăng nhập không hợp lệ', 401);
+    }
 };
-
 userSchema.statics.existsById = async (_id) => await User.exists({ _id, isActived: true });
 
 userSchema.statics.checkByIds = async (ids, message = 'User') => {

@@ -4,6 +4,8 @@ const redis = require('../config/redis');
 const otplib = require('otplib');
 const nodemailer = require('nodemailer');
 const CustomError = require('../exceptions/CustomError');
+const userValidate = require('../validates/userValidate');
+const tokenUtils = require('../utils/tokenUtils');
 
 class AuthService {
     constructor() {
@@ -13,34 +15,22 @@ class AuthService {
         });
     }
 
-    async validateEmail(email) {
-        if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-            return new CustomError('Email không hợp lệ', 400);
-        }
-        console.log(email);
-        const exists = await User.existsByUsername(email);
-        console.log(exists);
-        if (exists) {
-            console.log('Email đã được đăng ký');
-            return new CustomError('Email đã được đăng ký', 400);
-        }
-        return true;
-    }
-
     async validate(email) {
-        const validateEmail = await this.validateEmail(email);
+        const validateEmail = await userValidate.validateEmail(email);
         if (validateEmail !== true) {
-            throw new CustomError(validateEmail.message, 400);
+            throw new CustomError("Email không hợp lệ", 400);
         } else {
-            return { message: 'Email hợp lệ để đăng ký' };
+            const exists = await User.existsByUsername(email);
+            if (exists) {
+                console.log(exists);
+                throw new CustomError("Email đã đăng ký", 400);
+            }
         }
+        return { message: 'Email hợp lệ để đăng ký' };
     }
 
     async saveUserInfo(submitInformation) {
         const { contact, firstName, lastName, password, dateOfBirth, gender, bio } = submitInformation;
-
-        const username = `${firstName.toLowerCase()}.${lastName.toLowerCase()}`;
-        const fullName = `${firstName} ${lastName}`;
 
         const user = new User({
             username: contact,
@@ -95,11 +85,11 @@ class AuthService {
     async verifyOTP(email, otp) {
         const otpData = await redis.get(email);
         if (!otpData) {
-            throw new Error('OTP không tồn tại');
+            throw new CustomError('OTP không tồn tại', 400);
         }
 
         if (otpData.otp !== otp || new Date() > otpData.expiresAt) {
-            throw new Error('OTP không hợp lệ hoặc đã hết hạn', 400);
+            throw new CustomError('OTP không hợp lệ hoặc đã hết hạn', 400);
         }
 
         const user = User.findOne({ username: email.toLowerCase() });
@@ -112,6 +102,47 @@ class AuthService {
         return { message: 'Xác minh OTP thành công', email };
     }
 
+
+    async login(username, password, source) {
+        if (!source || typeof source !== 'string') throw new CustomError('Nguồn không hợp lệ', 400);
+
+        userValidate.validateLogin(username, password);
+
+        const user = await User.findByCredentials(username, password, '_id username');
+        if (!user) throw new CustomError('Thông tin đăng nhập không hợp lệ', 401);
+        else {
+            const tokens = await this.generateAndUpdateAccessTokenAndRefreshToken(user._id, source);
+
+            return {
+                user: { username: user.username },
+                ...tokens
+            };
+        }
+
+    }
+
+    async generateAndUpdateAccessTokenAndRefreshToken(_id, source) {
+        try {
+            const token = await tokenUtils.generateToken(
+                { _id, source },
+                process.env.JWT_LIFE_ACCESS_TOKEN
+            );
+            const refreshToken = await tokenUtils.generateToken(
+                { _id, source },
+                process.env.JWT_LIFE_REFRESH_TOKEN
+            );
+
+            await User.updateOne({ _id }, { $pull: { refreshTokens: { source } } });
+            await User.updateOne(
+                { _id },
+                { $push: { refreshTokens: { token: refreshToken, source } } }
+            );
+
+            return { token, refreshToken };
+        } catch (error) {
+            throw new CustomError(`Lỗi tạo token: ${error.message}`, 400);
+        }
+    }
 }
 
 module.exports = new AuthService();

@@ -2,6 +2,7 @@ const AuthService = require('../services/AuthService');
 const CustomError = require('../exceptions/CustomError');
 
 class AuthController {
+    // [POST] /api/auth/contact
     async registerContact(req, res, next) {
         try {
             const { contact } = req.body;
@@ -12,6 +13,7 @@ class AuthController {
         }
     }
 
+    // [POST] /api/auth/information
     async submitInformation(req, res, next) {
         try {
             const submitInformation = req.body;
@@ -28,6 +30,7 @@ class AuthController {
         }
     }
 
+    // [POST] /api/auth/verify-otp
     async verifyOTP(req, res, next) {
         try {
             const { contact, otp } = req.body;
@@ -39,6 +42,7 @@ class AuthController {
         }
     }
 
+    // [POST] /api/auth/resend-otp
     async resendOTP(req, res, next) {
         try {
             const { contact } = req.body;
@@ -49,6 +53,7 @@ class AuthController {
         }
     }
 
+    // [POST] /api/auth/login
     async login(req, res, next) {
         const { username, password } = req.body;
         let source = req.headers['user-agent'] || 'unknown';
@@ -70,6 +75,17 @@ class AuthController {
                     refreshToken: result.refreshToken
                 }
             });
+        } catch (err) {
+            next(err);
+        }
+    }
+
+    async refreshToken(req, res, next) {
+        try {
+            const { refreshToken } = req.body;
+            const source = req.headers['user-agent'] || 'unknown';
+            const result = await AuthService.refreshToken(refreshToken, source);
+            res.status(200).json(result);
         } catch (err) {
             next(err);
         }

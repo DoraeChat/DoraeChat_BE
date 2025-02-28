@@ -2,7 +2,7 @@ require('dotenv').config();
 const express = require('express');
 const connection = require('./config/database');
 const authRoutes = require('./routes/authRoutes');
-const handleError = require('./exceptions/handleErr');
+const handleError = require('./middleware/handleError');
 
 const app = express();
 const port = process.env.PORT || 8888;

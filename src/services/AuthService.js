@@ -274,7 +274,7 @@ class AuthService {
             });
 
             if (!user) {
-                throw new CustomError('Token không hợp lệ hoặc đã hết hạn', 401);
+                throw new CustomError('Token không hợp lệ', 401);
             }
 
             // Tạo token mới

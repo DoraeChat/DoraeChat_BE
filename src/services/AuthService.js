@@ -6,6 +6,7 @@ const nodemailer = require('nodemailer');
 const CustomError = require('../exceptions/CustomError');
 const userValidate = require('../validates/userValidate');
 const tokenUtils = require('../utils/tokenUtils');
+const bcrypt = require('bcryptjs');
 
 class AuthService {
     constructor() {
@@ -15,7 +16,7 @@ class AuthService {
         });
     }
 
-    async validate(email) {
+    async checkEmail(email) {
         if (!email) {
             throw new CustomError("Email không được để trống", 400);
         }
@@ -60,6 +61,7 @@ class AuthService {
             });
 
             await user.save();
+            await this.generateAndSendOTP(normalizedContact);
             return { message: 'Đã lưu thông tin người dùng' };
         } catch (error) {
             if (error instanceof CustomError) throw error;
@@ -138,7 +140,7 @@ class AuthService {
             email = email.toLowerCase().trim();
 
             // Kiểm tra OTP có đúng định dạng không
-            if (!userValidate.validateConfirmAccount(email, otp)) {
+            if (!userValidate.validateOtpAndUsername(email, otp)) {
                 throw new CustomError('Thông tin xác nhận không đúng định dạng', 400);
             }
 
@@ -293,6 +295,115 @@ class AuthService {
             throw new CustomError('Không thể làm mới token', 401);
         }
     }
+
+    async logout(_id, refreshToken, source) {
+        try {
+            if (!_id || !refreshToken || !source) {
+                throw new CustomError('Thiếu thông tin người dùng hoặc token', 400);
+            }
+
+            source = source.substring(0, 255);
+
+            // Xóa refresh token
+            await User.updateOne(
+                { _id },
+                { $pull: { refreshTokens: { token: refreshToken, source } } }
+            );
+
+            return { message: 'Đăng xuất thành công' };
+        } catch (error) {
+            if (error instanceof CustomError) throw error;
+            throw new CustomError('Không thể đăng xuất', 500);
+        }
+    }
+
+    async verifyEmailResetPassword(email) {
+        if (!email) {
+            throw new CustomError("Email không được để trống", 400);
+        }
+
+        email = email.toLowerCase().trim();
+
+        if (!userValidate.validateEmail(email)) {
+            throw new CustomError("Email không hợp lệ", 400);
+        }
+
+        const exists = await User.existsByUsername(email);
+        if (!exists) {
+            throw new CustomError("Email chưa đăng ký", 400);
+        }
+        await this.generateAndSendOTP(email);
+        return { message: 'Email hợp lệ để đặt lại mật khẩu' };
+    }
+
+
+    async resetPassword(email, otp, newPassword) {
+        try {
+            if (!email || !otp || !newPassword) {
+                throw new CustomError('Thiếu thông tin xác thực', 400);
+            }
+
+            email = email.toLowerCase().trim();
+
+            // Kiểm tra OTP có đúng định dạng không
+            if (!userValidate.validateOtpAndUsername(email, otp)) {
+                throw new CustomError('Thông tin xác nhận không đúng định dạng', 400);
+            }
+
+            // Lấy OTP từ Redis
+            const otpData = await redis.get(email);
+            if (!otpData) {
+                throw new CustomError('OTP không tồn tại hoặc đã hết hạn', 400);
+            }
+
+            // So sánh OTP và kiểm tra hết hạn
+            if (otpData.otp !== otp) {
+                throw new CustomError('OTP không chính xác', 400);
+            }
+
+            if (new Date() > new Date(otpData.expiresAt)) {
+                throw new CustomError('OTP đã hết hạn', 400);
+            }
+
+            // Tìm người dùng
+            const user = await User.findOne({ username: email });
+            if (!user) {
+                throw new CustomError('Không tìm thấy người dùng', 404);
+            }
+
+
+            // Kiểm tra mật khẩu mới
+            if (!userValidate.validatePassword(newPassword)) {
+                throw new CustomError('Mật khẩu không hợp lệ', 400);
+            }
+
+            // Kiểm tra mật khẩu mới có giống mật khẩu cũ không
+            const isPasswordMatch = await bcrypt.compare(newPassword, user.password);
+            if (isPasswordMatch) {
+                throw new CustomError('Mật khẩu mới không được giống mật khẩu cũ', 400);
+            }
+
+            // Lưu mật khẩu mới
+            user.password = newPassword;
+            await user.save();
+
+            // Xóa OTP khỏi Redis
+            await redis.set(email, null, 1);
+
+            // Xóa refresh token, cập nhật thời gian revoke token
+            const id = user._id;
+            await User.updateOne(
+                { id },
+                { $set: { timeRevokeToken: new Date(), refreshTokens: [] } }
+            );
+            return { message: 'Đặt lại mật khẩu thành công' };
+        } catch (error) {
+            if (error instanceof CustomError) throw error;
+            throw new CustomError(`Lỗi khi đặt lại mật khẩu: ${error.message}`, 400);
+        }
+
+    }
+
 }
 
 module.exports = new AuthService();

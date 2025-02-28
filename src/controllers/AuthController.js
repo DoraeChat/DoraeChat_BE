@@ -6,7 +6,7 @@ class AuthController {
     async registerContact(req, res, next) {
         try {
             const { contact } = req.body;
-            const result = await AuthService.validate(contact);
+            const result = await AuthService.checkEmail(contact);
             res.status(200).json(result);
         } catch (err) {
             next(err);
@@ -85,6 +85,36 @@ class AuthController {
             const { refreshToken } = req.body;
             const source = req.headers['user-agent'] || 'unknown';
             const result = await AuthService.refreshToken(refreshToken, source);
+            res.status(200).json(result);
+        } catch (err) {
+            next(err);
+        }
+    }
+
+    async logout(req, res, next) {
+        try {
+            const { refreshToken } = req.body;
+            const result = await AuthService.logout(refreshToken);
+            res.status(200).json(result);
+        } catch (err) {
+            next(err);
+        }
+    }
+
+    async verifyEmailResetPassword(req, res, next) {
+        try {
+            const { email } = req.body;
+            const result = await AuthService.verifyEmailResetPassword(email);
+            res.status(200).json(result);
+        } catch (err) {
+            next(err);
+        }
+    }
+
+    async resetPassword(req, res, next) {
+        try {
+            const { email, otp, newPassword } = req.body;
+            const result = await AuthService.resetPassword(email, otp, newPassword);
             res.status(200).json(result);
         } catch (err) {
             next(err);

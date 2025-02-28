@@ -14,12 +14,10 @@ const userValidate = {
             !this.validatePassword(password)
         )
             throw new CustomError('Info login invalid', 400);
+        else return true;
     },
     validateUsername: function (username) {
-        if (
-            !username ||
-            !this.validateEmail(username)
-        )
+        if (!username || !this.validateEmail(username))
             return false;
 
         return true;
@@ -53,13 +51,13 @@ const userValidate = {
     validateOTP: (otp) => {
         if (!otp) return false;
         const regex = /^[0-9]{6}$/g;
-
         return regex.test(otp);
     },
 
-    validateConfirmAccount: function (username, otpPhone) {
-        if (!this.validateUsername(username) || !this.validateOTP(otpPhone))
+    validateOtpAndUsername: function (username, otpPhone) {
+        if (this.validateUsername(username) !== true || !this.validateOTP(otpPhone))
             throw new CustomError('Info confirm account invalid', 400);
+        else return true;
     },
 
     validateSubmitInfo: function (submitInformation) {
@@ -72,7 +70,7 @@ const userValidate = {
         if (!lastName || lastName.length < 0 || lastName.length > 50)
             throw new CustomError('Last name invalid', 400);
         if (!bio || bio.length < 0 || bio.length > 500) throw new CustomError('Bio invalid', 400);
-
+        return true;
     }
 };
 

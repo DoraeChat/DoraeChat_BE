@@ -4,6 +4,14 @@ const dateUtils = {
     MILLISECONDS_IN_MINUTE: 60000,
 
     toObject(date) {
+        if (typeof date === 'string') {
+            date = new Date(date);
+        }
+
+        if (!(date instanceof Date) || isNaN(date.getTime())) {
+            throw new Error('Invalid date object');
+        }
+
         return {
             day: date.getDate(),
             month: date.getMonth() + 1,

@@ -72,6 +72,37 @@ const UserController = {
         } catch (error) {
             next(error);
         }
+    },
+
+    async addUser(req, res, next) {
+        try {
+            const user = req.body;
+            const newUser = await UserService.addUser(user);
+            res.json(newUser);
+        } catch (error) {
+            next(error);
+        }
+    },
+
+    async updateUser(req, res, next) {
+        try {
+            const { id } = req.params;
+            const user = req.body;
+            const updatedUser = await UserService.updateUser(id, user);
+            res.json(updatedUser);
+        } catch (error) {
+            next(error);
+        }
+    },
+
+    async deleteUser(req, res, next) {
+        try {
+            const { id } = req.params;
+            await UserService.deleteUser(id);
+            res.json({ message: 'User is deleted' });
+        } catch (error) {
+            next(error);
+        }
     }
 };
 

@@ -40,6 +40,21 @@ const UserService = {
             throw new NotFoundError('User summary not found');
         }
         return userSummary;
+    },
+
+    // add user
+    async addUser(user) {
+        return await User.addUser(user);
+    },
+
+    // update user
+    async updateUser(id, user) {
+        return await User.updateUser(id, user);
+    },
+
+    // delete user
+    async deleteUser(id) {
+        return await User.deleteUser(id);
     }
 };
 

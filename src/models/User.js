@@ -145,5 +145,29 @@ userSchema.statics.getSummaryById = async (_id, message = 'User') => {
     return user;
 };
 
+// add user
+userSchema.statics.addUser = async (user) => {
+    const newUser = await User.create(user);
+    return newUser;
+};
+
+// update user
+userSchema.statics.updateUser = async (_id, user) => {
+    const updatedUser = await User.findOneAndUpdate(
+        { _id },
+        { $set: user },
+        { new: true });
+    return updatedUser;
+}
+
+// delete user
+userSchema.statics.deleteUser = async (_id) => {
+    const deletedUser = await User.findOneAndUpdate(
+        { _id },
+        { $set: { isActived: false } },
+        { new: true });
+    return deletedUser;
+}
+
 const User = mongoose.model('User', userSchema);
 module.exports = User;

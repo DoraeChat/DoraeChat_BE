@@ -169,5 +169,14 @@ userSchema.statics.deleteUser = async (_id) => {
     return deletedUser;
 }
 
+// update avatar user
+userSchema.statics.updateAvatarUser = async (_id, avatar) => {
+    const updatedUser = await User.findOneAndUpdate(
+        { _id },
+        { $set: { avatar } },
+        { new: true });
+    return updatedUser;
+}
+
 const User = mongoose.model('User', userSchema);
 module.exports = User;

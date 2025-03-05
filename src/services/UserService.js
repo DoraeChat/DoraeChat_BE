@@ -1,5 +1,7 @@
 const User = require('../models/User');
 const NotFoundError = require('../exceptions/NotFoundError');
+const fs = require('fs').promises;
+const { uploadAvatar, deleteAvatar } = require('../config/cloudinary');
 
 const UserService = {
     async existsById(id) {
@@ -55,7 +57,35 @@ const UserService = {
     // delete user
     async deleteUser(id) {
         return await User.deleteUser(id);
-    }
+    },
+
+    // update avatar user
+    async updateAvatarUser(userId, file) {
+        // Kiểm tra xem file có tồn tại không
+        if (!file) {
+          throw new Error('Please provide an avatar file');
+        }
+    
+        try {
+          // Upload avatar mới lên Cloudinary
+          const uploadResult = await uploadAvatar(file.path);
+    
+          // Cập nhật avatar trong database
+          const updatedUser = await User.updateAvatarUser(userId, uploadResult.url);
+    
+          // Xóa file tạm sau khi upload
+          await fs.unlink(file.path);
+    
+          return {
+            message: 'Updated avatar successfully!',
+            avatarUrl: uploadResult.url
+          };
+        } catch (error) {
+          // Xóa file tạm nếu upload thất bại
+          await fs.unlink(file.path).catch(() => {});
+          throw error;
+        }
+      }
 };
 
 module.exports = UserService;

@@ -10,6 +10,12 @@ const port = process.env.PORT || 8888;
 
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 app.use(express.json({ limit: '50mb' }));
+app.use((err, req, res, next) => {
+    console.error(err.stack);
+    res.status(err.statusCode || 500).json({
+        error: err.message || 'Internal Server Error'
+    });
+});
 
 (async () => {
     try {

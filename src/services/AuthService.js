@@ -48,14 +48,14 @@ class AuthService {
             if (exists) {
                 throw new CustomError("Email đã đăng ký", 400);
             }
-
+            const genderBoolean = gender === 'male' ? true : false;
             // Tạo đối tượng user
             const user = new User({
                 username: normalizedContact,
                 name: `${firstName.trim()} ${lastName.trim()}`,
                 password,
-                dateOfBirth: new Date(`${dateOfBirth.year}-${dateOfBirth.month}-${dateOfBirth.day}`),
-                gender,
+                dateOfBirth: new Date(dateOfBirth),
+                genderBoolean,
                 bio,
                 isActived: false
             });

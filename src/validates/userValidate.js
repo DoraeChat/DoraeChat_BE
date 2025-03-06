@@ -31,8 +31,13 @@ const userValidate = {
     validateDateOfBirth: (date) => {
         if (!date) return false;
 
-        const { day, month, year } = date;
-
+        const dateParts = date.split('-');
+        const dateObj = {
+            year: parseInt(dateParts[0]),
+            month: parseInt(dateParts[1]),
+            day: parseInt(dateParts[2])
+        };
+        const { year, month, day } = dateObj;
         if (!day || !month || !year) return false;
 
         if (year < 1900) return false;

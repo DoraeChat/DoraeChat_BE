@@ -115,6 +115,17 @@ const UserController = {
         } catch (error) {
             next(error);
         }
+    },
+
+    async updateCoverUser(req, res, next) {
+        try {
+            const { id } = req.params;
+            const updatedUser = await UserService.updateCoverUser(id, req.file);    
+            
+            res.json({ message: 'User cover is updated successfully!', cover: updatedUser.cover });
+        } catch (error) {
+            next(error);
+        }
     }
 };
 

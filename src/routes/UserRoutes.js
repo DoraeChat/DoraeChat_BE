@@ -19,6 +19,11 @@ router.put('/avatar/:id', (req, res, next) => {
     // Lưu id vào req để sử dụng ở middleware
     req.userId = req.params.id;
     next();
-  }, upload.single('avatar'), UserController.updateAvatarUser);
+}, upload.single('avatar'), UserController.updateAvatarUser);
+router.put('/cover/:id', (req, res, next) => {
+    // Lưu id vào req để sử dụng ở middleware
+    req.userId = req.params.id;
+    next();
+}, upload.single('cover'), UserController.updateCoverUser);
 
 module.exports = router;

@@ -178,5 +178,14 @@ userSchema.statics.updateAvatarUser = async (_id, avatar) => {
     return updatedUser;
 }
 
+// update cover user
+userSchema.statics.updateCoverUser = async (_id, coverImage) => {
+    const updatedUser = await User.findOneAndUpdate(
+        { _id },
+        { $set: { coverImage } },
+        { new: true });
+    return updatedUser;
+}
+
 const User = mongoose.model('User', userSchema);
 module.exports = User;

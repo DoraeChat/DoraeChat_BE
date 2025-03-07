@@ -1,7 +1,7 @@
 const User = require('../models/User');
 const NotFoundError = require('../exceptions/NotFoundError');
 const fs = require('fs').promises;
-const { uploadAvatar, deleteAvatar } = require('../config/cloudinary');
+const { uploadImage, deleteImage } = require('../config/cloudinary');
 
 const UserService = {
     async existsById(id) {
@@ -63,29 +63,57 @@ const UserService = {
     async updateAvatarUser(userId, file) {
         // Kiểm tra xem file có tồn tại không
         if (!file) {
-          throw new Error('Please provide an avatar file');
+            throw new Error('Please provide an avatar file');
         }
     
         try {
-          // Upload avatar mới lên Cloudinary
-          const uploadResult = await uploadAvatar(file.path, userId);
+            // Upload avatar mới lên Cloudinary
+            const uploadResult = await uploadImage(file.path, userId, 'avatar');
     
-          // Cập nhật avatar trong database
-          const updatedUser = await User.updateAvatarUser(userId, uploadResult.url);
+            // Cập nhật avatar trong database
+            const updatedUser = await User.updateAvatarUser(userId, uploadResult.url);
     
-          // Xóa file tạm sau khi upload
-          await fs.unlink(file.path);
+            // Xóa file tạm sau khi upload
+            await fs.unlink(file.path);
     
-          return {
-            message: 'Updated avatar successfully!',
-            avatarUrl: uploadResult.url
-          };
+            return {
+                message: 'Updated avatar successfully!',
+                avatarUrl: uploadResult.url
+            };
         } catch (error) {
-          // Xóa file tạm nếu upload thất bại
-        //   await fs.unlink(file.path).catch(() => {});
-          throw error;
+            // Xóa file tạm nếu upload thất bại
+            // await fs.unlink(file.path).catch(() => {});
+            throw error;
         }
-      }
+    },
+
+    // update cover user
+    async updateCoverUser(userId, file) {
+        // Kiểm tra xem file có tồn tại không
+        if (!file) {
+            throw new Error('Please provide an cover file');
+        }
+    
+        try {
+            // Upload cover mới lên Cloudinary
+            const uploadResult = await uploadImage(file.path, userId, 'cover');
+    
+            // Cập nhật cover trong database
+            const updatedUser = await User.updateCoverUser(userId, uploadResult.url);
+    
+            // Xóa file tạm sau khi upload
+            await fs.unlink(file.path);
+    
+            return {
+                message: 'Updated cover successfully!',
+                coverUrl: uploadResult.url
+            };
+        } catch (error) {
+            // Xóa file tạm nếu upload thất bại
+            // await fs.unlink(file.path).catch(() => {});
+            throw error;
+        }
+    }
 };
 
 module.exports = UserService;

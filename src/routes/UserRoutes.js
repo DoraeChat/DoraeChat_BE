@@ -15,6 +15,10 @@ router.get('/summary/:id', UserController.getSummaryById);
 router.post('/', UserController.addUser);
 router.put('/:id', UserController.updateUser);
 router.delete('/:id', UserController.deleteUser);
-router.put('/avatar/:id', upload.single('avatar'), UserController.updateAvatarUser);
+router.put('/avatar/:id', (req, res, next) => {
+    // Lưu id vào req để sử dụng ở middleware
+    req.userId = req.params.id;
+    next();
+  }, upload.single('avatar'), UserController.updateAvatarUser);
 
 module.exports = router;

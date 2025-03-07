@@ -2,6 +2,17 @@ const cloudinary = require('cloudinary').v2;
 const multer = require('multer');
 const path = require('path');
 
+const formatDateToYYYYMMDD = (timestamp) => {
+  const date = new Date(timestamp);
+  
+  const year = date.getFullYear();
+  // getMonth() trả về giá trị từ 0-11, nên cần +1 và đảm bảo luôn có 2 chữ số
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  
+  return `${year}${month}${day}`;
+};
+
 cloudinary.config({
   cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
   api_key: process.env.CLOUDINARY_API_KEY,
@@ -15,7 +26,8 @@ const upload = multer({
       cb(null, 'uploads/'); 
     },
     filename: (req, file, cb) => {
-      const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+      const userId = req.userId || 'unknown';
+      const uniqueSuffix = userId + '-' + formatDateToYYYYMMDD(Date.now());
       cb(null, file.fieldname + '-' + uniqueSuffix + path.extname(file.originalname));
     }
   }),
@@ -32,7 +44,9 @@ const upload = multer({
   }
 });
 
-const uploadAvatar = async (file) => {
+const uploadAvatar = async (file, userId) => {
+  const uniqueSuffix = userId + '-' + formatDateToYYYYMMDD(Date.now());
+  const filename = 'avatar-' + uniqueSuffix;
   try {
     const uploadOptions = {
       folder: 'avatars',
@@ -42,7 +56,8 @@ const uploadAvatar = async (file) => {
         { quality: 'auto' } 
       ],
       overwrite: true, 
-      unique_filename: false 
+      unique_filename: true,
+      public_id: filename
     };
 
     const result = await cloudinary.uploader.upload(file, uploadOptions);

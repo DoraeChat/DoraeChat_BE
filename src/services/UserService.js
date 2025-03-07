@@ -68,7 +68,7 @@ const UserService = {
     
         try {
           // Upload avatar mới lên Cloudinary
-          const uploadResult = await uploadAvatar(file.path);
+          const uploadResult = await uploadAvatar(file.path, userId);
     
           // Cập nhật avatar trong database
           const updatedUser = await User.updateAvatarUser(userId, uploadResult.url);
@@ -82,7 +82,7 @@ const UserService = {
           };
         } catch (error) {
           // Xóa file tạm nếu upload thất bại
-          await fs.unlink(file.path).catch(() => {});
+        //   await fs.unlink(file.path).catch(() => {});
           throw error;
         }
       }

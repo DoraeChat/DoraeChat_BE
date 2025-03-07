@@ -46,6 +46,7 @@ class AuthController {
     async resendOTP(req, res, next) {
         try {
             const { contact } = req.body;
+            console.log(contact);
             const result = await AuthService.resendOTP(contact);
             res.status(200).json(result);
         } catch (err) {
@@ -93,8 +94,11 @@ class AuthController {
 
     async logout(req, res, next) {
         try {
-            const { refreshToken } = req.body;
-            const result = await AuthService.logout(refreshToken);
+            const { user, refreshToken } = req.body;
+            const userData = typeof user === 'string' ? JSON.parse(user) : user;
+            const source = req.headers['user-agent'] || 'unknown';
+            const userId = userData._id;
+            const result = await AuthService.logout(userId, refreshToken, source);
             res.status(200).json(result);
         } catch (err) {
             next(err);

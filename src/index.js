@@ -8,9 +8,19 @@ const cors = require("cors");
 const app = express();
 const port = process.env.PORT || 3001;
 
+const socketIO = require("socket.io");
+const socket = require("./config/socket");
+
 app.use(cors());
 app.use(express.urlencoded({ extended: true, limit: "50mb" }));
 app.use(express.json({ limit: "50mb" }));
+
+const server = http.createServer(app);
+const io = socketIO(server);
+socket(io);
+
+
+
 app.use((err, req, res, next) => {
   console.error(err.stack);
   res.status(err.statusCode || 500).json({

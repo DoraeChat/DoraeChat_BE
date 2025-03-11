@@ -34,6 +34,7 @@ app.use((err, req, res, next) => {
 
     app.use("/api/auth", authRoutes);
     app.use("/api/users", userRoutes);
+    app.use('/friends', auth, friendRouter);
     app.use(handleError);
     app.listen(port, () => {
       console.log(`Backend Nodejs App listening on port ${port}`);

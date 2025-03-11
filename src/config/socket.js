@@ -1,6 +1,7 @@
 const redisDb = require('./redis');
 const lastViewService = require('../services/LastViewService');
 
+const REDIS_TTL = 86400;
 /**
  * Xử lý khi người dùng rời đi
  * @param {string} userId - ID của người dùng
@@ -14,7 +15,7 @@ const handleLeave = async (userId) => {
                 ...cachedUser,
                 isOnline: false,
                 lastLogin: new Date(),
-            });
+            }, REDIS_TTL);
             console.log.debug(`User ${userId} went offline`);
         }
     } catch (error) {
@@ -35,7 +36,7 @@ const handleJoin = async (userId) => {
                 ...cachedUser,
                 isOnline: true,
                 lastLogin: null,
-            });
+            }, REDIS_TTL);
             console.log.debug(`User ${userId} came online`);
         }
     } catch (error) {

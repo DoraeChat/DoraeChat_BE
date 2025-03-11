@@ -1,9 +1,14 @@
 const friendService = require('../services/FriendService');
-const redis = require('../config/redis')
+const redisDb = require('../config/redis');
+const CustomError = require('../exceptions/CustomError');
 
 class FriendController {
     constructor(io) {
         this.io = io;
+        this.sendFriendInvite = this.sendFriendInvite.bind(this);
+        this.deleteFriend = this.deleteFriend.bind(this);
+        this.deleteFriendInvite = this.deleteFriendInvite.bind(this);
+        this.deleteInviteWasSend = this.deleteInviteWasSend.bind(this);
     }
 
     // [GET] /?name
@@ -19,10 +24,19 @@ class FriendController {
                 const friendResult = { ...friendEle };
 
                 const friendId = friendEle._id;
-                const cachedUser = await redisDb.get(friendId + '');
-                if (cachedUser) {
-                    friendResult.isOnline = cachedUser.isOnline;
-                    friendResult.lastLogin = cachedUser.lastLogin;
+                try {
+                    const cachedUser = await redisDb.get(friendId + '');
+                    if (cachedUser) {
+                        friendResult.isOnline = cachedUser.isOnline;
+                        friendResult.lastLogin = cachedUser.lastLogin;
+                    } else {
+                        friendResult.isOnline = false;
+                        friendResult.lastLogin = null;
+                    }
+                } catch (redisError) {
+                    console.error('Redis error:', redisError);
+                    friendResult.isOnline = false;
+                    friendResult.lastLogin = null;
                 }
 
                 friendsTempt.push(friendResult);
@@ -49,6 +63,21 @@ class FriendController {
         }
     }
 
+    //[DELETE]  /invites/:userId
+    async deleteFriendInvite(req, res, next) {
+        const { _id } = req;
+        const { userId } = req.params;
+
+        try {
+            await friendService.deleteFriendInvite(_id, userId);
+            this.io.to(userId + '').emit('deleted-friend-invite', _id);
+
+            res.status(204).json();
+        } catch (err) {
+            next(err);
+        }
+    }
+
     // [POST] /invites/me/:userId
     async sendFriendInvite(req, res, next) {
         const { _id } = req;
@@ -56,10 +85,20 @@ class FriendController {
         try {
             await friendService.sendFriendInvite(_id, userId);
 
-            const { name, avatar } = await redisDb.get(_id);
-            this.io
-                .to(userId + '')
-                .emit('send-friend-invite', { _id, name, avatar });
+            try {
+                const cachedUser = await redisDb.get(_id);
+                if (cachedUser) {
+                    const { name, avatar } = cachedUser;
+                    this.io
+                        .to(userId + '')
+                        .emit('send-friend-invite', { _id, name, avatar });
+                } else {
+                    this.io.to(userId + '').emit('send-friend-invite', { _id });
+                }
+            } catch (redisError) {
+                console.error('Redis error:', redisError);
+                this.io.to(userId + '').emit('send-friend-invite', { _id });
+            }
 
             res.status(201).json();
         } catch (err) {
@@ -80,7 +119,6 @@ class FriendController {
             next(err);
         }
     }
-
 }
 
 module.exports = FriendController;

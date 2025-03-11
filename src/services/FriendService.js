@@ -7,6 +7,10 @@ const CustomError = require('../exceptions/CustomError')
 class FriendService {
 
     async getList(name, _id) {
+        if (!_id) {
+            throw new CustomError('User ID is required');
+        }
+
         await User.getById(_id);
 
         const friends = await Friend.aggregate([
@@ -52,16 +56,24 @@ class FriendService {
     }
 
     async deleteFriend(_id, userId) {
+        if (!_id || !userId) {
+            throw new CustomError('Both user IDs are required');
+        }
+
         await Friend.deleteByIds(_id, userId);
     }
 
 
-    async deleteFriendInvite(_id, senderId) {
-        await FriendRequest.deleteByIds(senderId, _id);
-    }
-
-
     async sendFriendInvite(_id, userId) {
+        if (!_id || !userId) {
+            throw new CustomError('Both user IDs are required');
+        }
+
+        // Prevent sending invite to self
+        if (_id.toString() === userId.toString()) {
+            throw new CustomError('Cannot send friend invite to yourself');
+        }
+
         await User.checkById(_id);
         await User.checkById(userId);
 
@@ -84,10 +96,13 @@ class FriendService {
         await friendRequest.save();
     }
 
+    async deleteFriendInvite(_id, senderId) {
+        await FriendRequest.deleteByIds(senderId, _id);
+    }
+
     async deleteInviteWasSend(_id, userId) {
         await FriendRequest.deleteByIds(_id, userId);
     }
-
 }
 
 module.exports = new FriendService();

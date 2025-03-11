@@ -8,6 +8,8 @@ const cors = require("cors");
 const app = express();
 const port = process.env.PORT || 3001;
 
+const auth = require('./middleware/auth');
+
 const socketIO = require("socket.io");
 const socket = require("./config/socket");
 
@@ -27,6 +29,9 @@ app.use((err, req, res, next) => {
     error: err.message || "Internal Server Error",
   });
 });
+
+
+const friendRouter = require('./routes/FriendRoutes')(io);
 
 (async () => {
   try {

@@ -16,7 +16,7 @@ const handleLeave = async (userId) => {
                 isOnline: false,
                 lastLogin: new Date(),
             }, REDIS_TTL);
-            console.log.debug(`User ${userId} went offline`);
+            console.log(`User ${userId} went offline`);
         }
     } catch (error) {
         console.log.error(`Error in handleLeave for user ${userId}:`, error);
@@ -37,7 +37,7 @@ const handleJoin = async (userId) => {
                 isOnline: true,
                 lastLogin: null,
             }, REDIS_TTL);
-            console.log.debug(`User ${userId} came online`);
+            console.log(`User ${userId} came online`);
         }
     } catch (error) {
         console.log.error(`Error in handleJoin for user ${userId}:`, error);
@@ -103,14 +103,14 @@ const updateLastView = async (conversationId, channelId, userId, socket) => {
  */
 const socket = (io) => {
     io.on('connect', (socket) => {
-        console.log.debug(`Socket connected: ${socket.id}`);
+        console.log(`Socket connected: ${socket.id}`);
 
         // Cleanup khi disconnect
         socket.on('disconnect', () => {
             const { userId } = socket;
             if (userId) {
                 handleLeave(userId);
-                console.log.debug(`Socket disconnected: ${socket.id}, User: ${userId}`);
+                console.log(`Socket disconnected: ${socket.id}, User: ${userId}`);
             }
         });
 
@@ -121,7 +121,7 @@ const socket = (io) => {
             socket.userId = userId;
             socket.join(userId);
             handleJoin(userId);
-            console.log.debug(`User ${userId} joined`);
+            console.log(`User ${userId} joined`);
         });
 
         // Tham gia nhiều cuộc trò chuyện
@@ -131,7 +131,7 @@ const socket = (io) => {
             conversationIds.forEach((id) => {
                 if (id) socket.join(id);
             });
-            console.log.debug(`User ${socket.userId} joined conversations: ${conversationIds.join(', ')}`);
+            console.log(`User ${socket.userId} joined conversations: ${conversationIds.join(', ')}`);
         });
 
         // Tham gia một cuộc trò chuyện
@@ -139,7 +139,7 @@ const socket = (io) => {
             if (!conversationId) return;
 
             socket.join(conversationId);
-            console.log.debug(`User ${socket.userId} joined conversation: ${conversationId}`);
+            console.log(`User ${socket.userId} joined conversation: ${conversationId}`);
         });
 
         // Rời khỏi cuộc trò chuyện
@@ -147,7 +147,7 @@ const socket = (io) => {
             if (!conversationId) return;
 
             socket.leave(conversationId);
-            console.log.debug(`User ${socket.userId} left conversation: ${conversationId}`);
+            console.log(`User ${socket.userId} left conversation: ${conversationId}`);
         });
 
         // Đang nhập
@@ -182,7 +182,7 @@ const socket = (io) => {
             const roomId = `${conversationId}call`;
             socket.join(roomId);
 
-            console.log.debug(
+            console.log(
                 `Video call subscription: Room=${roomId}, User=${newUserId}, PeerId=${peerId}`
             );
 

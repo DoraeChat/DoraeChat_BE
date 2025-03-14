@@ -1,5 +1,6 @@
 require("dotenv").config();
 const express = require("express");
+const http = require("http");
 const connection = require("./config/database");
 const authRoutes = require("./routes/AuthRoutes");
 const userRoutes = require("./routes/UserRoutes");
@@ -8,7 +9,7 @@ const cors = require("cors");
 const app = express();
 const port = process.env.PORT || 3001;
 
-const auth = require('./middleware/auth');
+const auth = require("./middleware/auth");
 
 const socketIO = require("socket.io");
 const socket = require("./config/socket");
@@ -21,8 +22,6 @@ const server = http.createServer(app);
 const io = socketIO(server);
 socket(io);
 
-
-
 app.use((err, req, res, next) => {
   console.error(err.stack);
   res.status(err.statusCode || 500).json({
@@ -30,8 +29,7 @@ app.use((err, req, res, next) => {
   });
 });
 
-
-const friendRouter = require('./routes/FriendRoutes')(io);
+const friendRouter = require("./routes/FriendRoutes")(io);
 
 (async () => {
   try {
@@ -39,7 +37,7 @@ const friendRouter = require('./routes/FriendRoutes')(io);
 
     app.use("/api/auth", authRoutes);
     app.use("/api/users", userRoutes);
-    app.use('/friends', auth, friendRouter);
+    app.use("/friends", auth, friendRouter);
     app.use(handleError);
     app.listen(port, () => {
       console.log(`Backend Nodejs App listening on port ${port}`);

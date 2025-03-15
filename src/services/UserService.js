@@ -2,6 +2,9 @@ const User = require('../models/User');
 const NotFoundError = require('../exceptions/NotFoundError');
 const fs = require('fs').promises;
 const { uploadImage, deleteImage } = require('../config/cloudinary');
+const userValidate = require('../validates/userValidate');
+const bcrypt = require('bcryptjs');
+const CustomError = require('../exceptions/CustomError');
 
 const UserService = {
     async existsById(id) {
@@ -113,6 +116,35 @@ const UserService = {
             // await fs.unlink(file.path).catch(() => {});
             throw error;
         }
+    },
+
+    async updatePassword(id, oldPassword, newPassword) {
+        // Tìm người dùng
+        const user = await User.findOne({ _id: id });
+        if (!user) {
+            throw new CustomError('Không tìm thấy người dùng', 404);
+        }
+
+        // Kiểm tra mật khẩu mới
+        if (!userValidate.validatePassword(newPassword)) {
+            throw new CustomError('Mật khẩu không hợp lệ', 400);
+        }
+
+        // Kiểm tra mật khẩu cũ
+        const isOldPasswordMatch = await bcrypt.compare(oldPassword, user.password);
+        if (!isOldPasswordMatch) {
+            throw new CustomError('Mật khẩu cũ không đúng', 400);
+        }
+
+        // Kiểm tra mật khẩu mới có giống mật khẩu cũ không
+        const isPasswordMatch = await bcrypt.compare(newPassword, user.password);
+        if (isPasswordMatch) {
+            throw new CustomError('Mật khẩu mới không được giống mật khẩu cũ', 400);
+        }
+
+        // Lưu mật khẩu mới
+        user.password = newPassword;
+        return await user.save();
     }
 };
 

@@ -25,5 +25,6 @@ router.put('/cover/:id', (req, res, next) => {
     req.userId = req.params.id;
     next();
 }, upload.single('cover'), UserController.updateCoverUser);
+router.put('/password/:id', UserController.updatePassword);
 
 module.exports = router;

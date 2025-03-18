@@ -1,7 +1,7 @@
 const mongoose = require("mongoose");
 const Schema = mongoose.Schema;
 const ObjectId = mongoose.Types.ObjectId;
-const NotFoundError = require("../exception/NotFoundError");
+const NotFoundError = require("../exceptions/NotFoundError");
 
 const commonLookupStages = {
   userLookup: {

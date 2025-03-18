@@ -49,10 +49,11 @@ const upload = multer({
 
 const uploadImage = async (file, userId, type) => {
   const uniqueSuffix = userId + "-" + formatDateToYYYYMMDD(Date.now());
-  const filename = type === 'avatar' ? "avatar-" + uniqueSuffix : "cover-" + uniqueSuffix;
+  const filename =
+    type === "avatar" ? "avatar-" + uniqueSuffix : "cover-" + uniqueSuffix;
   try {
     const uploadOptions = {
-      folder: type === 'avatar' ? "avatars" : "covers",
+      folder: type === "avatar" ? "avatars" : "covers",
       allowed_formats: ["jpg", "png", "jpeg", "webp"],
       transformation: [
         { width: 400, height: 400, crop: "fill" },

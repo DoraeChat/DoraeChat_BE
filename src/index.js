@@ -4,6 +4,8 @@ const http = require("http");
 const connection = require("./config/database");
 const authRoutes = require("./routes/AuthRoutes");
 const userRoutes = require("./routes/UserRoutes");
+const conversationRoutes = require("./routes/ConversationRoutes");
+const messageRoutes = require("./routes/MessageRoutes");
 const handleError = require("./middleware/handleError");
 const cors = require("cors");
 const app = express();
@@ -37,6 +39,8 @@ const friendRouter = require("./routes/FriendRoutes")(io);
 
     app.use("/api/auth", authRoutes);
     app.use("/api/users", userRoutes);
+    app.use("/api/conversations", auth, conversationRoutes);
+    app.use("/api/messages", auth, messageRoutes);
     app.use("/friends", auth, friendRouter);
     app.use(handleError);
     app.listen(port, () => {

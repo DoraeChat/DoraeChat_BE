@@ -20,7 +20,6 @@ class AuthController {
             const { contact } = submitInformation;
             const result = await AuthService.saveUserInfo(submitInformation);
             if (result.message === 'Đã lưu thông tin người dùng') {
-                await AuthService.generateAndSendOTP(contact);
                 res.status(200).json(result);
             } else {
                 res.status(200).json('Lưu thông tin người dùng không thành công');

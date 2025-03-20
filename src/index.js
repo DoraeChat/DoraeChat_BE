@@ -41,7 +41,7 @@ const friendRouter = require("./routes/FriendRoutes")(io);
     app.use("/api/users", userRoutes);
     app.use("/api/conversations", auth, conversationRoutes);
     app.use("/api/messages", auth, messageRoutes);
-    app.use("/friends", auth, friendRouter);
+    app.use("/api/friends", auth, friendRouter);
     app.use(handleError);
     app.listen(port, () => {
       console.log(`Backend Nodejs App listening on port ${port}`);

@@ -1,10 +1,10 @@
 const Conversation = require("../models/Conversation");
 
-class ConversationService {
+const ConversationService = {
   // Lấy danh sách hội thoại của người dùng
   async getListByUserId(userId) {
     return await Conversation.getListByUserId(userId);
-  }
+  },
 
   // Tạo hội thoại mới
   async createConversation(name, members, type, leaderId) {
@@ -16,12 +16,12 @@ class ConversationService {
     });
     await conversation.save();
     return conversation;
-  }
+  },
 
   // Lấy hội thoại theo ID
   async getConversationById(conversationId) {
     return await Conversation.getById(conversationId);
-  }
+  },
 
   // Kiểm tra hội thoại cá nhân giữa hai user
   async existsIndividualConversation(userId1, userId2) {
@@ -29,4 +29,4 @@ class ConversationService {
   }
 }
 
-module.exports = new ConversationService();
+module.exports = ConversationService;

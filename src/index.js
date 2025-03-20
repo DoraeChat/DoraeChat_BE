@@ -7,6 +7,8 @@ const userRoutes = require("./routes/UserRoutes");
 const meRoutes = require("./routes/MeRoutes");
 const conversationRoutes = require("./routes/ConversationRoutes");
 const messageRoutes = require("./routes/MessageRoutes");
+const qrRoutes = require("./routes/QRRoutes");
+
 const handleError = require("./middleware/handleError");
 const cors = require("cors");
 const app = express();
@@ -44,6 +46,7 @@ const friendRouter = require("./routes/FriendRoutes")(io);
     app.use("/api/conversations", auth, conversationRoutes);
     app.use("/api/messages", auth, messageRoutes);
     app.use("/api/friends", auth, friendRouter);
+    app.use("/api/qr", qrRoutes);
     app.use(handleError);
     app.listen(port, () => {
       console.log(`Backend Nodejs App listening on port ${port}`);

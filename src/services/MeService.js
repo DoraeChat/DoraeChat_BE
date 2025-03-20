@@ -40,7 +40,7 @@ const MeService = {
     
             return {
                 message: 'Updated avatar successfully!',
-                avatarUrl: uploadResult.url
+                avatarUrl: updatedUser.avatar
             };
         } catch (error) {
             // Xóa file tạm nếu upload thất bại
@@ -68,7 +68,7 @@ const MeService = {
     
             return {
                 message: 'Updated cover successfully!',
-                coverUrl: uploadResult.url
+                coverUrl: updatedUser.coverImage
             };
         } catch (error) {
             // Xóa file tạm nếu upload thất bại

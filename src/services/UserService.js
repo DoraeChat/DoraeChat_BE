@@ -1,5 +1,4 @@
 const User = require('../models/User');
-const NotFoundError = require('../exceptions/NotFoundError');
 const userValidate = require('../validates/userValidate');
 
 const UserService = {
@@ -13,9 +12,6 @@ const UserService = {
 
     async getById(id) {
         const user = await User.getById(id);
-        if (!user) {
-            throw new NotFoundError('User not found');
-        }
         return user;
     },
 
@@ -25,9 +21,6 @@ const UserService = {
 
     async findByUsername(username) {
         const user = await User.findByUsername(username);
-        if (!user) {
-            throw new NotFoundError('User not found');
-        }
         return user;
     },
 
@@ -37,9 +30,6 @@ const UserService = {
 
     async getSummaryById(id) {
         const userSummary = await User.getSummaryById(id);
-        if (!userSummary) {
-            throw new NotFoundError('User summary not found');
-        }
         return userSummary;
     },
 

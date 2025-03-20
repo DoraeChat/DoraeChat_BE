@@ -6,7 +6,7 @@ const UserMiddleware = require('../middleware/UserMiddleware');
 const { upload } = require('../config/cloudinary');
 
 router.put('/profile', MeController.updateUser);
-router.get('/profile', MeController.getById);
+router.get('/profile/:id', MeController.getById);
 router.put('/avatar', (req, res, next) => {
     // Lưu id vào req để sử dụng ở middleware
     req.userId = req.params.id;

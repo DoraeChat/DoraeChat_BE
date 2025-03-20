@@ -60,6 +60,10 @@ const userSchema = new Schema(
       type: Date,
       default: () => new Date(),
     },
+    hobbies: {
+      type: [String],
+      default: [],
+    },
   },
   { timestamps: true }
 );
@@ -123,6 +127,7 @@ userSchema.statics.getById = async (_id, message = "User") => {
     avatarColor,
     coverImage,
     phoneBooks,
+    hobbies,
   } = user;
   return {
     _id,
@@ -134,6 +139,7 @@ userSchema.statics.getById = async (_id, message = "User") => {
     avatarColor,
     coverImage,
     phoneBooks,
+    hobbies,
   };
 };
 

@@ -9,7 +9,7 @@ const UserController = {
 
     async getById(req, res, next) {
         try {
-            const { id } = req.body;
+            const { id } = req.params;
             const user = await MeService.getById(id);
             res.json(user);
         } catch (error) {
@@ -32,7 +32,10 @@ const UserController = {
             const { id } = req.body;
             const updatedUser = await MeService.updateAvatarUser(id, req.file);    
             
-            res.json({ message: 'User avatar is updated successfully!', avatar: updatedUser.avatar });
+            res.json({ 
+                message: 'User avatar is updated successfully!', 
+                avatar: updatedUser.avatarUrl 
+            });
         } catch (error) {
             next(error);
         }
@@ -43,7 +46,10 @@ const UserController = {
             const { id } = req.body;
             const updatedUser = await MeService.updateCoverUser(id, req.file);    
             
-            res.json({ message: 'User cover is updated successfully!', cover: updatedUser.cover });
+            res.json({ 
+                message: 'User cover is updated successfully!', 
+                cover: updatedUser.coverUrl 
+            });
         } catch (error) {
             next(error);
         }

@@ -4,6 +4,7 @@ const http = require("http");
 const connection = require("./config/database");
 const authRoutes = require("./routes/AuthRoutes");
 const userRoutes = require("./routes/UserRoutes");
+const meRoutes = require("./routes/MeRoutes");
 const conversationRoutes = require("./routes/ConversationRoutes");
 const messageRoutes = require("./routes/MessageRoutes");
 const handleError = require("./middleware/handleError");
@@ -39,6 +40,7 @@ const friendRouter = require("./routes/FriendRoutes")(io);
 
     app.use("/api/auth", authRoutes);
     app.use("/api/users", userRoutes);
+    app.use("/api/me", meRoutes);
     app.use("/api/conversations", auth, conversationRoutes);
     app.use("/api/messages", auth, messageRoutes);
     app.use("/api/friends", auth, friendRouter);

@@ -23,8 +23,11 @@ const userValidate = {
         return true;
     },
     validatePassword: (password) => {
+        const passwordRegex =
+      /^(?=.*[A-Z])(?=.*[a-z])(?=.*\d)(?=.*[!@#$%^&*()_+=-]).{8,}$/;
         if (!password) return false;
-        if (password.length < 0 || password.length > 50) return false;
+        if (!passwordRegex.test(password)) return false;
+        if (password.length > 50) return false;
 
         return true;
     },

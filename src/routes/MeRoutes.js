@@ -1,8 +1,6 @@
 const express = require('express');
 const router = express.Router();
 const MeController = require('../controllers/MeController');
-const auth = require('../middleware/auth');
-const UserMiddleware = require('../middleware/UserMiddleware');
 const { upload } = require('../config/cloudinary');
 
 router.put('/profile', MeController.updateUser);

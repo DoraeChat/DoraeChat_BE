@@ -195,6 +195,7 @@ userSchema.statics.updateUser = async (_id, user) => {
     { $set: user },
     { new: true }
   );
+  if (!updatedUser) throw new NotFoundError("User");
   return updatedUser;
 };
 
@@ -205,6 +206,7 @@ userSchema.statics.deleteUser = async (_id) => {
     { $set: { isActived: false } },
     { new: true }
   );
+  if (!deletedUser) throw new NotFoundError("User");
   return deletedUser;
 };
 

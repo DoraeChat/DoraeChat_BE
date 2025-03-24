@@ -1,7 +1,7 @@
 const mongoose = require("mongoose");
 const Schema = mongoose.Schema;
 const ObjectId = mongoose.Types.ObjectId;
-const NotFoundError = require("../exception/NotFoundError");
+const NotFoundError = require("../exceptions/NotFoundError");
 
 const channelSchema = new Schema(
   {
@@ -28,17 +28,35 @@ channelSchema.statics.checkExistence = async (query, message) => {
 channelSchema.statics.getById = async (_id, message = "Channel") => {
   if (!ObjectId.isValid(_id))
     throw new NotFoundError(`${message} ID không hợp lệ`);
-  return Channel.checkExistence({ _id }, message);
+  return await Channel.checkExistence({ _id }, message);
 };
 
-channelSchema.statics.getByIdAndConversationId = async (
-  _id,
-  conversationId,
-  message = "Channel"
+channelSchema.statics.getAllChannelByConversationId = async (
+  conversationId
 ) => {
-  if (!ObjectId.isValid(_id) || !ObjectId.isValid(conversationId))
-    throw new NotFoundError(`${message} ID không hợp lệ`);
-  return Channel.checkExistence({ _id, conversationId }, message);
+  const channels = await Channel.find({ conversationId }).lean();
+  if (!channels) throw new NotFoundError("Channel");
+  return channels;
+};
+
+channelSchema.statics.addChannel = async (channel) => {
+  return await Channel.create(channel);
+};
+
+channelSchema.statics.updateChannel = async (channelId, channel) => {
+  const channelUpdated = await Channel.findOneAndUpdate(
+    { _id: channelId },
+    { $set: channel },
+    { new: true }
+  );
+  if (!channelUpdated) throw new NotFoundError("Channel");
+  return channelUpdated;
+};
+
+channelSchema.statics.deleteChannel = async (channelId) => {
+  const channelDelete = await Channel.findOneAndDelete({ _id: channelId });
+  if (!channelDelete) throw new NotFoundError("Channel");
+  return channelDelete;
 };
 
 const Channel = mongoose.model("Channel", channelSchema);

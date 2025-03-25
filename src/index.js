@@ -6,7 +6,6 @@ const authRoutes = require("./routes/AuthRoutes");
 const userRoutes = require("./routes/UserRoutes");
 const meRoutes = require("./routes/MeRoutes");
 const conversationRoutes = require("./routes/ConversationRoutes");
-const messageRoutes = require("./routes/MessageRoutes");
 const qrRoutes = require("./routes/QRRoutes");
 const channelRoutes = require("./routes/ChannelRoutes");
 
@@ -27,7 +26,6 @@ app.use(express.json({ limit: "50mb" }));
 const server = http.createServer(app);
 const io = socketIO(server);
 socket(io);
-
 app.use((err, req, res, next) => {
   console.error(err.stack);
   res.status(err.statusCode || 500).json({
@@ -36,7 +34,7 @@ app.use((err, req, res, next) => {
 });
 
 const friendRouter = require("./routes/FriendRoutes")(io);
-
+const messageRouter = require("./routes/MessageRoutes")(io);
 (async () => {
   try {
     await connection();
@@ -45,7 +43,7 @@ const friendRouter = require("./routes/FriendRoutes")(io);
     app.use("/api/users", userRoutes);
     app.use("/api/me", meRoutes);
     app.use("/api/conversations", auth, conversationRoutes);
-    app.use("/api/messages", auth, messageRoutes);
+    app.use("/api/messages", auth, messageRouter);
     app.use("/api/friends", auth, friendRouter);
     app.use("/api/qr", qrRoutes);
     app.use("/api/channels", channelRoutes);

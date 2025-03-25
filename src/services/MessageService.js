@@ -1,15 +1,38 @@
 const Message = require("../models/Message");
+const Conversation = require("../models/Conversation");
 
 class MessageService {
-  // Gửi tin nhắn mới
-  async sendMessage(userId, conversationId, content, type) {
+  // 🔹 Gửi tin nhắn văn bản
+  async sendTextMessage(userId, conversationId, content) {
+    if (!content.trim()) {
+      throw new Error("Message content cannot be empty");
+    }
+
+    // Kiểm tra xem cuộc trò chuyện có tồn tại không
+    const conversation = await Conversation.findById(conversationId);
+    if (!conversation) {
+      throw new Error("Conversation not found");
+    }
+
+    // Kiểm tra xem user có thuộc cuộc trò chuyện không
+    if (!conversation.members.includes(userId)) {
+      throw new Error("You are not a member of this conversation");
+    }
+
+    // Tạo tin nhắn mới
     const message = new Message({
       userId,
       conversationId,
       content,
-      type,
+      type: "TEXT",
     });
+
     await message.save();
+
+    // Cập nhật tin nhắn cuối cùng trong cuộc trò chuyện
+    conversation.lastMessageId = message._id;
+    await conversation.save();
+
     return message;
   }
 

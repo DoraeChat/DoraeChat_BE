@@ -2,6 +2,10 @@ const friendService = require('../services/FriendService');
 const redisDb = require('../config/redis');
 const CustomError = require('../exceptions/CustomError');
 
+// Add this at the top of the file
+const requestCache = new Map();
+const CACHE_TTL = 2000; // 2 seconds cache lifetime
+
 class FriendController {
     constructor(io) {
         this.io = io;
@@ -13,10 +17,26 @@ class FriendController {
 
     // [GET] /?name
     async getListFriends(req, res, next) {
+        console.log('getListFriends', req._id);
         const { _id } = req;
         const { name = '' } = req.query;
 
         try {
+            // Create a cache key based on user ID and search name
+            const cacheKey = `friends_${_id}_${name}`;
+
+            // Check if we have a recent response in cache
+            if (requestCache.has(cacheKey)) {
+                const { data, timestamp } = requestCache.get(cacheKey);
+                const now = Date.now();
+
+                // If cache is still fresh, return cached data
+                if (now - timestamp < CACHE_TTL) {
+                    console.log('Returning cached friends response');
+                    return res.json(data);
+                }
+            }
+
             const friends = await friendService.getList(name, _id);
 
             const friendsTempt = [];
@@ -42,9 +62,32 @@ class FriendController {
                 friendsTempt.push(friendResult);
             }
 
+            console.log('friendsTempt', friendsTempt);
+
+            // Store in cache
+            requestCache.set(cacheKey, {
+                data: friendsTempt,
+                timestamp: Date.now()
+            });
+
+            // Clean up old cache entries periodically
+            if (Math.random() < 0.1) { // 10% chance to clean up on each request
+                this.cleanupCache();
+            }
+
             res.json(friendsTempt);
         } catch (err) {
             next(err);
+        }
+    }
+
+    // Add this helper method to clean up old cache entries
+    cleanupCache() {
+        const now = Date.now();
+        for (const [key, { timestamp }] of requestCache.entries()) {
+            if (now - timestamp > CACHE_TTL) {
+                requestCache.delete(key);
+            }
         }
     }
 

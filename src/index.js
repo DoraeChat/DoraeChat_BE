@@ -50,7 +50,7 @@ const messageRouter = require("./routes/MessageRoutes")(io);
     app.use("/api/channels", channelRoutes);
     app.use("/api/pin-messages", pinMessageRoutes);
     app.use(handleError);
-    app.listen(port, () => {
+    server.listen(port, () => {
       console.log(`Backend Nodejs App listening on port ${port}`);
     });
   } catch (error) {

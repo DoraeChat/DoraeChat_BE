@@ -19,7 +19,7 @@ const handleLeave = async (userId) => {
             console.log(`User ${userId} went offline`);
         }
     } catch (error) {
-        console.log.error(`Error in handleLeave for user ${userId}:`, error);
+        console.error(`Error in handleLeave for user ${userId}:`, error);
     }
 };
 
@@ -40,7 +40,7 @@ const handleJoin = async (userId) => {
             console.log(`User ${userId} came online`);
         }
     } catch (error) {
-        console.log.error(`Error in handleJoin for user ${userId}:`, error);
+        console.error(`Error in handleJoin for user ${userId}:`, error);
     }
 };
 
@@ -60,7 +60,7 @@ const getUserOnline = async (userId, cb) => {
             cb({ isOnline: false, lastLogin: null });
         }
     } catch (error) {
-        console.log.error(`Error in getUserOnline for user ${userId}:`, error);
+        console.error(`Error in getUserOnline for user ${userId}:`, error);
         cb({ isOnline: false, lastLogin: null, error: true });
     }
 };
@@ -93,7 +93,7 @@ const updateLastView = async (conversationId, channelId, userId, socket) => {
 
         socket.to(`${conversationId}`).emit('user-last-view', lastViewData);
     } catch (error) {
-        console.log.error(`Error updating last view for conversation ${conversationId}, user ${userId}:`, error);
+        console.error(`Error updating last view for conversation ${conversationId}, user ${userId}:`, error);
     }
 };
 

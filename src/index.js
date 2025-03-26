@@ -8,6 +8,7 @@ const meRoutes = require("./routes/MeRoutes");
 const conversationRoutes = require("./routes/ConversationRoutes");
 const qrRoutes = require("./routes/QRRoutes");
 const channelRoutes = require("./routes/ChannelRoutes");
+const pinMessageRoutes = require("./routes/PinMessageRoutes");
 
 const handleError = require("./middleware/handleError");
 const cors = require("cors");
@@ -47,6 +48,7 @@ const messageRouter = require("./routes/MessageRoutes")(io);
     app.use("/api/friends", auth, friendRouter);
     app.use("/api/qr", qrRoutes);
     app.use("/api/channels", channelRoutes);
+    app.use("/api/pin-messages", pinMessageRoutes);
     app.use(handleError);
     app.listen(port, () => {
       console.log(`Backend Nodejs App listening on port ${port}`);

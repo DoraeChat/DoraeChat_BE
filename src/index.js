@@ -48,7 +48,7 @@ const messageRouter = require("./routes/MessageRoutes")(io);
     app.use("/api/qr", qrRoutes);
     app.use("/api/channels", channelRoutes);
     app.use(handleError);
-    app.listen(port, () => {
+    server.listen(port, () => {
       console.log(`Backend Nodejs App listening on port ${port}`);
     });
   } catch (error) {

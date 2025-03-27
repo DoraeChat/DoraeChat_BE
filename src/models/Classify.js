@@ -15,7 +15,7 @@ const classifySchema = new Schema({
         type: ObjectId
     },
     userId: {
-        type: ObjectId
+        type: Ob    jectId
     },
 }, { timestamps: true });
 

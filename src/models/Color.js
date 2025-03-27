@@ -1,7 +1,6 @@
 const mongoose = require('mongoose');
 const Schema = mongoose.Schema;
-const ObjectId = mongoose.Types.ObjectId;
-const NotFoundError = require('../exception/NotFoundError');
+const NotFoundError = require("../exceptions/NotFoundError");
 
 const colorSchema = new Schema({
     name: {
@@ -15,11 +14,20 @@ const colorSchema = new Schema({
 colorSchema.index({ name: 1 });
 colorSchema.index({ code: 1 });
 
-colorSchema.statics.checkById = async (colorId, message = 'Color') => {
-    if (!ObjectId.isValid(colorId)) throw new NotFoundError(`${message} ID không hợp lệ`);
+colorSchema.statics.getAll = async () => {
+    return await Color.find().lean();
+}
+
+colorSchema.statics.getById = async (colorId, message = 'Color') => {
     const isExists = await Color.findById(colorId).lean();
     if (!isExists) throw new NotFoundError(message);
     return isExists;
+};
+
+colorSchema.statics.getByName = async (name, message = 'Color') => {
+    const color = await Color.findOne({ name }).lean();
+    if (!color) throw new NotFoundError(message);
+    return color;
 };
 
 const Color = mongoose.model('Color', colorSchema);

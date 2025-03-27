@@ -87,12 +87,13 @@ class FriendService {
     }
 
     async acceptFriend(_id, senderId) {
+        console.log('acceptFriend', _id, senderId);
         await FriendRequest.checkByIds(senderId, _id);
 
         if (await Friend.existsByIds(_id, senderId))
             throw new CustomError('Friend exists');
 
-        // await FriendRequest.deleteOne({ receiverId, senderId: _id });
+        await FriendRequest.deleteOne({ senderId, receiverId: _id });
 
         const friend = new Friend({ userIds: [_id, senderId] });
         await friend.save();

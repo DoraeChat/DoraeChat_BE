@@ -34,7 +34,24 @@ class AuthService {
 
         return { message: 'Email hợp lệ để đăng ký' };
     }
+    randomColor() {
+        const colors = [
+            'red',
+            'blue',
+            'green',
+            'yellow',
+            'purple',
+            'pink',
+            'orange',
+            'teal',
+            'cyan',
+            'white',
+            'black'
+        ];
 
+        const randomIndex = Math.floor(Math.random() * colors.length);
+        return colors[randomIndex];
+    }
     async saveUserInfo(submitInformation) {
         try {
             // Kiểm tra toàn bộ thông tin đầu vào
@@ -57,7 +74,8 @@ class AuthService {
                 dateOfBirth: new Date(dateOfBirth),
                 genderBoolean,
                 bio,
-                isActived: false
+                isActived: false,
+                avatarColor: this.randomColor(),
             });
 
             await user.save();

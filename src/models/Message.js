@@ -198,6 +198,10 @@ const messageSchema = new Schema(
             type: [ObjectId],
             default: [],
           },
+          userCreated: {
+            type: ObjectId,
+            required: true,
+          },
         },
       ],
       required: false,
@@ -473,6 +477,198 @@ messageSchema.statics.getListFilesByTypeAndConversationId = async function (
     .lean()
     .skip(skip)
     .limit(limit);
+};
+
+messageSchema.statics.getVotesByConversationId = async function (
+  conversationId,
+  skip = 0,
+  limit = 20
+) {
+  const pipeline = [
+    {
+      $match: {
+        conversationId: new ObjectId(conversationId),
+        type: "VOTE",
+      },
+    },
+    ...getBaseGroupMessagePipeline(),
+    ...getPaginationStages(skip, limit),
+  ];
+
+  return await Message.aggregate(pipeline);
+};
+
+messageSchema.statics.createVote = async function (voteData) {
+  // Validate required fields
+  if (
+    !voteData.userId ||
+    !voteData.conversationId ||
+    !voteData.content ||
+    !voteData.options
+  ) {
+    throw new Error("Missing required vote fields");
+  }
+
+  // Ensure options are valid
+  if (!Array.isArray(voteData.options) || voteData.options.length === 0) {
+    throw new Error("Vote must have at least one option");
+  }
+
+  const newVote = new Message({
+    ...voteData,
+    type: "VOTE",
+    reacts: [],
+    tags: voteData.tags || [],
+    manipulatedUserIds: [],
+    deletedUserIds: [],
+    isDeleted: false,
+  });
+
+  return await newVote.save();
+};
+
+messageSchema.statics.deleteVote = async function (voteId, userId) {
+  // Verify vote exists
+  const vote = await Message.getById(voteId);
+
+  // Optional: Add check to ensure only the creator can delete
+  if (vote.userId.toString() !== userId) {
+    throw new Error("Only the vote creator can delete the vote");
+  }
+
+  return await Message.findByIdAndUpdate(
+    voteId,
+    {
+      $set: {
+        isDeleted: true,
+        deletedUserIds: [userId],
+      },
+    },
+    { new: true }
+  );
+};
+
+messageSchema.statics.addVoteOption = async function (
+  voteId,
+  userId,
+  newOption
+) {
+  // newOption is object { name, userIds, userCreated }
+  // Verify vote exists and is owned by the user
+  const vote = await Message.getById(voteId);
+
+  // Ensure the option has a name
+  if (!newOption.name) {
+    throw new Error("Option must have a name");
+  }
+
+  return await Message.findByIdAndUpdate(
+    voteId,
+    {
+      $push: {
+        options: {
+          _id: new ObjectId(),
+          name: newOption.name,
+          userIds: [],
+          userCreated: userId,
+        },
+      },
+    },
+    { new: true }
+  );
+};
+
+messageSchema.statics.removeVoteOption = async function (
+  voteId,
+  userId,
+  optionId
+) {
+  const vote = await Message.getById(voteId);
+
+  // Ensure optionId is valid
+  const optionIndex = vote.options.findIndex(
+    (option) => option._id.toString() === optionId
+  );
+  if (optionIndex === -1) {
+    throw new Error("Invalid option ID");
+  }
+
+  return await Message.findByIdAndUpdate(
+    voteId,
+    {
+      $pull: {
+        options: { _id: optionId },
+      },
+    },
+    { new: true }
+  );
+};
+
+messageSchema.statics.selectVoteOption = async function (
+  voteId,
+  userId,
+  optionId
+) {
+  const vote = await Message.getById(voteId);
+
+  // Ensure optionId is valid
+  const optionIndex = vote.options.findIndex(
+    (option) => option._id.toString() === optionId
+  );
+  if (optionIndex === -1) {
+    throw new Error("Invalid option ID");
+  }
+
+  // Check if user has already selected this option
+  const currentOption = vote.options[optionIndex];
+  if (currentOption.userIds.includes(userId)) {
+    return vote;
+  }
+
+  // Remove user from other options first
+  const updatedOptions = vote.options.map((option) => ({
+    name: option.name,
+    userIds: option.userIds.filter((id) => id.toString() !== userId),
+  }));
+
+  // Add user to the selected option
+  updatedOptions[optionIndex].userIds.push(userId);
+
+  return await Message.findByIdAndUpdate(
+    voteId,
+    { $set: { options: updatedOptions } },
+    { new: true }
+  );
+};
+
+messageSchema.statics.deselectVoteOption = async function (
+  voteId,
+  userId,
+  optionId
+) {
+  const vote = await Message.getById(voteId);
+
+  // Ensure optionId is valid
+  const optionIndex = vote.options.findIndex(
+    (option) => option._id.toString() === optionId
+  );
+  if (optionIndex === -1) {
+    throw new Error("Invalid option ID");
+  }
+
+  const updatedOptions = vote.options.map((option, index) => ({
+    name: option.name,
+    userIds:
+      index === optionIndex
+        ? option.userIds.filter((id) => id.toString() !== userId)
+        : option.userIds,
+  }));
+
+  return await Message.findByIdAndUpdate(
+    voteId,
+    { $set: { options: updatedOptions } },
+    { new: true }
+  );
 };
 
 const Message = mongoose.model("message", messageSchema);

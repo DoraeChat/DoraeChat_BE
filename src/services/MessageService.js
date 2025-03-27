@@ -36,10 +36,29 @@ class MessageService {
     return message;
   }
 
-  // Lấy danh sách tin nhắn theo hội thoại
-  async getMessagesByConversationId(conversationId) {
-    return await Message.find({ conversationId })
+  // Lấy danh sách tin nhắn theo hội thoại giới hạn 20 tin nhắn
+  async getMessagesByConversationId(
+    conversationId,
+    userId,
+    skip = 0,
+    limit = 20
+  ) {
+    const conversation = await Conversation.findById(conversationId);
+    if (!conversation) {
+      throw new Error("Conversation not found");
+    }
+
+    if (!conversation.members.includes(userId)) {
+      throw new Error("You are not a member of this conversation");
+    }
+
+    return await Message.find({
+      conversationId,
+      deletedUserIds: { $nin: [userId] },
+    })
       .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit)
       .lean();
   }
 

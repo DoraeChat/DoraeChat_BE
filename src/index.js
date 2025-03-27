@@ -24,15 +24,14 @@ app.use(cors());
 app.use(express.urlencoded({ extended: true, limit: "50mb" }));
 app.use(express.json({ limit: "50mb" }));
 
-
-const setupSocket = require('./socket');
+const setupSocket = require("./socket");
 
 const server = http.createServer(app);
 
 const { io, socketHandler } = setupSocket(server);
 
-app.set('io', io);
-app.set('socketHandler', socketHandler);
+app.set("io", io);
+app.set("socketHandler", socketHandler);
 
 const friendRouter = require("./routes/FriendRoutes")(io);
 const messageRouter = require("./routes/MessageRoutes")(io);

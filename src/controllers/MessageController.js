@@ -30,11 +30,20 @@ class MessageController {
     }
   }
 
-  async getMessages(req, res) {
+  // [GET] /api/message/:conversationId - Lấy danh sách tin nhắn theo conversationId
+  async getMessagesByConversation(req, res) {
     try {
       const { conversationId } = req.params;
+      const userId = req._id; //userId được lấy từ middleware xác thực
+
+      if (!conversationId) {
+        return res.status(400).json({ message: "Conversation ID is required" });
+      }
+
+      // Gọi phương thức từ MessageService để lấy danh sách tin nhắn
       const messages = await MessageService.getMessagesByConversationId(
-        conversationId
+        conversationId,
+        userId
       );
       res.status(200).json(messages);
     } catch (error) {

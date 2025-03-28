@@ -63,6 +63,15 @@ classifySchema.statics.deleteClassify = async function (classifyId) {
   return classifyRemoved;
 };
 
+classifySchema.statics.getById = async function (classifyId) {
+  console.log(classifyId);
+  const classify = await Classify.findOne({ _id: classifyId }).lean();
+  if (!classify) {
+    throw new NotFoundError("Classify");
+  }
+  return classify;
+};
+
 classifySchema.statics.addConversationToClassify = async function (
   classifyId,
   conversationId

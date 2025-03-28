@@ -1,7 +1,11 @@
 const mongoose = require("mongoose");
+const redisClient = require("../config/redis");
 const Schema = mongoose.Schema;
 const ObjectId = mongoose.Types.ObjectId;
 const NotFoundError = require("../exceptions/NotFoundError");
+
+const MESSAGE_CACHE_PREFIX = 'message:';
+const CONVERSATION_MESSAGES_PREFIX = 'conv_msgs:';
 
 const commonLookupStages = {
   userLookup: {
@@ -311,8 +315,17 @@ messageSchema.statics.countUnread = async function (time, conversationId) {
 };
 
 messageSchema.statics.getById = async function (_id, message = "Message") {
+  const cacheKey = `${MESSAGE_CACHE_PREFIX}${_id}`;
+
+  // Thử lấy từ cache trước
+  const cachedMessage = await redisClient.get(cacheKey);
+  if (cachedMessage) {
+    return cachedMessage;
+  }
+
   const messageResult = await Message.findById(_id).lean();
   if (!messageResult) throw new NotFoundError(message);
+  await redisClient.set(cacheKey, messageResult, 3600); // Cache trong 1 giờ 
   return messageResult;
 };
 

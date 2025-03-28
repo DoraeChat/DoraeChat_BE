@@ -59,6 +59,89 @@ async function initializeRedis() {
   }
 }
 
+ /**
+   * Thêm phần tử vào Sorted Set (ZSET)
+   * @param {string} key - Tên key
+   * @param {number} score - Điểm để sắp xếp
+   * @param {string} member - Giá trị thành viên
+   * @returns {Promise<number>} - Số phần tử được thêm mới (không tính updated)
+   */
+ async function zadd(key, score, member) {
+  try {
+    return await this.client.zadd(key, score, member);
+  } catch (err) {
+    console.error('Redis zadd error:', err);
+    return 0;
+  }
+}
+
+/**
+ * Xóa phần tử trong Sorted Set theo rank
+ * @param {string} key - Tên key
+ * @param {number} start - Vị trí bắt đầu
+ * @param {number} stop - Vị trí kết thúc
+ * @returns {Promise<number>} - Số phần tử bị xóa
+ */
+async function zremrangebyrank(key, start, stop) {
+  try {
+    return await this.client.zremrangebyrank(key, start, stop);
+  } catch (err) {
+    console.error('Redis zremrangebyrank error:', err);
+    return 0;
+  }
+}
+
+/**
+ * Đặt thời gian sống (TTL) cho key
+ * @param {string} key - Tên key
+ * @param {number} seconds - Thời gian sống (giây)
+ * @returns {Promise<boolean>} - True nếu thành công
+ */
+async function expire(key, seconds) {
+  try {
+    const result = await this.client.expire(key, seconds);
+    return result === 1;
+  } catch (err) {
+    console.error('Redis expire error:', err);
+    return false;
+  }
+}
+
+/**
+ * Lấy danh sách member trong Sorted Set theo khoảng score
+ * @param {string} key - Tên key
+ * @param {number} min - Điểm tối thiểu
+ * @param {number} max - Điểm tối đa
+ * @param {Object} options - { LIMIT: { offset, count } }
+ * @returns {Promise<string[]>} - Mảng các member
+ */
+async function zrangebyscore(key, min, max, options = {}) {
+  try {
+    const args = [key, min, max];
+    if (options.LIMIT) {
+      args.push('LIMIT', options.LIMIT.offset, options.LIMIT.count);
+    }
+    return await this.client.zrangebyscore(...args);
+  } catch (err) {
+    console.error('Redis zrangebyscore error:', err);
+    return [];
+  }
+}
+
+/**
+ * Lấy số phần tử trong Sorted Set
+ * @param {string} key - Tên key
+ * @returns {Promise<number>} - Số phần tử
+ */
+async function zcard(key) {
+  try {
+    return await this.client.zcard(key);
+  } catch (err) {
+    console.error('Redis zcard error:', err);
+    return 0;
+  }
+}
+
 initializeRedis();
 
 module.exports = {
@@ -67,4 +150,9 @@ module.exports = {
   exists,
   del,
   flush,
+  zadd,
+  zremrangebyrank,
+  expire,
+  zrangebyscore,
+  zcard,
 };

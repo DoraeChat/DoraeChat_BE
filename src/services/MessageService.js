@@ -32,7 +32,10 @@ class MessageService {
       type: "TEXT",
     });
 
-    await message.save();
+    const newMessage = await message.save();
+
+    // Cập nhật cache
+    await syncMessageCache(conversationId, [newMessage]);
 
     // Cập nhật tin nhắn cuối cùng trong cuộc trò chuyện
     conversation.lastMessageId = message._id;
@@ -129,10 +132,9 @@ class MessageService {
       const cursorKey = `messages:${conversationId}:cursor:${new Date(
         msg.createdAt
       ).getTime()}`;
-      return redis.set(
+      return redisClient.set(
         cursorKey,
         JSON.stringify([msg]), // Lưu mảng 1 phần tử để tái sử dụng code
-        "EX",
         300 // TTL 5 phút
       );
     });
@@ -140,16 +142,16 @@ class MessageService {
     // Thực thi đồng thời tất cả cập nhật cache
     await Promise.all([
       ...individualCachePromises,
-      redis.zadd(zsetKey, ...zsetUpdates),
+      redisClient.zadd(zsetKey, ...zsetUpdates),
       ...cursorCachePromises,
     ]);
 
     // 4. Giới hạn kích thước Sorted Set (tránh memory leak)
     const maxMessagesInCache = 1000;
-    await redis.zremrangebyrank(zsetKey, 0, -maxMessagesInCache - 1);
+    await redisClient.zremrangebyrank(zsetKey, 0, -maxMessagesInCache - 1);
 
     // 5. Cập nhật TTL cho Sorted Set
-    await redis.expire(zsetKey, 3600 * 24 * 7); // TTL 1 tuần
+    await redisClient.expire(zsetKey, 3600 * 24 * 7); // TTL 1 tuần
   }
 
   // Lấy tin nhắn theo ID

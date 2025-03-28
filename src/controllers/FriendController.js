@@ -1,14 +1,16 @@
 const friendService = require('../services/FriendService');
-const redisDb = require('../config/redis');
 const CustomError = require('../exceptions/CustomError');
+const MeService = require('../services/MeService');
+const SOCKET_EVENTS = require('../constants/socketEvents');
 
 // Add this at the top of the file
 const requestCache = new Map();
-const CACHE_TTL = 2000; // 2 seconds cache lifetime
+const CACHE_TTL = 1000;
 
 class FriendController {
     constructor(io) {
         this.io = io;
+        this.acceptFriend = this.acceptFriend.bind(this);
         this.sendFriendInvite = this.sendFriendInvite.bind(this);
         this.deleteFriend = this.deleteFriend.bind(this);
         this.deleteFriendInvite = this.deleteFriendInvite.bind(this);
@@ -22,58 +24,16 @@ class FriendController {
         const { name = '' } = req.query;
 
         try {
-            // Create a cache key based on user ID and search name
-            const cacheKey = `friends_${_id}_${name}`;
-
-            // Check if we have a recent response in cache
-            if (requestCache.has(cacheKey)) {
-                const { data, timestamp } = requestCache.get(cacheKey);
-                const now = Date.now();
-
-                // If cache is still fresh, return cached data
-                if (now - timestamp < CACHE_TTL) {
-                    console.log('Returning cached friends response');
-                    return res.json(data);
-                }
-            }
-
             const friends = await friendService.getList(name, _id);
 
             const friendsTempt = [];
             for (const friendEle of friends) {
                 const friendResult = { ...friendEle };
-
-                const friendId = friendEle._id;
-                try {
-                    const cachedUser = await redisDb.get(friendId + '');
-                    if (cachedUser) {
-                        friendResult.isOnline = cachedUser.isOnline;
-                        friendResult.lastLogin = cachedUser.lastLogin;
-                    } else {
-                        friendResult.isOnline = false;
-                        friendResult.lastLogin = null;
-                    }
-                } catch (redisError) {
-                    console.error('Redis error:', redisError);
-                    friendResult.isOnline = false;
-                    friendResult.lastLogin = null;
-                }
-
                 friendsTempt.push(friendResult);
             }
 
             console.log('friendsTempt', friendsTempt);
 
-            // Store in cache
-            requestCache.set(cacheKey, {
-                data: friendsTempt,
-                timestamp: Date.now()
-            });
-
-            // Clean up old cache entries periodically
-            if (Math.random() < 0.1) { // 10% chance to clean up on each request
-                this.cleanupCache();
-            }
 
             res.json(friendsTempt);
         } catch (err) {
@@ -81,7 +41,6 @@ class FriendController {
         }
     }
 
-    // Add this helper method to clean up old cache entries
     cleanupCache() {
         const now = Date.now();
         for (const [key, { timestamp }] of requestCache.entries()) {
@@ -98,7 +57,7 @@ class FriendController {
         try {
             await friendService.deleteFriend(_id, userId);
 
-            this.io.to(userId + '').emit('deleted-friend', _id);
+            this.io.to(userId + '').emit(SOCKET_EVENTS.DELETED_FRIEND, _id);
 
             res.status(204).json();
         } catch (err) {
@@ -113,7 +72,7 @@ class FriendController {
 
         try {
             await friendService.deleteFriendInvite(_id, userId);
-            this.io.to(userId + '').emit('deleted-friend-invite', _id);
+            this.io.to(userId + '').emit(SOCKET_EVENTS.DELETED_FRIEND_INVITE, _id);
 
             res.status(204).json();
         } catch (err) {
@@ -129,18 +88,15 @@ class FriendController {
             await friendService.sendFriendInvite(_id, userId);
 
             try {
-                const cachedUser = await redisDb.get(_id);
-                if (cachedUser) {
-                    const { name, avatar } = cachedUser;
-                    this.io
-                        .to(userId + '')
-                        .emit('send-friend-invite', { _id, name, avatar });
-                } else {
-                    this.io.to(userId + '').emit('send-friend-invite', { _id });
-                }
-            } catch (redisError) {
-                console.error('Redis error:', redisError);
-                this.io.to(userId + '').emit('send-friend-invite', { _id });
+                // Fix: friendId is not defined, should be _id
+                const user = await MeService.getById(_id);
+                const { name, avatar } = user;
+                this.io
+                    .to(userId + '')
+                    .emit(SOCKET_EVENTS.SEND_FRIEND_INVITE, { _id, name, avatar });
+            } catch (error) {
+                console.error('Error getting user data:', error);
+                this.io.to(userId + '').emit(SOCKET_EVENTS.SEND_FRIEND_INVITE, { _id });
             }
 
             res.status(201).json();
@@ -156,8 +112,73 @@ class FriendController {
 
         try {
             await friendService.deleteInviteWasSend(_id, userId);
-            this.io.to(userId + '').emit('deleted-invite-was-send', _id);
+            this.io.to(userId + '').emit(SOCKET_EVENTS.DELETED_INVITE_WAS_SEND, _id);
             res.status(204).json();
+        } catch (err) {
+            next(err);
+        }
+    }
+
+    // [GET] /invites
+    async getListFriendInvites(req, res, next) {
+        const { _id } = req;
+        try {
+            const friendInvites = await friendService.getListInvites(_id);
+
+            res.json(friendInvites);
+        } catch (err) {
+            next(err);
+        }
+    }
+
+
+    // [POST] /:userId
+    async acceptFriend(req, res, next) {
+        const { _id } = req;
+        const { userId } = req.params;
+        console.log('acceptFriend', _id, userId);
+        try {
+            const result = await friendService.acceptFriend(_id, userId);
+
+            const user = await MeService.getById(_id);
+            const { name, avatar } = user;
+            // this.io
+            //     .to(userId + '')
+            //     .emit(SOCKET_EVENTS.ACCEPT_FRIEND, { _id, name, avatar });
+
+            res.status(201).json(result);
+        } catch (err) {
+            next(err);
+        }
+    }
+
+    // [GET] /invites/me
+    async getListFriendInvitesWasSend(req, res, next) {
+        const { _id } = req;
+        try {
+            const friendInvites = await friendService.getListInvitesWasSend(
+                _id
+            );
+            console.log('friendInvites', friendInvites);
+            res.json(friendInvites);
+        } catch (err) {
+            next(err);
+        }
+    }
+
+    // [GET] /suggest
+    async getSuggestFriends(req, res, next) {
+        const { _id } = req;
+        const { page = 0, size = 12 } = req.query;
+
+        try {
+            const suggestFriends = await friendService.getSuggestFriends(
+                _id,
+                parseInt(page),
+                parseInt(size)
+            );
+
+            res.json(suggestFriends);
         } catch (err) {
             next(err);
         }

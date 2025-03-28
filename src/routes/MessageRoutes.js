@@ -6,6 +6,7 @@ const MessageRouter = (io) => {
   const messageController = new MessageController(io);
 
   router.post("/text", messageController.sendTextMessage);
+  router.get("/:conversationId", messageController.getMessagesByConversation);
 
   return router;
 };

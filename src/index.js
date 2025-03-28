@@ -10,7 +10,7 @@ const qrRoutes = require("./routes/QRRoutes");
 const channelRoutes = require("./routes/ChannelRoutes");
 const pinMessageRoutes = require("./routes/PinMessageRoutes");
 const voteRoutes = require("./routes/VoteRoutes");
-const colorRoutes = require("./routes/ColorRoutes");  
+const colorRoutes = require("./routes/ColorRoutes");
 const classifyRoutes = require("./routes/ClassifyRoutes");
 
 const handleError = require("./middleware/handleError");
@@ -20,22 +20,18 @@ const port = process.env.PORT || 3001;
 
 const auth = require("./middleware/auth");
 
-const socketIO = require("socket.io");
-const socket = require("./config/socket");
-
 app.use(cors());
 app.use(express.urlencoded({ extended: true, limit: "50mb" }));
 app.use(express.json({ limit: "50mb" }));
 
+const setupSocket = require("./socket");
+
 const server = http.createServer(app);
-const io = socketIO(server);
-socket(io);
-app.use((err, req, res, next) => {
-  console.error(err.stack);
-  res.status(err.statusCode || 500).json({
-    error: err.message || "Internal Server Error",
-  });
-});
+
+const { io, socketHandler } = setupSocket(server);
+
+app.set("io", io);
+app.set("socketHandler", socketHandler);
 
 const friendRouter = require("./routes/FriendRoutes")(io);
 const messageRouter = require("./routes/MessageRoutes")(io);
@@ -54,7 +50,7 @@ const messageRouter = require("./routes/MessageRoutes")(io);
     app.use("/api/pin-messages", pinMessageRoutes);
     app.use("/api/votes", voteRoutes);
     app.use("/api/colors", colorRoutes);
-    app.use("/api/classifies", classifyRoutes); 
+    app.use("/api/classifies", classifyRoutes);
     app.use(handleError);
     server.listen(port, () => {
       console.log(`Backend Nodejs App listening on port ${port}`);

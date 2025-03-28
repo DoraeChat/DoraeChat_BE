@@ -2,10 +2,6 @@ const Message = require("../models/Message");
 const Conversation = require("../models/Conversation");
 const redisClient = require("../config/redis");
 
-const BASE_KEY = `messages:${conversationId}`;
-const CURSOR_KEY = `${BASE_KEY}:cursor:${beforeTimestamp || "latest"}`; // Cho infinite scroll
-const PAGE_KEY = `${BASE_KEY}:page:${skip}:${limit}`; // Cho phân trang truyền thống
-
 class MessageService {
   // 🔹 Gửi tin nhắn văn bản
   async sendTextMessage(userId, conversationId, content) {
@@ -65,7 +61,7 @@ class MessageService {
       : `messages:${conversationId}:page:${skip}:${limit}`;
 
     // 3. Thử lấy từ cache trước
-    const cachedMessages = await redis.get(cacheKey);
+    const cachedMessages = await redisClient.get(cacheKey);
     if (cachedMessages) {
       return JSON.parse(cachedMessages);
     }
@@ -92,7 +88,7 @@ class MessageService {
       await redisClient.set(cacheKey, JSON.stringify(messages), 300); // 5 phút
 
       // Đồng bộ cache phụ trợ
-      await syncMessageCache(conversationId, messages);
+      await this.syncMessageCache(conversationId, messages);
     }
 
     return messages;

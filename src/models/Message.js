@@ -145,7 +145,7 @@ const commonProjections = {
 
 const messageSchema = new Schema(
   {
-    userId: {
+    memberId: {
       type: ObjectId,
       required: true,
       index: true,
@@ -194,11 +194,11 @@ const messageSchema = new Schema(
       type: [
         {
           name: String,
-          userIds: {
+          memberIds: {
             type: [ObjectId],
             default: [],
           },
-          userCreated: {
+          memberCreated: {
             type: ObjectId,
             required: true,
           },
@@ -501,7 +501,7 @@ messageSchema.statics.getVotesByConversationId = async function (
 messageSchema.statics.createVote = async function (voteData) {
   // Validate required fields
   if (
-    !voteData.userId ||
+    !voteData.memberId ||
     !voteData.conversationId ||
     !voteData.content ||
     !voteData.options
@@ -527,25 +527,16 @@ messageSchema.statics.createVote = async function (voteData) {
   return await newVote.save();
 };
 
-messageSchema.statics.deleteVote = async function (voteId, userId) {
+messageSchema.statics.deleteVote = async function (voteId, memberId) {
   // Verify vote exists
   const vote = await Message.getById(voteId);
 
   // Optional: Add check to ensure only the creator can delete
-  if (vote.userId.toString() !== userId) {
+  if (vote.memberId.toString() !== memberId) {
     throw new Error("Only the vote creator can delete the vote");
   }
 
-  return await Message.findByIdAndUpdate(
-    voteId,
-    {
-      $set: {
-        isDeleted: true,
-        deletedUserIds: [userId],
-      },
-    },
-    { new: true }
-  );
+  return await Message.findByIdAndDelete(voteId, { new: false });
 };
 
 messageSchema.statics.addVoteOption = async function (

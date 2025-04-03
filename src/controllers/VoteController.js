@@ -1,4 +1,3 @@
-const { model } = require('mongoose');
 const VoteService = require('../services/VoteService');
 
 const VoteController = {

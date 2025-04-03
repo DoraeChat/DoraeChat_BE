@@ -1,4 +1,5 @@
 const Message = require('../models/Message');
+const Conversation = require('../models/Conversation');
 
 const VoteService = {
     async getVotesByConversationId(conversationId) {
@@ -6,11 +7,16 @@ const VoteService = {
     },
 
     async addVote(vote) { // vote is message
+        const { conversationId, memberId } = vote;
+        const conversation = await Conversation.getById(conversationId);
+        if (!conversation) throw new Error('Conversation not found');
+        if (!conversation.members.includes(memberId)) throw new Error('User not in conversation');
+
         return await Message.createVote(vote);
     },
 
-    async deleteVote(voteId, userId) {
-        return await Message.removeVote(voteId, userId);
+    async deleteVote(voteId, memberId) {
+        return await Message.deleteVote(voteId, memberId);
     },
 
     async addVoteOption(voteId, userId, newOption) {

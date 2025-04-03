@@ -88,7 +88,10 @@ const ConversationService = {
   // 🔹 Đổi tên nhóm hội thoại
   async updateGroupName(conversationId, newName, userId) {
     const conversation = await Conversation.findById(conversationId);
-
+    const member = await Member.findOne({
+      conversationId,
+      userId,
+    });
     if (!conversation) {
       throw new Error("Conversation not found");
     }
@@ -99,8 +102,8 @@ const ConversationService = {
 
     // Kiểm tra xem user có phải là leader hoặc quản trị viên không
     if (
-      conversation.leaderId.toString() !== userId &&
-      !conversation.managerIds.includes(userId)
+      conversation.leaderId.toString() !== member._id &&
+      !conversation.managerIds.includes(member._id)
     ) {
       throw new Error("You do not have permission to rename this group");
     }
@@ -111,11 +114,6 @@ const ConversationService = {
   // Lấy hội thoại theo ID
   async getConversationById(conversationId) {
     return await Conversation.getById(conversationId);
-  },
-
-  // Kiểm tra hội thoại cá nhân giữa hai user
-  async existsIndividualConversation(userId1, userId2) {
-    return await Conversation.existsIndividualConversation(userId1, userId2);
   },
   async getByIdAndUserId(conversationId, userId) {
     return await Conversation.getByIdAndUserId(conversationId, userId);

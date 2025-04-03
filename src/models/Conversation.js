@@ -1,5 +1,6 @@
 const mongoose = require("mongoose");
 const Schema = mongoose.Schema;
+const Member = require("./Member");
 const ObjectId = mongoose.Types.ObjectId;
 const NotFoundError = require("../exceptions/NotFoundError");
 
@@ -34,8 +35,12 @@ const conversationSchema = new Schema(
 conversationSchema.index({ name: "text" });
 
 conversationSchema.statics.getListByUserId = async (userId) => {
+  // Tìm tất cả Member của userId
+  const members = await Member.find({ userId }).lean();
+  const memberIds = members.map((m) => m._id);
+
   return Conversation.find({
-    members: { $in: [userId] },
+    members: { $in: memberIds }, // Tìm Conversation chứa memberId
   })
     .sort({ updatedAt: -1 })
     .lean();
@@ -139,11 +144,13 @@ conversationSchema.statics.existsIndividualConversation = async (
   userId1,
   userId2
 ) => {
+  const member1 = await Member.findOne({ userId: userId1 }).lean();
+  const member2 = await Member.findOne({ userId: userId2 }).lean();
+  if (!member1 || !member2) return null;
+
   const conversation = await Conversation.findOne({
+    members: { $all: [member1._id, member2._id] },
     type: false,
-    members: {
-      $all: [userId1, userId2],
-    },
   }).lean();
   return conversation ? conversation._id : null;
 };
@@ -153,11 +160,13 @@ conversationSchema.statics.getByIdAndUserId = async (
   userId,
   message = "Conversation"
 ) => {
+  // Tìm memberId từ userId
+  const member = await Member.findOne({ conversationId: _id, userId }).lean();
+  if (!member) throw new NotFoundError(message);
+
   const conversation = await Conversation.findOne({
     _id,
-    members: {
-      $in: [userId],
-    },
+    members: { $in: [member._id] }, // Kiểm tra memberId
   }).lean();
   if (!conversation) throw new NotFoundError(message);
   return conversation;

@@ -37,6 +37,7 @@ class MessageService {
 
     // Cập nhật tin nhắn cuối cùng trong cuộc trò chuyện
     conversation.lastMessageId = message._id;
+
     await conversation.save();
 
     return message;

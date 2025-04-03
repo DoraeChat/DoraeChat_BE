@@ -1,5 +1,4 @@
 const { createClient } = require("@redis/client");
-const Redis = require("ioredis");
 
 const client = createClient({
   url: `redis://${process.env.REDIS_HOST}:${process.env.REDIS_PORT}`, // URL kết nối Redis
@@ -23,7 +22,7 @@ const set = async (key, value, expirationSeconds = 600) => {
 
 const get = async (key) => {
   try {
-    const data = await this.client.get(key);
+    const data = await client.get(key);
     return data ? JSON.parse(data) : null;
   } catch (err) {
     console.error("Redis get error:", err);
@@ -37,7 +36,7 @@ const exists = async (key) => {
 
 const del = async (key) => {
   try {
-    await this.client.del(key);
+    await client.del(key);
   } catch (err) {
     console.error("Redis del error:", err);
   }
@@ -45,7 +44,7 @@ const del = async (key) => {
 
 const flush = async () => {
   try {
-    await this.client.flushdb();
+    await client.flushdb();
   } catch (err) {
     console.error("Redis flush error:", err);
   }
@@ -59,16 +58,16 @@ async function initializeRedis() {
   }
 }
 
- /**
-   * Thêm phần tử vào Sorted Set (ZSET)
-   * @param {string} key - Tên key
-   * @param {number} score - Điểm để sắp xếp
-   * @param {string} member - Giá trị thành viên
-   * @returns {Promise<number>} - Số phần tử được thêm mới (không tính updated)
-   */
- async function zadd(key, score, member) {
+/**
+  * Thêm phần tử vào Sorted Set (ZSET)
+  * @param {string} key - Tên key
+  * @param {number} score - Điểm để sắp xếp
+  * @param {string} member - Giá trị thành viên
+  * @returns {Promise<number>} - Số phần tử được thêm mới (không tính updated)
+  */
+async function zadd(key, score, member) {
   try {
-    return await this.client.zadd(key, score, member);
+    return await client.zadd(key, score, member);
   } catch (err) {
     console.error('Redis zadd error:', err);
     return 0;
@@ -84,7 +83,7 @@ async function initializeRedis() {
  */
 async function zremrangebyrank(key, start, stop) {
   try {
-    return await this.client.zremrangebyrank(key, start, stop);
+    return await client.zremrangebyrank(key, start, stop);
   } catch (err) {
     console.error('Redis zremrangebyrank error:', err);
     return 0;
@@ -99,7 +98,7 @@ async function zremrangebyrank(key, start, stop) {
  */
 async function expire(key, seconds) {
   try {
-    const result = await this.client.expire(key, seconds);
+    const result = await client.expire(key, seconds);
     return result === 1;
   } catch (err) {
     console.error('Redis expire error:', err);
@@ -121,7 +120,7 @@ async function zrangebyscore(key, min, max, options = {}) {
     if (options.LIMIT) {
       args.push('LIMIT', options.LIMIT.offset, options.LIMIT.count);
     }
-    return await this.client.zrangebyscore(...args);
+    return await client.zrangebyscore(...args);
   } catch (err) {
     console.error('Redis zrangebyscore error:', err);
     return [];
@@ -135,7 +134,7 @@ async function zrangebyscore(key, min, max, options = {}) {
  */
 async function zcard(key) {
   try {
-    return await this.client.zcard(key);
+    return await client.zcard(key);
   } catch (err) {
     console.error('Redis zcard error:', err);
     return 0;

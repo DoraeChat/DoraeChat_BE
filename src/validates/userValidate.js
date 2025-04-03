@@ -24,7 +24,7 @@ const userValidate = {
     },
     validatePassword: (password) => {
         const passwordRegex =
-      /^(?=.*[A-Z])(?=.*[a-z])(?=.*\d)(?=.*[!@#$%^&*()_+=-]).{8,}$/;
+            /^(?=.*[A-Z])(?=.*[a-z])(?=.*\d)(?=.*[!@#$%^&*()_+=-]).{8,}$/;
         if (!password) return false;
         if (!passwordRegex.test(password)) return false;
         if (password.length > 50) return false;
@@ -69,7 +69,7 @@ const userValidate = {
     },
 
     validateSubmitInfo: function (submitInformation) {
-        const { contact, firstName, lastName, password, dateOfBirth, gender, bio } = submitInformation;
+        const { contact, firstName, lastName, password, dateOfBirth, gender } = submitInformation;
         if (!this.validateUsername(contact)) throw new CustomError('Contact invalid', 400);
         if (!this.validatePassword(password)) throw new CustomError('Password invalid', 400);
         if (!this.validateDateOfBirth(dateOfBirth)) throw new CustomError('Date of birth invalid', 400);
@@ -77,7 +77,6 @@ const userValidate = {
             throw new CustomError('First name invalid', 400);
         if (!lastName || lastName.length < 0 || lastName.length > 50)
             throw new CustomError('Last name invalid', 400);
-        if (!bio || bio.length < 0 || bio.length > 500) throw new CustomError('Bio invalid', 400);
         return true;
     }
 };

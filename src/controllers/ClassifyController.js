@@ -26,6 +26,12 @@ const ClassifyController = {
         res.json(classifyRemoved);
     },
 
+    async getById(req, res) {
+        const classifyId = req.params.classifyId;
+        const classify = await ClassifyService.getById(classifyId);
+        res.json(classify);
+    },
+
     async addConversationToClassify(req, res) {
         const classifyId = req.params.classifyId;
         const conversationId = req.params.conversationId;

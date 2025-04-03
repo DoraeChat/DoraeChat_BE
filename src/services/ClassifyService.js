@@ -23,6 +23,10 @@ const ClassifyService = {
 
     async removeConversationFromClassify(classifyId, conversationId) {
         return await Classify.removeConversationFromClassify(classifyId, conversationId);
+    },
+
+    async getById(classifyId) {
+        return await Classify.getById(classifyId);
     }
 };
 

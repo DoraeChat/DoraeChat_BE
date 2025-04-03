@@ -407,8 +407,8 @@ messageSchema.statics.getListByChannelIdAndUserId = async function (
   const pipeline = [
     {
       $match: {
-        channelId: ObjectId(channelId),
-        deletedUserIds: { $nin: [ObjectId(userId)] },
+        channelId: new ObjectId(channelId),
+        deletedUserIds: { $nin: [new ObjectId(userId)] },
       },
     },
     ...getBaseGroupMessagePipeline(),

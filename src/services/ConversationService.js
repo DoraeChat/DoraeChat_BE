@@ -70,6 +70,9 @@ const ConversationService = {
   async existsIndividualConversation(userId1, userId2) {
     return await Conversation.existsIndividualConversation(userId1, userId2);
   },
+  async getByIdAndUserId(conversationId, userId) {
+    return await Conversation.getByIdAndUserId(conversationId, userId);
+  },
 };
 
 module.exports = ConversationService;

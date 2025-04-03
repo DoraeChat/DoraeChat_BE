@@ -7,6 +7,7 @@ const MessageRouter = (io) => {
 
   router.post("/text", messageController.sendTextMessage);
   router.get("/:conversationId", messageController.getMessagesByConversation);
+  router.get("/channel/:channelId", messageController.getMessagesByChannelId);
 
   return router;
 };

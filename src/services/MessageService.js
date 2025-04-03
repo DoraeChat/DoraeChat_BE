@@ -1,6 +1,8 @@
 const Message = require("../models/Message");
 const Conversation = require("../models/Conversation");
+const Channel = require("../models/Channel");
 const redisClient = require("../config/redis");
+const SOCKET_EVENTS = require("../constants/socketEvents");
 
 class MessageService {
   // 🔹 Gửi tin nhắn văn bản
@@ -85,6 +87,35 @@ class MessageService {
     }
 
     return messages;
+  }
+  // Lấy danh sách tin nhắn theo channelId
+  async getMessagesByChannelId(channelId, userId, skip, limit) {
+    try {
+      // Kiểm tra xem channelId có hợp lệ không
+      const channel = await Channel.getById(channelId);
+      if (!channel) {
+        throw new Error("Channel not found");
+      }
+      // Kiểm tra xem userId có phải là thành viên của channel không
+      try {
+        const conversation = await Conversation.getByIdAndUserId(
+          channel.conversationId,
+          userId
+        );
+      } catch (error) {
+        throw new Error("You are not a member of this channel");
+      }
+      // Gọi phương thức tĩnh từ MessageSchema
+      const messages = await Message.getListByChannelIdAndUserId(
+        channelId,
+        userId,
+        skip,
+        limit
+      );
+      return messages;
+    } catch (error) {
+      throw new Error(`Error fetching messages: ${error.message}`);
+    }
   }
 
   /**

@@ -56,7 +56,7 @@ class MessageService {
       conversationId,
       deletedUserIds: { $nin: [userId] },
     })
-      .sort({ createdAt: -1 })
+      .sort({ createdAt: 1 })
       .skip(skip)
       .limit(limit)
       .lean();

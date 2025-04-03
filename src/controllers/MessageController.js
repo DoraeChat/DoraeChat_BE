@@ -23,7 +23,7 @@ class MessageController {
         content
       );
       // 🔹 Gửi tin nhắn real-time đến tất cả user trong phòng chat
-      this.io.to(conversationId).emit("newMessage", message);
+      this.io.to(conversationId).emit("receive-message", message);
       res.status(201).json(message);
     } catch (error) {
       res.status(400).json({ message: error.message });

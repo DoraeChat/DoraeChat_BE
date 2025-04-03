@@ -24,10 +24,15 @@ const ChannelService = {
     return await Channel.updateChannel(channelId, channel);
   },
 
-  async deleteChannel(channelId) {
+  async deleteChannel(channelId, memberId) {
+    const conversation = await Conversation.getById(channelId);
+    if (!channelId) throw new Error("Channel ID is required");
+    if (memberId === conversation.leaderId || conversation.managerIds.includes(memberId)) 
+      throw new Error("Member is not access to update channel");
+    if (!conversation.type) throw new Error("Conversation is not a group");
     return await Channel.deleteChannel(channelId);
   },
-  
+
   async getById(channelId) {
     return await Channel.getById(channelId);
   },

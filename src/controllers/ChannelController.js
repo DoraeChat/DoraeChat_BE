@@ -27,7 +27,8 @@ const ChannelController = {
 
   async deleteChannel(req, res) {
     const channelId = req.params.channelId;
-    const deletedChannel = await ChannelService.deleteChannel(channelId);
+    const memberId = req.body.memberId;
+    const deletedChannel = await ChannelService.deleteChannel(channelId, memberId);
     res.json(deletedChannel);
   },
 };

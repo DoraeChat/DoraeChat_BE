@@ -2,6 +2,8 @@ const mongoose = require("mongoose");
 const Schema = mongoose.Schema;
 const ObjectId = mongoose.Types.ObjectId;
 const NotFoundError = require("../exceptions/NotFoundError");
+const Channel = require("./Channel");
+const Member = require("./Member");
 
 const commonLookupStages = {
   userLookup: {
@@ -211,9 +213,9 @@ const messageSchema = new Schema(
         lockedStatus: Boolean,
         lockedBy: ObjectId,
         lockedAt: Date,
-      }
+      },
     },
-    deletedUserIds: {
+    deletedMemberIds: {
       type: [ObjectId],
       default: [],
     },
@@ -237,7 +239,7 @@ const messageSchema = new Schema(
       { channelId: 1, type: 1 },
       { conversationId: 1, createdAt: -1 },
       { channelId: 1, createdAt: -1 },
-      { conversationId: 1, deletedUserIds: 1 },
+      { conversationId: 1, deletedMemberIds: 1 },
     ],
   }
 );
@@ -250,14 +252,37 @@ const getPaginationStages = (skip, limit) => [
 ];
 
 const getBaseGroupMessagePipeline = () => [
-  commonLookupStages.userLookup,
-  { $unwind: "$user" },
+  // Lookup vào members để lấy thông tin member từ memberId
+  {
+    $lookup: {
+      from: "members",
+      localField: "memberId",
+      foreignField: "_id",
+      as: "member",
+    },
+  },
+  { $unwind: "$member" }, // Chuyển member từ mảng thành object
+
+  // Lookup vào users để lấy thông tin user từ member.userId
+  {
+    $lookup: {
+      from: "users",
+      localField: "member.userId",
+      foreignField: "_id",
+      as: "user",
+    },
+  },
+  { $unwind: "$user" }, // Chuyển user từ mảng thành object
+
+  // Các stage khác giữ nguyên nếu không phụ thuộc vào userId trực tiếp
   commonLookupStages.manipulatedUsersLookup,
   commonLookupStages.userOptionsLookup,
   commonLookupStages.replyMessageLookup,
   commonLookupStages.replyUserLookup,
   commonLookupStages.reactUsersLookup,
   commonLookupStages.tagUsersLookup,
+
+  // Dự án kết quả
   { $project: commonProjections.groupMessage },
 ];
 
@@ -357,7 +382,7 @@ messageSchema.statics.countDocumentsByConversationIdAndUserId = async function (
 ) {
   return await Message.countDocuments({
     conversationId,
-    deletedUserIds: {
+    deletedMemberIds: {
       $nin: [userId],
     },
   }).lean();
@@ -373,7 +398,7 @@ messageSchema.statics.getListByConversationIdAndUserIdOfGroup = async function (
     {
       $match: {
         conversationId: ObjectId(conversationId),
-        deletedUserIds: { $nin: [ObjectId(userId)] },
+        deletedMemberIds: { $nin: [ObjectId(userId)] },
       },
     },
     ...getBaseGroupMessagePipeline(),
@@ -395,7 +420,7 @@ messageSchema.statics.getListByConversationIdAndTypeAndUserId = async function (
       $match: {
         conversationId: ObjectId(conversationId),
         type,
-        deletedUserIds: { $nin: [ObjectId(userId)] },
+        deletedMemberIds: { $nin: [ObjectId(userId)] },
       },
     },
     ...getBaseGroupMessagePipeline(),
@@ -411,14 +436,29 @@ messageSchema.statics.getListByChannelIdAndUserId = async function (
   skip,
   limit
 ) {
+  // Tìm conversationId từ channelId
+  const channel = await Channel.findById(channelId).lean();
+  if (!channel) {
+    throw new Error("Channel not found");
+  }
+  const conversationId = channel.conversationId;
+
+  // Tìm memberId từ userId và conversationId
+  const member = await Member.findOne({ conversationId, userId }).lean();
+  if (!member) {
+    throw new Error("User is not a member of this conversation");
+  }
+  const memberId = member._id;
+
+  // Thiết lập pipeline với memberId
   const pipeline = [
     {
       $match: {
         channelId: new ObjectId(channelId),
-        deletedUserIds: { $nin: [new ObjectId(userId)] },
+        deletedMemberIds: { $nin: [new ObjectId(memberId)] }, // Sử dụng memberId thay vì userId
       },
     },
-    ...getBaseGroupMessagePipeline(),
+    ...getBaseGroupMessagePipeline(), // Pipeline đã được cập nhật để làm việc với memberId
     ...getPaginationStages(skip, limit),
   ];
 
@@ -431,7 +471,7 @@ messageSchema.statics.getListByConversationIdAndUserIdOfIndividual =
       {
         $match: {
           conversationId: ObjectId(conversationId),
-          deletedUserIds: { $nin: [ObjectId(userId)] },
+          deletedMemberIds: { $nin: [ObjectId(userId)] },
         },
       },
       commonLookupStages.replyMessageLookup,
@@ -472,7 +512,7 @@ messageSchema.statics.getListFilesByTypeAndConversationId = async function (
       conversationId,
       type,
       isDeleted: false,
-      deletedUserIds: { $nin: [userId] },
+      deletedMemberIds: { $nin: [userId] },
     },
     {
       userId: 1,
@@ -527,7 +567,7 @@ messageSchema.statics.createVote = async function (vote) {
     reacts: [],
     tags: vote.tags || [],
     manipulatedUserIds: [],
-    deletedUserIds: [],
+    deletedMemberIds: [],
     isDeleted: false,
   });
 
@@ -581,10 +621,7 @@ messageSchema.statics.addVoteOption = async function (
   );
 };
 
-messageSchema.statics.removeVoteOption = async function (
-  voteId,
-  optionId
-) {
+messageSchema.statics.removeVoteOption = async function (voteId, optionId) {
   const vote = await Message.getById(voteId);
 
   // Ensure optionId is valid

@@ -18,6 +18,11 @@ const UserService = {
         return user;
     },
 
+    async getUserByPhoneNumber(phoneNumber) {
+        const user = await User.getUserByPhoneNumber(phoneNumber);
+        return user;
+    },
+
     async existsByUsername(username) {
         return await User.existsByUsername(username);
     },

@@ -101,6 +101,16 @@ const UserController = {
       next(error);
     }
   },
+
+  async getUserByPhoneNumber(req, res, next) {
+    try {
+      const { phoneNumber } = req.params;
+      const user = await UserService.getUserByPhoneNumber(phoneNumber);
+      res.json(user);
+    } catch (error) {
+      next(error);
+    }
+  }
 };
 
 module.exports = UserController;

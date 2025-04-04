@@ -64,6 +64,10 @@ const userSchema = new Schema(
       type: [String],
       default: [],
     },
+    phoneNumber: {
+      type: String,
+      default: "",
+    },
   },
   { timestamps: true }
 );
@@ -167,6 +171,19 @@ userSchema.statics.findByUsername = async (username, message = "User") => {
     coverImage,
   };
 };
+
+userSchema.statics.getUserByPhoneNumber = async (phoneNumber) => {
+  const user = await User.findOne({
+    phoneNumber,
+    isActived: true,  
+  }).lean();
+  if (!user) throw new NotFoundError("User");
+
+  const { _id, name, dateOfBirth, gender, avatar, avatarColor, coverImage, username } =
+    user;
+
+  return { _id, name, dateOfBirth, gender, avatar, avatarColor, coverImage, username };
+}
 
 userSchema.statics.checkById = async (_id, message = "User") => {
   const user = await User.findOne({ _id, isActived: true });

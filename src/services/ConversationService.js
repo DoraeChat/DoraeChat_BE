@@ -52,14 +52,13 @@ const ConversationService = {
     }
     const conversation = new Conversation({
       name,
-      leaderId, // Người tạo nhóm
+      // leaderId, // Người tạo nhóm
       type: true, // Chat nhóm
     });
     // Lấy thông tin tất cả User trong members
     const users = await User.find({ _id: { $in: members }, isActived: true })
       .select("_id name")
       .lean();
-
     if (users.length !== members.length) {
       throw new Error("One or more users not found");
     }
@@ -78,9 +77,12 @@ const ConversationService = {
 
     // Lấy memberId từ các Member vừa tạo
     const memberIds = createdMembers.map((member) => member._id);
-
+    const leaderMember = createdMembers.find(
+      (member) => member.userId.toString() === leaderId.toString()
+    );
     // Cập nhật members trong Conversation
     conversation.members = memberIds;
+    conversation.leaderId = leaderMember._id; // Cập nhật leaderId từ memberId
     await conversation.save();
 
     return conversation;

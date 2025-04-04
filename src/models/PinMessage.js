@@ -13,8 +13,7 @@ const pinMessageSchema = new Schema({
 pinMessageSchema.index({ conversationId: 1, pinnedAt: -1 });
 
 pinMessageSchema.statics.getAllByConversationId = async (conversationId) => {
-  const pinMessages = await PinMessage.find({ conversationId });
-  return pinMessages;
+  return await PinMessage.find({ conversationId });
 };
 
 pinMessageSchema.statics.addPinMessage = async (pinMessage) => {

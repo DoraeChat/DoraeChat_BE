@@ -4,7 +4,7 @@ const VoteController = require('../controllers/VoteController');
 
 router.get('/:conversationId', VoteController.getVotesByConversationId);
 router.post('/', VoteController.addVote);
-router.delete('/:voteId', VoteController.deleteVote);
+router.put('/:voteId', VoteController.lockVote);
 router.post('/option/:voteId', VoteController.addVoteOption);
 router.delete('/option/:voteId/:optionId', VoteController.deleteVoteOption);
 router.post('/option/select/:voteId/:optionId', VoteController.selectVoteOption);

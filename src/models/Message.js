@@ -213,7 +213,7 @@ const messageSchema = new Schema(
         lockedStatus: Boolean,
         lockedBy: ObjectId,
         lockedAt: Date,
-      }
+      },
     },
     deletedMemberIds: {
       type: [ObjectId],
@@ -621,10 +621,7 @@ messageSchema.statics.addVoteOption = async function (
   );
 };
 
-messageSchema.statics.removeVoteOption = async function (
-  voteId,
-  optionId
-) {
+messageSchema.statics.removeVoteOption = async function (voteId, optionId) {
   const vote = await Message.getById(voteId);
 
   // Ensure optionId is valid

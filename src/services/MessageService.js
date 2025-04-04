@@ -1,8 +1,8 @@
 const Message = require("../models/Message");
 const Conversation = require("../models/Conversation");
+const Member = require("../models/Member");
 const Channel = require("../models/Channel");
 const redisClient = require("../config/redis");
-const SOCKET_EVENTS = require("../constants/socketEvents");
 
 class MessageService {
   // 🔹 Gửi tin nhắn văn bản
@@ -10,21 +10,26 @@ class MessageService {
     if (!content.trim()) {
       throw new Error("Message content cannot be empty");
     }
-
+    const member = await Member.findOne({
+      conversationId,
+      userId,
+    });
+    if (!member) {
+      throw new Error("You are not a member of this conversation");
+    }
     // Kiểm tra xem cuộc trò chuyện có tồn tại không
     const conversation = await Conversation.findById(conversationId);
     if (!conversation) {
       throw new Error("Conversation not found");
     }
-
-    // Kiểm tra xem user có thuộc cuộc trò chuyện không
-    if (!conversation.members.includes(userId)) {
-      throw new Error("You are not a member of this conversation");
-    }
+    // // Kiểm tra xem user có thuộc cuộc trò chuyện không
+    // if (!conversation.members.includes(member._id)) {
+    //   throw new Error("You are not a member of this conversation");
+    // }
 
     // Tạo tin nhắn mới
     const message = new Message({
-      userId,
+      memberId: member._id,
       conversationId,
       content,
       type: "TEXT",
@@ -54,9 +59,16 @@ class MessageService {
     if (!conversation) {
       throw new Error("Conversation not found");
     }
-    if (!conversation.members.includes(userId)) {
+    const member = await Member.findOne({
+      conversationId,
+      userId,
+    });
+    if (!member) {
       throw new Error("You are not a member of this conversation");
     }
+    // if (!conversation.members.includes(userId)) {
+    //   throw new Error("You are not a member of this conversation");
+    // }
 
     // 2. Xác định cache key
     const cacheKey = beforeTimestamp
@@ -73,20 +85,21 @@ class MessageService {
     const query = {
       conversationId,
       deletedUserIds: { $nin: [userId] },
+    };
+    if (beforeTimestamp) {
+      query.createdAt = { $lt: new Date(beforeTimestamp) };
     }
-      .sort({ createdAt: 1 })
-      .skip(skip)
-      .limit(limit)
-      .lean();
+    const messages = await Message.find(query)
+      .sort({ createdAt: -1 }) // Sắp xếp theo thời gian giảm dần
+      .skip(skip) // Bỏ qua số lượng tin nhắn đã chỉ định
+      .limit(limit) // Giới hạn số lượng tin nhắn trả về
+      .lean(); // Chuyển đổi sang đối tượng JavaScript thuần túy
 
     // 6. Lưu vào cache với TTL
-    if (messages.length > 0) {
-      await redisClient.set(cacheKey, JSON.stringify(messages), 300); // 5 phút
-
-      // Đồng bộ cache phụ trợ
+    if (messages && messages.length > 0) {
+      await redisClient.set(cacheKey, JSON.stringify(messages), 300);
       await this.syncMessageCache(conversationId, messages);
     }
-
     return messages;
   }
   // Lấy danh sách tin nhắn theo channelId
@@ -99,10 +112,7 @@ class MessageService {
       }
       // Kiểm tra xem userId có phải là thành viên của channel không
       try {
-        const conversation = await Conversation.getByIdAndUserId(
-          channel.conversationId,
-          userId
-        );
+        await Conversation.getByIdAndUserId(channel.conversationId, userId);
       } catch (error) {
         throw new Error("You are not a member of this channel");
       }

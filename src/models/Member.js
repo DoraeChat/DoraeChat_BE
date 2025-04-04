@@ -12,6 +12,9 @@ const memberSchema = new Schema(
       default: () => new Date(),
     },
     name: String,
+    active: {
+      type: Boolean,
+    },
     lastViewOfChannels: [
       {
         channelId: ObjectId,

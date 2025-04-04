@@ -59,7 +59,6 @@ class ConversationController {
       const { name } = req.body;
       const conversationId = req.params.id;
       const userId = req._id; // Người thực hiện đổi tên
-
       if (!name) {
         return res.status(400).json({ message: "Group name is required" });
       }

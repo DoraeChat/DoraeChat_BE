@@ -14,6 +14,14 @@ const commonLookupStages = {
       as: "user",
     },
   },
+  memberLookup: {
+    $lookup: {
+      from: "members",
+      localField: "memberId",
+      foreignField: "_id",
+      as: "member",
+    },
+  },
   manipulatedUsersLookup: {
     $lookup: {
       from: "users",
@@ -252,37 +260,14 @@ const getPaginationStages = (skip, limit) => [
 ];
 
 const getBaseGroupMessagePipeline = () => [
-  // Lookup vào members để lấy thông tin member từ memberId
-  {
-    $lookup: {
-      from: "members",
-      localField: "memberId",
-      foreignField: "_id",
-      as: "member",
-    },
-  },
-  { $unwind: "$member" }, // Chuyển member từ mảng thành object
-
-  // Lookup vào users để lấy thông tin user từ member.userId
-  {
-    $lookup: {
-      from: "users",
-      localField: "member.userId",
-      foreignField: "_id",
-      as: "user",
-    },
-  },
-  { $unwind: "$user" }, // Chuyển user từ mảng thành object
-
-  // Các stage khác giữ nguyên nếu không phụ thuộc vào userId trực tiếp
+  commonLookupStages.memberLookup,
+  { $unwind: "$member" },
   commonLookupStages.manipulatedUsersLookup,
   commonLookupStages.userOptionsLookup,
   commonLookupStages.replyMessageLookup,
   commonLookupStages.replyUserLookup,
   commonLookupStages.reactUsersLookup,
   commonLookupStages.tagUsersLookup,
-
-  // Dự án kết quả
   { $project: commonProjections.groupMessage },
 ];
 

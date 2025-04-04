@@ -21,11 +21,11 @@ const VoteController = {
         }
     },
 
-    async deleteVote(req, res, next) {
+    async lockVote(req, res, next) {
         try {
             const { voteId } = req.params;
-            const userId = req.body.userId;
-            const vote = await VoteService.deleteVote(voteId, userId);
+            const memberId = req.body.memberId;
+            const vote = await VoteService.lockVote(voteId, memberId);
             res.json(vote);
         } catch (error) {
             next(error);
@@ -35,9 +35,9 @@ const VoteController = {
     async addVoteOption(req, res, next) {
         try {
             const { voteId } = req.params;
-            const userId = req.body.userId;
+            const memberId = req.body.memberId;
             const newOption = req.body.option;
-            const vote = await VoteService.addVoteOption(voteId, userId, newOption);
+            const vote = await VoteService.addVoteOption(voteId, memberId, newOption);
             res.json(vote);
         } catch (error) {
             next(error);
@@ -47,8 +47,8 @@ const VoteController = {
     async deleteVoteOption(req, res, next) {
         try {
             const { voteId, optionId } = req.params;
-            const userId = req.body.userId;
-            const vote = await VoteService.deleteVoteOption(voteId, userId, optionId);
+            const memberId = req.body.memberId;
+            const vote = await VoteService.deleteVoteOption(voteId, memberId, optionId);
             res.json(vote);
         } catch (error) {
             next(error);

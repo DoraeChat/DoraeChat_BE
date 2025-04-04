@@ -38,7 +38,7 @@ class MessageService {
     const newMessage = await message.save();
 
     // Cập nhật cache
-    await syncMessageCache(conversationId, [newMessage]);
+    await this.syncMessageCache(conversationId, [newMessage]);
 
     // Cập nhật tin nhắn cuối cùng trong cuộc trò chuyện
     conversation.lastMessageId = message._id;

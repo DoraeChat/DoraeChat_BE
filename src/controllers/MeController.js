@@ -7,6 +7,7 @@ const fs = require('fs').promises;
 
 const UserController = {
 
+    // [GET] /api/me/profile/:userId
     async getById(req, res, next) {
         try {
             const { id } = req.params;
@@ -17,6 +18,7 @@ const UserController = {
         }
     },
 
+    // [PUT] /api/me/profile
     async updateUser(req, res, next) {
         try {
             const user = req.body;
@@ -27,6 +29,7 @@ const UserController = {
         }
     },
     
+    // [PUT] /api/me/avatar
     async updateAvatarUser(req, res, next) {
         try {
             const { id } = req.body;
@@ -41,6 +44,7 @@ const UserController = {
         }
     },
 
+    // [PUT] /api/me/cover
     async updateCoverUser(req, res, next) {
         try {
             const { id } = req.body;
@@ -55,6 +59,7 @@ const UserController = {
         }
     },
 
+    // [PUT] /api/me/password
     async updatePassword(req, res, next) {
         try {
             const { id, oldPassword, newPassword } = req.body;

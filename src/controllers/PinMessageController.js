@@ -1,6 +1,7 @@
 const PinMessageService = require("../services/PinMessageService")
 
 const PinMessageController = {
+    // [GET] /api/pin-messages/:conversationId
     async getAllByConversationId(req, res, next) {
         try {
             const { conversationId } = req.params;
@@ -11,6 +12,7 @@ const PinMessageController = {
         }
     },
 
+    // [POST] /api/pin-messages
     async addPinMessage(req, res, next) {
         try {
             const pinMessage = req.body;
@@ -21,6 +23,7 @@ const PinMessageController = {
         }
     },
 
+    // [DELETE] /api/pin-messages/:messageId
     async deletePinMessage(req, res, next) {
         try {
             const { messageId } = req.params;

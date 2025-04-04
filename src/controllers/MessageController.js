@@ -33,7 +33,7 @@ class MessageController {
     }
   }
 
-  // [GET] /api/message/:conversationId - Lấy danh sách tin nhắn theo conversationId
+  // [GET] /api/messages/:conversationId - Lấy danh sách tin nhắn theo conversationId
   async getMessagesByConversation(req, res) {
     try {
       const { conversationId } = req.params;

@@ -1,6 +1,7 @@
 const QRService = require('../services/QRService');
 
 const QRController = {
+    // [GET] /api/qr/user/:userId 
     async generateQRUser(req, res, next) {
         try {
             const { userId } = req.params;
@@ -11,6 +12,7 @@ const QRController = {
         }
     },
 
+    // [GET] /api/qr/group/:groupId
     async generateQRGroup(req, res, next) {
         try {
             const { groupId } = req.params;

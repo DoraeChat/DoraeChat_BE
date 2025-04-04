@@ -206,6 +206,13 @@ const messageSchema = new Schema(
       ],
       required: false,
     },
+    lockedVote: {
+      type: {
+        lockedStatus: Boolean,
+        lockedBy: ObjectId,
+        lockedAt: Date,
+      }
+    },
     deletedUserIds: {
       type: [ObjectId],
       default: [],
@@ -498,27 +505,27 @@ messageSchema.statics.getVotesByConversationId = async function (
   return await Message.aggregate(pipeline);
 };
 
-messageSchema.statics.createVote = async function (voteData) {
+messageSchema.statics.createVote = async function (vote) {
   // Validate required fields
   if (
-    !voteData.memberId ||
-    !voteData.conversationId ||
-    !voteData.content ||
-    !voteData.options
+    !vote.memberId ||
+    !vote.conversationId ||
+    !vote.content ||
+    !vote.options
   ) {
     throw new Error("Missing required vote fields");
   }
 
   // Ensure options are valid
-  if (!Array.isArray(voteData.options) || voteData.options.length === 0) {
+  if (!Array.isArray(vote.options) || vote.options.length === 0) {
     throw new Error("Vote must have at least one option");
   }
 
   const newVote = new Message({
-    ...voteData,
+    ...vote,
     type: "VOTE",
     reacts: [],
-    tags: voteData.tags || [],
+    tags: vote.tags || [],
     manipulatedUserIds: [],
     deletedUserIds: [],
     isDeleted: false,
@@ -527,26 +534,31 @@ messageSchema.statics.createVote = async function (voteData) {
   return await newVote.save();
 };
 
-messageSchema.statics.deleteVote = async function (voteId, memberId) {
-  // Verify vote exists
-  const vote = await Message.getById(voteId);
-
-  // Optional: Add check to ensure only the creator can delete
-  if (vote.memberId.toString() !== memberId) {
-    throw new Error("Only the vote creator can delete the vote");
-  }
-
-  return await Message.findByIdAndDelete(voteId, { new: false });
+messageSchema.statics.lockVote = async function (voteId, memberId) {
+  return await Message.findByIdAndUpdate(
+    voteId,
+    {
+      $set: {
+        "lockedVote.lockedStatus": true,
+        "lockedVote.lockedAt": new Date(),
+        "lockedVote.lockedBy": memberId,
+      },
+    },
+    { new: true }
+  );
 };
 
 messageSchema.statics.addVoteOption = async function (
   voteId,
-  userId,
+  memberId,
   newOption
 ) {
-  // newOption is object { name, userIds, userCreated }
-  // Verify vote exists and is owned by the user
+  // newOption is object { name, memberIds, memberCreated }
+
   const vote = await Message.getById(voteId);
+  if (!vote) {
+    throw new NotFoundError("Vote not found");
+  }
 
   // Ensure the option has a name
   if (!newOption.name) {
@@ -560,8 +572,8 @@ messageSchema.statics.addVoteOption = async function (
         options: {
           _id: new ObjectId(),
           name: newOption.name,
-          userIds: [],
-          userCreated: userId,
+          memberIds: [],
+          memberCreated: memberId,
         },
       },
     },
@@ -571,7 +583,6 @@ messageSchema.statics.addVoteOption = async function (
 
 messageSchema.statics.removeVoteOption = async function (
   voteId,
-  userId,
   optionId
 ) {
   const vote = await Message.getById(voteId);
@@ -597,7 +608,7 @@ messageSchema.statics.removeVoteOption = async function (
 
 messageSchema.statics.selectVoteOption = async function (
   voteId,
-  userId,
+  memberId,
   optionId
 ) {
   const vote = await Message.getById(voteId);
@@ -612,18 +623,18 @@ messageSchema.statics.selectVoteOption = async function (
 
   // Check if user has already selected this option
   const currentOption = vote.options[optionIndex];
-  if (currentOption.userIds.includes(userId)) {
+  if (currentOption.memberIds.includes(memberId)) {
     return vote;
   }
 
   // Remove user from other options first
   const updatedOptions = vote.options.map((option) => ({
     name: option.name,
-    userIds: option.userIds.filter((id) => id.toString() !== userId),
+    memberIds: option.memberIds.filter((id) => id.toString() !== memberId),
   }));
 
   // Add user to the selected option
-  updatedOptions[optionIndex].userIds.push(userId);
+  updatedOptions[optionIndex].memberIds.push(memberId);
 
   return await Message.findByIdAndUpdate(
     voteId,
@@ -634,7 +645,7 @@ messageSchema.statics.selectVoteOption = async function (
 
 messageSchema.statics.deselectVoteOption = async function (
   voteId,
-  userId,
+  memberId,
   optionId
 ) {
   const vote = await Message.getById(voteId);
@@ -649,10 +660,10 @@ messageSchema.statics.deselectVoteOption = async function (
 
   const updatedOptions = vote.options.map((option, index) => ({
     name: option.name,
-    userIds:
+    memberIds:
       index === optionIndex
-        ? option.userIds.filter((id) => id.toString() !== userId)
-        : option.userIds,
+        ? option.memberIds.filter((id) => id.toString() !== memberId)
+        : option.memberIds,
   }));
 
   return await Message.findByIdAndUpdate(

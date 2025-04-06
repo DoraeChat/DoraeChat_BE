@@ -1,6 +1,10 @@
 const ConversationService = require("../services/ConversationService");
-
+const MessageService = require("../services/MessageService");
 class ConversationController {
+  constructor(io) {
+    this.io = io; // Nhận io từ Socket.IO
+    this.updateAvatar = this.updateAvatar.bind(this); // Bind this để sử dụng trong hàm
+  }
   // [GET] /api/conversations - Lấy danh sách hội thoại của người dùng
   async getListByUserId(req, res) {
     try {
@@ -32,7 +36,7 @@ class ConversationController {
       res.status(500).json({ message: error.message });
     }
   }
-  //  Tạo nhóm hội thoại
+  //  [POST] /api/conversations/groups - Tạo cuộc trò chuyện nhóm
   async createGroupConversation(req, res) {
     try {
       const { name, members } = req.body;
@@ -53,7 +57,7 @@ class ConversationController {
       res.status(400).json({ message: error.message });
     }
   }
-  // 🔹 Đổi tên nhóm hội thoại
+  // [PATCH] /api/conversations/:id/name - Cập nhật tên nhóm
   async updateGroupName(req, res) {
     try {
       const { name } = req.body;
@@ -73,6 +77,7 @@ class ConversationController {
       res.status(400).json({ message: error.message });
     }
   }
+  // [GET] /api/conversations/:id - Lấy thông tin cuộc trò chuyện theo ID
   async getConversationById(req, res) {
     try {
       const conversation = await ConversationService.getConversationById(
@@ -83,6 +88,32 @@ class ConversationController {
       res.status(404).json({ message: "Conversation not found" });
     }
   }
-}
+  // [PATCH] /api/conversations/:id/avatar - Cập nhật ảnh đại diện nhóm
+  async updateAvatar(req, res) {
+    try {
+      const conversationId = req.params.id;
+      const userId = req._id;
+      const { avatar } = req.body;
 
-module.exports = new ConversationController();
+      if (!avatar) {
+        return res.status(400).json({ message: "Avatar URL is required" });
+      }
+      const updatedConversation = await ConversationService.updateAvatar(
+        conversationId,
+        userId,
+        avatar
+      );
+      // Phát sự kiện real-time
+      if (this.io) {
+        const notifyMessage = await MessageService.getMessageById(
+          updatedConversation.lastMessageId
+        );
+        this.io.to(conversationId).emit("receive-message", notifyMessage);
+      }
+      res.status(200).json(updatedConversation);
+    } catch (error) {
+      res.status(400).json({ message: error.message });
+    }
+  }
+}
+module.exports = ConversationController;

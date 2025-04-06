@@ -1,6 +1,7 @@
 const Conversation = require("../models/Conversation");
 const Member = require("../models/Member");
 const User = require("../models/User");
+const Message = require("../models/Message");
 const ConversationService = {
   // Lấy danh sách hội thoại của người dùng
   async getListByUserId(userId) {
@@ -103,13 +104,41 @@ const ConversationService = {
     }
 
     // Kiểm tra xem user có phải là leader hoặc quản trị viên không
-    if (
-      conversation.leaderId.toString() !== member._id &&
-      !conversation.managerIds.includes(member._id)
-    ) {
+    if (!this.checkManager(conversation, member._id.toString())) {
       throw new Error("You do not have permission to rename this group");
     }
     conversation.name = newName;
+    await conversation.save();
+    return conversation;
+  },
+  // 🔹 Cập nhật ảnh đại diện nhóm hội thoại
+  async updateAvatar(conversationId, userId, avatar) {
+    const conversation = await Conversation.findById(conversationId);
+    if (!conversation) {
+      throw new Error("Conversation not found");
+    }
+    // Tìm memberId từ userId
+    const member = await Member.findOne({ conversationId, userId });
+    if (!member) {
+      throw new Error("You are not a member of this conversation");
+    }
+
+    // Kiểm tra quyền: Chỉ leader hoặc manager được cập nhật avatar
+    if (!this.checkManager(conversation, member._id.toString())) {
+      throw new Error("You do not have permission to update the avatar");
+    }
+    // Cập nhật avatar
+    conversation.avatar = avatar;
+    await conversation.save();
+    // Tạo tin nhắn notify
+    const notifyMessage = await Message.createMessage({
+      memberId: member._id,
+      content: `${member.name} đã thay đổi ảnh đại diện của nhóm`,
+      type: "NOTIFY",
+      conversationId: conversation._id,
+    });
+    // Cập nhật lastMessageId trong Conversation
+    conversation.lastMessageId = notifyMessage._id;
     await conversation.save();
     return conversation;
   },
@@ -119,6 +148,16 @@ const ConversationService = {
   },
   async getByIdAndUserId(conversationId, userId) {
     return await Conversation.getByIdAndUserId(conversationId, userId);
+  },
+  checkManager(conversation, id) {
+    let isManager = false;
+    if (
+      conversation.leaderId.toString() === id ||
+      conversation.managerIds.includes(id)
+    ) {
+      isManager = true;
+    }
+    return isManager;
   },
 };
 

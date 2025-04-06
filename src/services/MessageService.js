@@ -28,14 +28,18 @@ class MessageService {
     // }
 
     // Tạo tin nhắn mới
-    const message = new Message({
+    const newMessage = await Message.create({
       memberId: member._id,
-      conversationId,
       content,
       type: "TEXT",
+      conversationId,
     });
-
-    const newMessage = await message.save();
+    // const message = new Message({
+    //   memberId: member._id,
+    //   conversationId,
+    //   content,
+    //   type: "TEXT",
+    // });
 
     // Cập nhật cache
     await this.syncMessageCache(conversationId, [newMessage]);
@@ -126,6 +130,15 @@ class MessageService {
       return messages;
     } catch (error) {
       throw new Error(`Error fetching messages: ${error.message}`);
+    }
+  }
+  // lấy tin nhắn theo id
+  async getMessageById(messageId) {
+    try {
+      const message = await Message.getById(messageId);
+      return message;
+    } catch (error) {
+      throw new Error("Message not found");
     }
   }
 

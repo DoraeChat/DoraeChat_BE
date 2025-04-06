@@ -270,7 +270,32 @@ const getBaseGroupMessagePipeline = () => [
   commonLookupStages.tagUsersLookup,
   { $project: commonProjections.groupMessage },
 ];
+// Hàm tĩnh để tạo tin nhắn
+messageSchema.statics.createMessage = async function ({
+  memberId,
+  content,
+  type = "TEXT",
+  conversationId,
+  channelId = null,
+}) {
+  // Kiểm tra các trường bắt buộc
+  if (!memberId || !content || !conversationId) {
+    throw new Error("memberId, content, and conversationId are required");
+  }
 
+  // Tạo tin nhắn mới
+  const message = new this({
+    memberId,
+    content,
+    type,
+    conversationId,
+    channelId,
+  });
+
+  // Lưu tin nhắn vào database
+  await message.save();
+  return message;
+};
 messageSchema.statics.getByIdOfGroup = async function (_id) {
   const pipeline = [
     {

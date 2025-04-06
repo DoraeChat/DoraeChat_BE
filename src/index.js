@@ -5,7 +5,6 @@ const connection = require("./config/database");
 const authRoutes = require("./routes/AuthRoutes");
 const userRoutes = require("./routes/UserRoutes");
 const meRoutes = require("./routes/MeRoutes");
-const conversationRoutes = require("./routes/ConversationRoutes");
 const qrRoutes = require("./routes/QRRoutes");
 const channelRoutes = require("./routes/ChannelRoutes");
 const pinMessageRoutes = require("./routes/PinMessageRoutes");
@@ -35,6 +34,7 @@ app.set("socketHandler", socketHandler);
 
 const friendRouter = require("./routes/FriendRoutes")(io);
 const messageRouter = require("./routes/MessageRoutes")(io);
+const conversationRoutes = require("./routes/ConversationRoutes")(io);
 (async () => {
   try {
     await connection();

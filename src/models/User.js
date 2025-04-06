@@ -68,6 +68,10 @@ const userSchema = new Schema(
       type: String,
       default: "",
     },
+    email: {
+      type: String,
+      default: "",
+    },
   },
   { timestamps: true }
 );

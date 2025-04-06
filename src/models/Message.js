@@ -160,7 +160,7 @@ const messageSchema = new Schema(
       required: true,
       index: true,
     },
-    manipulatedUserIds: {
+    manipulatedMemberIds: { // member được nhắc đến trong thông báo
       type: [ObjectId],
       default: [],
     },
@@ -180,10 +180,10 @@ const messageSchema = new Schema(
         "IMAGE",
         "STICKER",
         "VIDEO",
-        "FILE",
-        "HTML",
-        "NOTIFY",
+        "FILE", // docx, pdf, pptx, xlsx, zip, rar, txt, gif
+        "NOTIFY", // Thông báo
         "VOTE",
+        "AUDIO"
       ],
       required: true,
       index: true,
@@ -218,7 +218,7 @@ const messageSchema = new Schema(
     },
     lockedVote: {
       type: {
-        lockedStatus: Boolean,
+        lockedStatus: Boolean, // true: locked
         lockedBy: ObjectId,
         lockedAt: Date,
       },

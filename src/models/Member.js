@@ -21,6 +21,10 @@ const memberSchema = new Schema(
         lastView: Date,
       },
     ],
+    hideBeforeTime: {
+      type: Date,
+      default: null,
+    },
     isNotify: {
       type: Boolean,
       default: true,

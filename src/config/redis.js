@@ -59,17 +59,17 @@ async function initializeRedis() {
 }
 
 /**
-  * Thêm phần tử vào Sorted Set (ZSET)
-  * @param {string} key - Tên key
-  * @param {number} score - Điểm để sắp xếp
-  * @param {string} member - Giá trị thành viên
-  * @returns {Promise<number>} - Số phần tử được thêm mới (không tính updated)
-  */
+ * Thêm phần tử vào Sorted Set (ZSET)
+ * @param {string} key - Tên key
+ * @param {number} score - Điểm để sắp xếp
+ * @param {string} member - Giá trị thành viên
+ * @returns {Promise<number>} - Số phần tử được thêm mới (không tính updated)
+ */
 async function zadd(key, score, member) {
   try {
     return await client.zadd(key, score, member);
   } catch (err) {
-    console.error('Redis zadd error:', err);
+    console.error("Redis zadd error:", err);
     return 0;
   }
 }
@@ -85,7 +85,7 @@ async function zremrangebyrank(key, start, stop) {
   try {
     return await client.zremrangebyrank(key, start, stop);
   } catch (err) {
-    console.error('Redis zremrangebyrank error:', err);
+    console.error("Redis zremrangebyrank error:", err);
     return 0;
   }
 }
@@ -101,7 +101,7 @@ async function expire(key, seconds) {
     const result = await client.expire(key, seconds);
     return result === 1;
   } catch (err) {
-    console.error('Redis expire error:', err);
+    console.error("Redis expire error:", err);
     return false;
   }
 }
@@ -118,11 +118,11 @@ async function zrangebyscore(key, min, max, options = {}) {
   try {
     const args = [key, min, max];
     if (options.LIMIT) {
-      args.push('LIMIT', options.LIMIT.offset, options.LIMIT.count);
+      args.push("LIMIT", options.LIMIT.offset, options.LIMIT.count);
     }
     return await client.zrangebyscore(...args);
   } catch (err) {
-    console.error('Redis zrangebyscore error:', err);
+    console.error("Redis zrangebyscore error:", err);
     return [];
   }
 }
@@ -136,7 +136,7 @@ async function zcard(key) {
   try {
     return await client.zcard(key);
   } catch (err) {
-    console.error('Redis zcard error:', err);
+    console.error("Redis zcard error:", err);
     return 0;
   }
 }

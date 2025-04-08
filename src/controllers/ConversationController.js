@@ -115,5 +115,20 @@ class ConversationController {
       res.status(400).json({ message: error.message });
     }
   }
+  // [DELETE] /api/conversations/:id - Ẩn tin nhắn cũ bằng thời gian
+  async hideConversationBeforeTime(req, res) {
+    try {
+      const conversationId = req.params.id;
+      const userId = req._id; // Lấy từ token
+
+      const result = await ConversationService.hideConversationBeforeTime(
+        conversationId,
+        userId
+      );
+      res.status(200).json(result);
+    } catch (error) {
+      res.status(400).json({ message: error.message });
+    }
+  }
 }
 module.exports = ConversationController;

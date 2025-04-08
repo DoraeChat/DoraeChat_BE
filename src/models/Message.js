@@ -160,7 +160,8 @@ const messageSchema = new Schema(
       required: true,
       index: true,
     },
-    manipulatedMemberIds: { // member được nhắc đến trong thông báo
+    manipulatedMemberIds: {
+      // member được nhắc đến trong thông báo
       type: [ObjectId],
       default: [],
     },
@@ -183,7 +184,7 @@ const messageSchema = new Schema(
         "FILE", // docx, pdf, pptx, xlsx, zip, rar, txt, gif
         "NOTIFY", // Thông báo
         "VOTE",
-        "AUDIO"
+        "AUDIO",
       ],
       required: true,
       index: true,
@@ -458,17 +459,19 @@ messageSchema.statics.getListByChannelIdAndUserId = async function (
   if (!member) {
     throw new Error("User is not a member of this conversation");
   }
-  const memberId = member._id;
 
   // Thiết lập pipeline với memberId
   const pipeline = [
     {
       $match: {
         channelId: new ObjectId(channelId),
-        deletedMemberIds: { $nin: [new ObjectId(memberId)] }, // Sử dụng memberId thay vì userId
+        deletedUserIds: { $nin: [member._id] },
+        ...(member.hideBeforeTime && {
+          createdAt: { $gt: member.hideBeforeTime }, //  hiển thị tin nhắn sau hideBeforeTime
+        }),
       },
     },
-    ...getBaseGroupMessagePipeline(), // Pipeline đã được cập nhật để làm việc với memberId
+    ...getBaseGroupMessagePipeline(),
     ...getPaginationStages(skip, limit),
   ];
 

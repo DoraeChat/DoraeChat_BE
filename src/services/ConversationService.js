@@ -159,6 +159,24 @@ const ConversationService = {
     }
     return isManager;
   },
+  // ( ẩn tin nhắn trong hội thoại cho member có nhu cầu xóa hội thoại)
+  async hideConversationBeforeTime(conversationId, userId) {
+    const conversation = await Conversation.findById(conversationId);
+    if (!conversation) {
+      throw new Error("Conversation not found");
+    }
+    // Tìm memberId từ userId
+    const member = await Member.findOne({ conversationId, userId });
+    if (!member) {
+      throw new Error("You are not a member of this conversation");
+    }
+    // Ghi nhận thời gian hiện tại vào hideBeforeTime
+    member.hideBeforeTime = new Date();
+    await member.save();
+    return {
+      message:
+        "Conversation messages before this time have been hidden for you",
+    };
+  },
 };
-
 module.exports = ConversationService;

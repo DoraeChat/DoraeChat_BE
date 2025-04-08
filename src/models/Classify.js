@@ -44,7 +44,7 @@ classifySchema.statics.addClassify = async function (classify) {
 classifySchema.statics.updateClassify = async function (classify, classifyId) {
   const classifyCheck = await Classify.findOne({ _id: classifyId }).lean();
   if (!classifyCheck) {
-    throw new NotFoundError("Classify not found");
+    throw new NotFoundError("Classify");
   }
   const updatedClassify = await Classify.findOneAndUpdate(
     { _id: classifyId },

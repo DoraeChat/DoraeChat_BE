@@ -7,33 +7,50 @@ const ChannelController = {
     const channels = await ChannelService.getAllChannelByConversationId(
       conversationId
     );
-    res.json(channels);
+    res.status(200).json(channels);
   },
 
   // [POST] /api/channels
-  async addChannel(req, res) {
-    const channel = req.body;
-    const newChannel = await ChannelService.addChannel(channel);
-    res.json(newChannel);
+  async addChannel(req, res, next) {
+    try {
+      const channel = req.body;
+      const newChannel = await ChannelService.addChannel(channel);
+      res.status(200).json(newChannel);
+    } catch (err) {
+      next(err);
+    }
   },
 
   // [PUT] /api/channels/:channelId
-  async updateChannel(req, res) {
-    const channelId = req.params.channelId;
-    const channel = req.body;
-    const updatedChannel = await ChannelService.updateChannel(
-      channelId,
-      channel
-    );
-    res.json(updatedChannel);
+  async updateChannel(req, res, next) {
+    try {
+      const channelId = req.params.channelId;
+      const channel = req.body;
+      const updatedChannel = await ChannelService.updateChannel(
+        channelId,
+        channel
+      );
+      res.status(200).json(updatedChannel);
+    } catch (err) {
+      next(err);
+    }
   },
 
   // [DELETE] /api/channels/:channelId
-  async deleteChannel(req, res) {
-    const channelId = req.params.channelId;
-    const memberId = req.body.memberId;
-    const deletedChannel = await ChannelService.deleteChannel(channelId, memberId);
-    res.json(deletedChannel);
+  async deleteChannel(req, res, next) {
+    try {
+      const channelId = req.params.channelId;
+      const memberId = req.body.memberId;
+      const conversationId = req.body.conversationId;
+      const deletedChannel = await ChannelService.deleteChannel(
+        channelId,
+        memberId,
+        conversationId
+      );
+      res.status(200).json(deletedChannel);
+    } catch (err) {
+      next(err);
+    }
   },
 };
 module.exports = ChannelController;

@@ -1,5 +1,7 @@
 const Channel = require("../models/Channel");
 const Conversation = require("../models/Conversation");
+const NotFoundError = require("../exceptions/NotFoundError");
+const CustomError = require("../exceptions/CustomError");
 
 const ChannelService = {
   async getAllChannelByConversationId(conversationId) {
@@ -7,51 +9,67 @@ const ChannelService = {
   },
 
   async addChannel(channel) {
-    const conversation = await Conversation.getById(channel.conversationId);
+    try {
+      const conversation = await Conversation.getById(channel.conversationId);
 
-    if (!conversation) throw new Error("Conversation not found");
+      if (!conversation) throw new NotFoundError("Conversation");
 
-    if (
-      !conversation.managerIds.includes(channel.memberId) &&
-      conversation.leaderId.toString() !== channel.memberId
-    )
-      throw new Error("Member is not access to add channel");
+      if (
+        !conversation.managerIds.includes(channel.memberId) &&
+        conversation.leaderId.toString() !== channel.memberId
+      )
+        throw new CustomError("Member is not access to add channel", 400);
 
-    if (!conversation.type) throw new Error("Conversation is not a group");
+      if (!conversation.type) throw new NotFoundError("Conversation");
 
-    return await Channel.addChannel(channel);
+      return await Channel.addChannel(channel);
+    } catch (err) {
+      if (err instanceof NotFoundError || err instanceof CustomError) throw err;
+    }
   },
 
   async updateChannel(channelId, channel) {
-    const conversation = await Conversation.getById(channel.conversationId);
+    try {
+      const conversation = await Conversation.getById(channel.conversationId);
+      if (!conversation) throw new NotFoundError("Conversation");
 
-    if (!channelId) throw new Error("Channel ID is required");
+      if (!channelId) throw new CustomError("Channel ID is required", 400);
 
-    if (
-      !conversation.managerIds.includes(channel.memberId) &&
-      conversation.leaderId.toString() !== channel.memberId
-    )
-      throw new Error("Member is not access to update channel");
+      if (
+        !conversation.managerIds.includes(channel.memberId) &&
+        conversation.leaderId.toString() !== channel.memberId
+      )
+        throw new CustomError("Member is not access to update channel", 400);
 
-    if (!conversation.type) throw new Error("Conversation is not a group");
+      if (!conversation.type)
+        throw new CustomError("Conversation is not a group", 400);
 
-    return await Channel.updateChannel(channelId, channel);
+      return await Channel.updateChannel(channelId, channel);
+    } catch (err) {
+      if (err instanceof CustomError) throw err;
+    }
   },
 
-  async deleteChannel(channelId, memberId) {
-    if (!channelId) throw new Error("Channel ID is required");
+  async deleteChannel(channelId, memberId, conversationId) {
+    try {
+      if (!channelId) throw new CustomError("Channel ID is required", 400);
 
-    const conversation = await Conversation.getById(channelId);
+      const conversation = await Conversation.getById(conversationId);
+      if (!conversation) throw new NotFoundError("Conversation");
 
-    if (
-      !conversation.managerIds.includes(memberId) &&
-      conversation.leaderId.toString() !== memberId
-    )
-      throw new Error("Member is not access to update channel");
+      if (
+        !conversation.managerIds.includes(memberId) &&
+        conversation.leaderId.toString() !== memberId
+      )
+        throw new CustomError("Member is not access to update channel", 400);
 
-    if (!conversation.type) throw new Error("Conversation is not a group");
+      if (!conversation.type)
+        throw new CustomError("Conversation is not a group", 400);
 
-    return await Channel.deleteChannel(channelId);
+      return await Channel.deleteChannel(channelId);
+    } catch (err) {
+      if (err instanceof NotFoundError || err instanceof CustomError) throw err;
+    }
   },
 
   async getById(channelId) {

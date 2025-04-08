@@ -2,6 +2,7 @@ const Conversation = require("../models/Conversation");
 const Member = require("../models/Member");
 const User = require("../models/User");
 const Message = require("../models/Message");
+const Channel = require("../models/Channel");
 const ConversationService = {
   // Lấy danh sách hội thoại của người dùng
   async getListByUserId(userId) {
@@ -81,12 +82,21 @@ const ConversationService = {
     const leaderMember = createdMembers.find(
       (member) => member.userId.toString() === leaderId.toString()
     );
+    // Tạo channel mặc định "Main"
+    const defaultChannel = new Channel({
+      name: "Main",
+      conversationId: conversation._id,
+    });
+    await defaultChannel.save();
     // Cập nhật members trong Conversation
     conversation.members = memberIds;
     conversation.leaderId = leaderMember._id; // Cập nhật leaderId từ memberId
     await conversation.save();
 
-    return conversation;
+    return {
+      conversation,
+      defaultChannel,
+    };
   },
   // 🔹 Đổi tên nhóm hội thoại
   async updateGroupName(conversationId, newName, userId) {

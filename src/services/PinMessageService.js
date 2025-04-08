@@ -22,11 +22,9 @@ const PinMessageService = {
     const conversation = await Conversation.findById(conversationId).lean();
     if (!conversation) throw new NotFoundError("Conversation");
 
-    const member = await Member.findOne({
-      conversationId,
-      userId: pinnedBy,
-    }).lean();
-    if (!conversation.members.includes(member._id))
+    const member = await Member.findOne({_id: pinnedBy}).lean();
+    const members = conversation.members.map((member) => member._id.toString());
+    if (!members.includes(member._id.toString()))
       throw new CustomError("Member is not in conversation", 400);
 
     // check message is in conversation

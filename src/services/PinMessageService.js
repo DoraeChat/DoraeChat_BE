@@ -2,6 +2,8 @@ const PinMessage = require("../models/PinMessage");
 const Message = require("../models/Message");
 const Conversation = require("../models/Conversation");
 const Member = require("../models/Member");
+const CustomError = require("../exceptions/CustomError");
+const NotFoundError = require("../exceptions/NotFoundError");
 
 const PinMessageService = {
   async getAllByConversationId(conversationId) {
@@ -10,22 +12,20 @@ const PinMessageService = {
 
   async addPinMessage(pinMessage) {
     const { messageId, conversationId, pinnedBy } = pinMessage;
-    if (!messageId) throw new Error("messageId is required");
-    if (!conversationId) throw new Error("conversationId is required");
-    if (!pinnedBy) throw new Error("pinnedBy is required");
+    if (!messageId) throw new CustomError("messageId is required", 400);
+    if (!conversationId) throw new CustomError("conversationId is required", 400);
+    if (!pinnedBy) throw new CustomError("pinnedBy is required", 400);
 
     const message = await Message.findById(messageId).lean();
-    if (!message) throw new Error("Message not found");
+    if (!message) throw new NotFoundError("Message");
 
     const conversation = await Conversation.findById(conversationId).lean();
-    if (!conversation) throw new Error("Conversation not found");
+    if (!conversation) throw new NotFoundError("Conversation");
 
-    const member = await Member.findOne({
-      conversationId,
-      userId: pinnedBy,
-    }).lean();
-    if (!conversation.members.includes(member._id))
-      throw new Error("Member is not in conversation");
+    const member = await Member.findOne({_id: pinnedBy}).lean();
+    const members = conversation.members.map((member) => member._id.toString());
+    if (!members.includes(member._id.toString()))
+      throw new CustomError("Member is not in conversation", 400);
 
     // check message is in conversation
     const isMessageInConversation = await Message.findOne({
@@ -33,7 +33,7 @@ const PinMessageService = {
       conversationId,
     }).lean();
     if (!isMessageInConversation)
-      throw new Error("Message not in conversation");
+      throw new CustomError("Message not in conversation", 400);
 
     // message pinned
     const existingPinMessage = await PinMessage.findOne({
@@ -41,20 +41,20 @@ const PinMessageService = {
       conversationId,
     }).lean();
     if (existingPinMessage)
-      throw new Error("Message already pinned in this conversation");
+      throw new CustomError("Message already pinned in this conversation", 400);
 
     return await PinMessage.addPinMessage(pinMessage);
   },
 
   async deletePinMessage(messageId, pinnedBy) {
-    if (!messageId) throw new Error("messageId is required");
-    if (!pinnedBy) throw new Error("pinnedBy is required");
+    if (!messageId) throw new CustomError("messageId is required", 400);
+    if (!pinnedBy) throw new CustomError("pinnedBy is required", 400);
 
     const pinMessage = await PinMessage.findOne({ messageId }).lean();
-    if (!pinMessage) throw new Error("Pin message not found");
+    if (!pinMessage) throw new NotFoundError("Pin message");
 
     const member = await Member.findOne({ _id: pinnedBy }).lean();
-    if (!member) throw new Error("Member not found");
+    if (!member) throw new NotFoundError("Member");
     
     const conversation = await Conversation.findById(
       pinMessage.conversationId
@@ -64,7 +64,7 @@ const PinMessageService = {
       !conversation.leaderId.toString() === pinnedBy && // leader
       pinMessage.pinnedBy === pinnedBy // member pinned
     )
-      throw new Error("Member is not allowed to unpin message");
+      throw new CustomError("Member is not allowed to unpin message", 400);
 
     return await PinMessage.deletePinMessage(messageId, pinnedBy);
   },

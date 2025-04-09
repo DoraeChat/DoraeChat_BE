@@ -181,11 +181,28 @@ userSchema.statics.getUserByPhoneNumber = async (phoneNumber) => {
   }).lean();
   if (!user) throw new NotFoundError("User");
 
-  const { _id, name, dateOfBirth, gender, avatar, avatarColor, coverImage, username } =
-    user;
+  const {
+    _id,
+    name,
+    dateOfBirth,
+    gender,
+    avatar,
+    avatarColor,
+    coverImage,
+    username,
+  } = user;
 
-  return { _id, name, dateOfBirth, gender, avatar, avatarColor, coverImage, username };
-}
+  return {
+    _id,
+    name,
+    dateOfBirth,
+    gender,
+    avatar,
+    avatarColor,
+    coverImage,
+    username,
+  };
+};
 
 userSchema.statics.checkById = async (_id, message = "User") => {
   const user = await User.findOne({ _id, isActived: true });

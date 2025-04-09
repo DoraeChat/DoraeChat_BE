@@ -10,10 +10,10 @@ class MessageService {
     if (!content.trim()) {
       throw new Error("Message content cannot be empty");
     }
-    const member = await Member.findOne({
+    const member = await Member.getByConversationIdAndUserId(
       conversationId,
-      userId,
-    });
+      userId
+    );
     if (!member) {
       throw new Error("You are not a member of this conversation");
     }
@@ -63,10 +63,10 @@ class MessageService {
     if (!conversation) {
       throw new Error("Conversation not found");
     }
-    const member = await Member.findOne({
+    const member = await Member.getByConversationIdAndUserId(
       conversationId,
-      userId,
-    });
+      userId
+    );
     if (!member) {
       throw new Error("You are not a member of this conversation");
     }

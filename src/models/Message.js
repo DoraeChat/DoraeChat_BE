@@ -455,7 +455,10 @@ messageSchema.statics.getListByChannelIdAndUserId = async function (
   const conversationId = channel.conversationId;
 
   // Tìm memberId từ userId và conversationId
-  const member = await Member.findOne({ conversationId, userId }).lean();
+  const member = await Member.getByConversationIdAndUserId(
+    conversationId,
+    userId
+  );
   if (!member) {
     throw new Error("User is not a member of this conversation");
   }

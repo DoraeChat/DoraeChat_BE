@@ -130,5 +130,21 @@ class ConversationController {
       res.status(400).json({ message: error.message });
     }
   }
+  // [GET] /api/conversations/:id/members - Lấy danh sách thành viên trong hội thoại
+  async getMembersByConversationId(req, res) {
+    try {
+      const conversationId = req.params.id;
+      const userId = req._id;
+
+      const members = await ConversationService.getMembersByConversationId(
+        conversationId,
+        userId
+      );
+
+      res.status(200).json(members);
+    } catch (error) {
+      res.status(400).json({ message: error.message });
+    }
+  }
 }
 module.exports = ConversationController;

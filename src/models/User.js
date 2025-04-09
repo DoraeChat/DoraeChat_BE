@@ -53,8 +53,6 @@ const userSchema = new Schema(
       type: [{ name: String, phone: String }],
       default: [],
     },
-    otp: String,
-    otpTime: Date,
     isActived: Boolean,
     timeRevokeToken: {
       type: Date,
@@ -179,7 +177,7 @@ userSchema.statics.findByUsername = async (username, message = "User") => {
 userSchema.statics.getUserByPhoneNumber = async (phoneNumber) => {
   const user = await User.findOne({
     phoneNumber,
-    isActived: true,  
+    isActived: true,
   }).lean();
   if (!user) throw new NotFoundError("User");
 

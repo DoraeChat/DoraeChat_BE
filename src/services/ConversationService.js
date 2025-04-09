@@ -2,14 +2,17 @@ const Conversation = require("../models/Conversation");
 const Member = require("../models/Member");
 const User = require("../models/User");
 const Message = require("../models/Message");
+const Channel = require("../models/Channel");
 const ConversationService = {
   // Lấy danh sách hội thoại của người dùng
   async getListByUserId(userId) {
+    // đã conver member
     return await Conversation.getListByUserId(userId);
   },
   // 🔍 Kiểm tra xem cuộc trò chuyện cá nhân giữa 2 user có tồn tại không
   async findOrCreateIndividualConversation(userId1, userId2) {
     // Kiểm tra nếu đã có cuộc trò chuyện 1-1 giữa hai user
+    // đã conver member
     let conversation = await Conversation.existsIndividualConversation(
       userId1,
       userId2
@@ -81,20 +84,28 @@ const ConversationService = {
     const leaderMember = createdMembers.find(
       (member) => member.userId.toString() === leaderId.toString()
     );
+    // Tạo channel mặc định "Main"
+    const defaultChannel = new Channel({
+      name: "Main",
+      conversationId: conversation._id,
+    });
+    await defaultChannel.save();
     // Cập nhật members trong Conversation
     conversation.members = memberIds;
     conversation.leaderId = leaderMember._id; // Cập nhật leaderId từ memberId
     await conversation.save();
-
-    return conversation;
+    return {
+      conversation,
+      defaultChannel,
+    };
   },
   // 🔹 Đổi tên nhóm hội thoại
   async updateGroupName(conversationId, newName, userId) {
     const conversation = await Conversation.findById(conversationId);
-    const member = await Member.findOne({
+    const member = await Member.getByConversationIdAndUserId(
       conversationId,
-      userId,
-    });
+      userId
+    );
     if (!conversation) {
       throw new Error("Conversation not found");
     }
@@ -118,7 +129,10 @@ const ConversationService = {
       throw new Error("Conversation not found");
     }
     // Tìm memberId từ userId
-    const member = await Member.findOne({ conversationId, userId });
+    const member = await Member.getByConversationIdAndUserId(
+      conversationId,
+      userId
+    );
     if (!member) {
       throw new Error("You are not a member of this conversation");
     }
@@ -159,6 +173,56 @@ const ConversationService = {
     }
     return isManager;
   },
-};
+  // ( ẩn tin nhắn trong hội thoại cho member có nhu cầu xóa hội thoại)
+  async hideConversationBeforeTime(conversationId, userId) {
+    const conversation = await Conversation.findById(conversationId);
+    if (!conversation) {
+      throw new Error("Conversation not found");
+    }
+    // Tìm memberId từ userId
+    const member = await Member.getByConversationIdAndUserId(
+      conversationId,
+      userId
+    );
+    if (!member) {
+      throw new Error("You are not a member of this conversation");
+    }
+    // Ghi nhận thời gian hiện tại vào hideBeforeTime
+    member.hideBeforeTime = new Date();
+    await member.save();
+    return {
+      message:
+        "Conversation messages before this time have been hidden for you",
+    };
+  },
+  // Lấy danh sách thành viên trong hội thoại
+  async getMembersByConversationId(conversationId, userId) {
+    // Kiểm tra hội thoại
+    const conversation = await Conversation.findById(conversationId);
+    if (!conversation) {
+      throw new Error("Conversation not found");
+    }
 
+    // Kiểm tra xem userId có phải thành viên không
+    const requestingMember = await Member.getByConversationIdAndUserId(
+      conversationId,
+      userId
+    );
+    if (!requestingMember) {
+      throw new Error("You are not a member of this conversation");
+    }
+    // Lấy danh sách thành viên
+    const members = await Member.getMembersWithUserInfo(conversationId);
+
+    const memberList = members.map((member) => ({
+      memberId: member._id,
+      userId: member.userId._id,
+      name: member.name,
+      avatar: member.userId.avatar,
+      avatarColor: member.userId.avatarColor,
+    }));
+
+    return memberList;
+  },
+};
 module.exports = ConversationService;

@@ -13,7 +13,8 @@ const PinMessageService = {
   async addPinMessage(pinMessage) {
     const { messageId, conversationId, pinnedBy } = pinMessage;
     if (!messageId) throw new CustomError("messageId is required", 400);
-    if (!conversationId) throw new CustomError("conversationId is required", 400);
+    if (!conversationId)
+      throw new CustomError("conversationId is required", 400);
     if (!pinnedBy) throw new CustomError("pinnedBy is required", 400);
 
     const message = await Message.findById(messageId).lean();
@@ -22,7 +23,7 @@ const PinMessageService = {
     const conversation = await Conversation.findById(conversationId).lean();
     if (!conversation) throw new NotFoundError("Conversation");
 
-    const member = await Member.findOne({_id: pinnedBy}).lean();
+    const member = await Member.findOne({ _id: pinnedBy }).lean();
     const members = conversation.members.map((member) => member._id.toString());
     if (!members.includes(member._id.toString()))
       throw new CustomError("Member is not in conversation", 400);
@@ -55,7 +56,7 @@ const PinMessageService = {
 
     const member = await Member.findOne({ _id: pinnedBy }).lean();
     if (!member) throw new NotFoundError("Member");
-    
+
     const conversation = await Conversation.findById(
       pinMessage.conversationId
     ).lean();

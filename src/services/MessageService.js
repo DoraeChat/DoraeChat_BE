@@ -10,10 +10,10 @@ class MessageService {
     if (!content.trim()) {
       throw new Error("Message content cannot be empty");
     }
-    const member = await Member.findOne({
+    const member = await Member.getByConversationIdAndUserId(
       conversationId,
-      userId,
-    });
+      userId
+    );
     if (!member) {
       throw new Error("You are not a member of this conversation");
     }
@@ -45,11 +45,11 @@ class MessageService {
     await this.syncMessageCache(conversationId, [newMessage]);
 
     // Cập nhật tin nhắn cuối cùng trong cuộc trò chuyện
-    conversation.lastMessageId = message._id;
+    conversation.lastMessageId = newMessage._id;
 
     await conversation.save();
 
-    return message;
+    return newMessage;
   }
 
   // Lấy danh sách tin nhắn theo hội thoại giới hạn 20 tin nhắn
@@ -63,17 +63,13 @@ class MessageService {
     if (!conversation) {
       throw new Error("Conversation not found");
     }
-    const member = await Member.findOne({
+    const member = await Member.getByConversationIdAndUserId(
       conversationId,
-      userId,
-    });
+      userId
+    );
     if (!member) {
       throw new Error("You are not a member of this conversation");
     }
-    // if (!conversation.members.includes(userId)) {
-    //   throw new Error("You are not a member of this conversation");
-    // }
-
     // 2. Xác định cache key
     const cacheKey = beforeTimestamp
       ? `messages:${conversationId}:cursor:${beforeTimestamp}`
@@ -82,22 +78,29 @@ class MessageService {
     // 3. Thử lấy từ cache trước
     const cachedMessages = await redisClient.get(cacheKey);
     if (cachedMessages) {
-      return JSON.parse(cachedMessages);
+      return JSON.parse(cachedMessages); // bug
     }
 
     // 4. Build query nếu không có cache
     const query = {
       conversationId,
-      deletedUserIds: { $nin: [userId] },
+      deletedMemberIds: { $nin: [member._id] },
     };
+    // Thêm điều kiện hideBeforeTime
+    if (member.hideBeforeTime) {
+      query.createdAt = { $gt: member.hideBeforeTime };
+    }
+    // Nếu có beforeTimestamp, thêm điều kiện lọc trước thời gian đó
     if (beforeTimestamp) {
-      query.createdAt = { $lt: new Date(beforeTimestamp) };
+      query.createdAt = query.createdAt
+        ? { $gt: member.hideBeforeTime, $lt: new Date(beforeTimestamp) }
+        : { $lt: new Date(beforeTimestamp) };
     }
     const messages = await Message.find(query)
       .sort({ createdAt: -1 }) // Sắp xếp theo thời gian giảm dần
       .skip(skip) // Bỏ qua số lượng tin nhắn đã chỉ định
       .limit(limit) // Giới hạn số lượng tin nhắn trả về
-      .lean(); // Chuyển đổi sang đối tượng JavaScript thuần túy
+      .lean(); // Chuyển đổi sang đối tượng JavaScript
 
     // 6. Lưu vào cache với TTL
     if (messages && messages.length > 0) {

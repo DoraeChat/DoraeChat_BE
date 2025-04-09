@@ -7,6 +7,7 @@ const CustomError = require('../exceptions/CustomError');
 const userValidate = require('../validates/userValidate');
 const tokenUtils = require('../utils/tokenUtils');
 const bcrypt = require('bcryptjs');
+const { v4: uuidv4 } = require('uuid');
 
 class AuthService {
     constructor() {
@@ -421,6 +422,102 @@ class AuthService {
         }
 
     }
+
+    async createQRSession(source = 'web') {
+        const sessionId = uuidv4();
+        const sessionData = JSON.stringify({
+            status: 'PENDING',
+            source,
+            createdAt: Date.now(),
+            userId: null,
+        });
+
+        console.log(`qr-session:${sessionId}`);
+        await redis.set(`qr-session:${sessionId}`, sessionData, 180);
+
+        return {
+            sessionId,
+            qrContent: `qrlogin:${sessionId}`,
+            source,
+            expiresIn: 180,
+        };
+    }
+
+
+
+    async verifyQRSession(sessionId, userId) {
+        const existing = await redis.get(`qr-session:${sessionId}`);
+        if (!existing || existing === 'null') {
+            throw new CustomError('Session không tồn tại hoặc đã hết hạn', 400);
+        }
+
+        const user = await User.findById(userId);
+        if (!user) throw new CustomError('Không tìm thấy người dùng', 404);
+        if (!user.isActived) throw new CustomError('Tài khoản chưa được kích hoạt', 401);
+
+        const sessionData = JSON.parse(existing);
+        const source = sessionData.source || 'qr';
+
+        const tokens = await this.generateAndUpdateAccessTokenAndRefreshToken(user._id, source);
+
+        // Cập nhật trạng thái thành VERIFIED
+        const updatedSession = JSON.stringify({
+            status: 'VERIFIED',
+            source,
+            userId: user._id,
+            createdAt: sessionData.createdAt,
+        });
+
+        await redis.set(`qr-session:${sessionId}`, updatedSession, 30);
+
+        console.log(`QR session verified: ${sessionId} by user ${user.username}`);
+        return {
+            ...tokens,
+            user: {
+                _id: user._id,
+                username: user.username,
+                name: user.name,
+                avatar: user.avatar,
+                gender: user.gender,
+            },
+        };
+    }
+
+    async checkQRSession(sessionId) {
+        const value = await redis.get(`qr-session:${sessionId}`);
+        if (!value || value === 'null') {
+            return { status: 'EXPIRED' };
+        }
+
+        try {
+            const session = JSON.parse(value);
+
+            if (session.status === 'VERIFIED') {
+                const user = await User.findById(session.userId);
+                const tokens = await this.generateAndUpdateAccessTokenAndRefreshToken(session.userId, session.source);
+
+                // Có thể xóa session nếu muốn
+                await redis.del(`qr-session:${sessionId}`);
+
+                return {
+                    status: 'VERIFIED',
+                    user: {
+                        _id: user._id,
+                        username: user.username,
+                        name: user.name,
+                        avatar: user.avatar,
+                        gender: user.gender,
+                    },
+                    ...tokens,
+                };
+            }
+
+            return { status: 'PENDING' };
+        } catch (err) {
+            return { status: 'ERROR', message: 'Dữ liệu QR không hợp lệ' };
+        }
+    }
+
 
 }
 

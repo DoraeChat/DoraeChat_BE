@@ -123,6 +123,42 @@ class AuthController {
             next(err);
         }
     }
+
+    // [GET] /api/auth/qr
+    // [GET] /api/auth/qr
+    async getQRSession(req, res, next) {
+        try {
+            const source = req.headers['user-agent'] || 'unknown';
+            const result = await AuthService.createQRSession(source);
+            res.status(200).json(result);
+        } catch (err) {
+            next(err);
+        }
+    }
+
+    // [POST] /api/auth/qr/verify
+    async verifyQRSession(req, res, next) {
+        try {
+            const { sessionId, userId } = req.body;
+            const result = await AuthService.verifyQRSession(sessionId, userId);
+            res.status(200).json(result);
+        } catch (err) {
+            next(err);
+        }
+    }
+
+
+    // [GET] /api/auth/qr/status/:sessionId
+    async getQRSessionStatus(req, res, next) {
+        try {
+            const { sessionId } = req.params;
+            const result = await AuthService.checkQRSession(sessionId);
+            res.status(200).json(result);
+        } catch (err) {
+            next(err);
+        }
+    }
+
 }
 
 module.exports = new AuthController();

@@ -33,7 +33,7 @@ class MessageController {
     }
   }
 
-  // [GET] /api/messages/:conversationId - Lấy danh sách tin nhắn theo conversationId
+  // [GET] /api/messages/:conversationId - Lấy danh sách tin nhắn theo conversationId 1-1
   async getMessagesByConversation(req, res) {
     try {
       const { conversationId } = req.params;
@@ -53,7 +53,7 @@ class MessageController {
       res.status(500).json({ message: error.message });
     }
   }
-  // [GET] /api/message/channel/:channelId - Lấy danh sách tin nhắn theo channelId
+  // [GET] /api/message/channel/:channelId - Lấy danh sách tin nhắn theo channelId - group
   async getMessagesByChannelId(req, res) {
     try {
       const { channelId } = req.params;

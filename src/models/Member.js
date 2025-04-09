@@ -6,7 +6,10 @@ const NotFoundError = require("../exceptions/NotFoundError");
 const memberSchema = new Schema(
   {
     conversationId: ObjectId,
-    userId: ObjectId,
+    userId: {
+      type: ObjectId,
+      ref: "User",
+    },
     lastView: {
       type: Date,
       default: () => new Date(),
@@ -21,6 +24,10 @@ const memberSchema = new Schema(
         lastView: Date,
       },
     ],
+    hideBeforeTime: {
+      type: Date,
+      default: null,
+    },
     isNotify: {
       type: Boolean,
       default: true,
@@ -89,6 +96,19 @@ memberSchema.statics.getListInfosByConversationId = async (conversationId) => {
     { $replaceWith: "$user" },
   ]).exec();
   return users;
+};
+// Lấy danh sách thành viên trong cuộc hội thoại kèm thông tin user
+memberSchema.statics.getMembersWithUserInfo = async (conversationId) => {
+  if (!ObjectId.isValid(conversationId)) {
+    throw new NotFoundError("Invalid conversationId");
+  }
+
+  const members = await Member.find({ conversationId })
+    .populate("userId", "name avatar avatarColor")
+    .lean();
+  console.log("members", members);
+
+  return members;
 };
 
 const Member = mongoose.model("Member", memberSchema);

@@ -14,7 +14,8 @@ const ConVersationRouter = (io) => {
   router.patch("/:id/name", conversationController.updateGroupName);
   router.get("/conversations/:id", conversationController.getConversationById);
   router.patch("/:id/avatar", conversationController.updateAvatar);
-
+  router.delete("/:id", conversationController.hideConversationBeforeTime);
+  router.get("/:id/members", conversationController.getMembersByConversationId);
   return router;
 };
 

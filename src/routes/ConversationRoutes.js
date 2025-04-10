@@ -25,6 +25,7 @@ const ConVersationRouter = (socketHandler) => {
     "/:id/managers",
     conversationController.addManagersToConversation
   );
+  router.delete("/:id/managers", conversationController.removeManager);
   return router;
 };
 

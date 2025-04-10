@@ -76,6 +76,7 @@ const ConversationService = {
       conversationId: conversation._id,
       userId,
       name: userMap.get(userId.toString()) || "Unknown", // Mặc định "Unknown" nếu không tìm thấy
+      active: true,
     }));
     const createdMembers = await Member.insertMany(membersToCreate);
 
@@ -445,7 +446,7 @@ const ConversationService = {
           memberId: requestingMember._id, // Người thêm (A)
           content: `${requestingMember.name} đã thêm ${newManager.name} làm phó nhóm`,
           type: "NOTIFY",
-          action: "UPDATE",
+          action: "ADD_MANAGER",
           actionData: {
             targetId: newManager._id, // Người được thêm làm phó nhóm (B)
           },
@@ -470,6 +471,75 @@ const ConversationService = {
 
     return { addedManagers, notifyMessages };
   },
+  // Xóa phó nhóm khỏi hội thoại
+  async removeManagerFromConversation(
+    conversationId,
+    userId,
+    managerIdToRemove
+  ) {
+    // Kiểm tra conversation
+    const conversation = await Conversation.findById(conversationId);
+    if (!conversation) {
+      throw new Error("Conversation not found");
+    }
+    if (!conversation.type) {
+      throw new Error(
+        "This operation is only applicable to group conversations"
+      );
+    }
+
+    // Kiểm tra quyền của người yêu cầu (leader)
+    const requestingMember = await Member.getByConversationIdAndUserId(
+      conversationId,
+      userId
+    );
+    if (!requestingMember || requestingMember.active) {
+      throw new Error("You are not an active member of this conversation");
+    }
+    if (conversation.leaderId.toString() !== requestingMember._id.toString()) {
+      throw new Error("Only the group leader can remove managers");
+    }
+
+    // Kiểm tra manager cần xóa
+    const managerMember = await Member.findById(managerIdToRemove);
+    if (
+      !managerMember ||
+      managerMember.conversationId.toString() !== conversationId.toString()
+    ) {
+      throw new Error("Manager not found in this conversation");
+    }
+    if (
+      !conversation.managerIds.some(
+        (id) => id.toString() === managerIdToRemove.toString()
+      )
+    ) {
+      throw new Error("This member is not a manager");
+    }
+
+    // Xóa manager khỏi danh sách managerIds
+    conversation.managerIds = conversation.managerIds.filter(
+      (id) => id.toString() !== managerIdToRemove.toString()
+    );
+    await conversation.save();
+
+    // Tạo tin nhắn NOTIFY
+    const channelId = await this.getDefaultChannelId(conversationId);
+    const notifyMessage = await Message.create({
+      memberId: requestingMember._id,
+      content: `${requestingMember.name} đã xóa vai trò phó nhóm của ${managerMember.name}`,
+      type: "NOTIFY",
+      action: "REMOVE_MANAGER",
+      conversationId,
+      channelId,
+    });
+
+    // Cập nhật lastMessageId
+    conversation.lastMessageId = notifyMessage._id;
+    await conversation.save();
+
+    return { removedManager: managerMember, notifyMessage };
+  },
+
   async getDefaultChannelId(conversationId) {
     const channel = await Channel.findOne({
       conversationId,

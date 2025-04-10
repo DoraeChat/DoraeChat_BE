@@ -1,6 +1,6 @@
 const ConversationService = require("../services/ConversationService");
 const MessageService = require("../services/MessageService");
-const { SOCKET_EVENTS } = require("../constants/socketEvents");
+const SOCKET_EVENTS = require("../constants/socketEvents");
 class ConversationController {
   constructor(socketHandler) {
     this.socketHandler = socketHandler; // Nhận io từ Socket.IO
@@ -9,6 +9,7 @@ class ConversationController {
       this.removeMemberFromConversation.bind(this);
     this.addMembersToConversation = this.addMembersToConversation.bind(this);
     this.addManagersToConversation = this.addManagersToConversation.bind(this);
+    this.removeManager = this.removeManager.bind(this);
   }
   // [GET] /api/conversations - Lấy danh sách hội thoại của người dùng
   async getListByUserId(req, res) {
@@ -281,6 +282,38 @@ class ConversationController {
       }
 
       res.status(201).json(addedManagers);
+    } catch (error) {
+      res.status(400).json({ message: error.message });
+    }
+  }
+  // [DELETE] /api/conversations/:id/managers - Xóa phó nhóm
+  async removeManager(req, res) {
+    try {
+      const { id: conversationId } = req.params;
+      const { managerId } = req.body;
+      const userId = req._id;
+
+      if (!conversationId || !managerId) {
+        return res
+          .status(400)
+          .json({ message: "Conversation ID and Manager ID are required" });
+      }
+
+      const { removedManager, notifyMessage } =
+        await ConversationService.removeManagerFromConversation(
+          conversationId,
+          userId,
+          managerId
+        );
+
+      // Phát sự kiện socket
+      this.socketHandler.emitToConversation(
+        conversationId,
+        SOCKET_EVENTS.RECEIVE_MESSAGE,
+        notifyMessage
+      );
+
+      res.status(200).json({ removedManager, notifyMessage });
     } catch (error) {
       res.status(400).json({ message: error.message });
     }

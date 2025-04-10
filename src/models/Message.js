@@ -170,7 +170,10 @@ const messageSchema = new Schema(
       type: String,
       required: true,
     },
-    action: { type: String, enum: ["ADD", "REMOVE", "UPDATE"] }, // Loại hành động
+    action: {
+      type: String,
+      enum: ["ADD", "REMOVE", "UPDATE", "REMOVE_MANAGER", "ADD_MANAGER"],
+    }, // Loại hành động
     actionData: {
       targetId: { type: ObjectId }, // Người được thêm
     },

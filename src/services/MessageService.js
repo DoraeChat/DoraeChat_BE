@@ -6,10 +6,12 @@ const redisClient = require("../config/redis");
 
 class MessageService {
   // 🔹 Gửi tin nhắn văn bản
-  async sendTextMessage(userId, conversationId, content) {
+  async sendTextMessage(userId, conversationId, content, channelId = null) {
     if (!content.trim()) {
       throw new Error("Message content cannot be empty");
     }
+
+    // Kiểm tra member
     const member = await Member.getByConversationIdAndUserId(
       conversationId,
       userId
@@ -17,15 +19,42 @@ class MessageService {
     if (!member) {
       throw new Error("You are not a member of this conversation");
     }
-    // Kiểm tra xem cuộc trò chuyện có tồn tại không
+    if (!member.active) {
+      throw new Error(
+        "You are no longer an active member of this conversation"
+      );
+    }
+
+    // Kiểm tra conversation
     const conversation = await Conversation.findById(conversationId);
     if (!conversation) {
       throw new Error("Conversation not found");
     }
-    // // Kiểm tra xem user có thuộc cuộc trò chuyện không
-    // if (!conversation.members.includes(member._id)) {
-    //   throw new Error("You are not a member of this conversation");
-    // }
+
+    // Kiểm tra loại conversation và channelId
+    if (conversation.type && !channelId) {
+      throw new Error("Channel ID is required for group conversations");
+    }
+    if (!conversation.type && channelId) {
+      throw new Error(
+        "Channel ID is not applicable for individual conversations"
+      );
+    }
+
+    // Nếu là group, kiểm tra channel
+    let validChannelId = null;
+    if (conversation.type) {
+      const channel = await Channel.findById(channelId);
+      if (
+        !channel ||
+        channel.conversationId.toString() !== conversationId.toString()
+      ) {
+        throw new Error(
+          "Invalid or non-existent channel for this conversation"
+        );
+      }
+      validChannelId = channel._id;
+    }
 
     // Tạo tin nhắn mới
     const newMessage = await Message.create({
@@ -33,23 +62,24 @@ class MessageService {
       content,
       type: "TEXT",
       conversationId,
+      ...(validChannelId && { channelId: validChannelId }), // Chỉ thêm channelId nếu có
     });
-    // const message = new Message({
-    //   memberId: member._id,
-    //   conversationId,
-    //   content,
-    //   type: "TEXT",
-    // });
 
-    // Cập nhật cache
-    await this.syncMessageCache(conversationId, [newMessage]);
+    const populatedMessage = await Message.findById(newMessage._id)
+      .populate({
+        path: "memberId",
+        select: "userId",
+      })
+      .lean();
+
+    // Cập nhật cache (nếu dùng)
+    // await this.syncMessageCache(conversationId, [newMessage]);
 
     // Cập nhật tin nhắn cuối cùng trong cuộc trò chuyện
     conversation.lastMessageId = newMessage._id;
-
     await conversation.save();
 
-    return newMessage;
+    return populatedMessage;
   }
 
   // Lấy danh sách tin nhắn theo hội thoại giới hạn 20 tin nhắn
@@ -71,42 +101,32 @@ class MessageService {
       throw new Error("You are not a member of this conversation");
     }
     // 2. Xác định cache key
-    const cacheKey = beforeTimestamp
-      ? `messages:${conversationId}:cursor:${beforeTimestamp}`
-      : `messages:${conversationId}:page:${skip}:${limit}`;
+    // const cacheKey = beforeTimestamp
+    //   ? `messages:${conversationId}:cursor:${beforeTimestamp}`
+    //   : `messages:${conversationId}:page:${skip}:${limit}`;
 
     // 3. Thử lấy từ cache trước
-    const cachedMessages = await redisClient.get(cacheKey);
-    if (cachedMessages) {
-      return JSON.parse(cachedMessages); // bug
-    }
+    // const cachedMessages = await redisClient.get(cacheKey);
+    // if (cachedMessages) {
+    //   return JSON.parse(cachedMessages); // bug
+    // }
 
     // 4. Build query nếu không có cache
-    const query = {
+    const messages = await Message.getListForIndividualConversation(
       conversationId,
-      deletedMemberIds: { $nin: [member._id] },
-    };
-    // Thêm điều kiện hideBeforeTime
-    if (member.hideBeforeTime) {
-      query.createdAt = { $gt: member.hideBeforeTime };
-    }
-    // Nếu có beforeTimestamp, thêm điều kiện lọc trước thời gian đó
-    if (beforeTimestamp) {
-      query.createdAt = query.createdAt
-        ? { $gt: member.hideBeforeTime, $lt: new Date(beforeTimestamp) }
-        : { $lt: new Date(beforeTimestamp) };
-    }
-    const messages = await Message.find(query)
-      .sort({ createdAt: -1 }) // Sắp xếp theo thời gian giảm dần
-      .skip(skip) // Bỏ qua số lượng tin nhắn đã chỉ định
-      .limit(limit) // Giới hạn số lượng tin nhắn trả về
-      .lean(); // Chuyển đổi sang đối tượng JavaScript
-
+      member._id,
+      {
+        skip,
+        limit,
+        beforeTimestamp,
+        hideBeforeTime: member.hideBeforeTime, // Truyền hideBeforeTime từ member
+      }
+    );
     // 6. Lưu vào cache với TTL
-    if (messages && messages.length > 0) {
-      await redisClient.set(cacheKey, JSON.stringify(messages), 300);
-      await this.syncMessageCache(conversationId, messages);
-    }
+    // if (messages && messages.length > 0) {
+    //   await redisClient.set(cacheKey, JSON.stringify(messages), 300);
+    //   await this.syncMessageCache(conversationId, messages);
+    // }
     return messages;
   }
   // Lấy danh sách tin nhắn theo channelId
@@ -134,6 +154,64 @@ class MessageService {
     } catch (error) {
       throw new Error(`Error fetching messages: ${error.message}`);
     }
+  }
+  // thu hồi tin nhắn
+  async recallMessage(conversationId, userId, messageId) {
+    // Kiểm tra cuộc trò chuyện
+    const conversation = await Conversation.findById(conversationId);
+    if (!conversation) {
+      throw new Error("Conversation not found");
+    }
+
+    // Kiểm tra thành viên
+    const member = await Member.getByConversationIdAndUserId(
+      conversationId,
+      userId
+    );
+    if (!member) {
+      throw new Error("You are not a member of this conversation");
+    }
+
+    // Tìm tin nhắn
+    const message = await Message.findOne({
+      _id: messageId,
+      conversationId,
+    });
+    if (!message) {
+      throw new Error("Message not found in this conversation");
+    }
+
+    // Kiểm tra quyền thu hồi: chỉ người gửi được thu hồi
+    if (message.memberId.toString() !== member._id.toString()) {
+      throw new Error("You can only recall your own messages");
+    }
+
+    if (message.isDeleted) {
+      throw new Error("Message has already been recalled");
+    }
+
+    // Các loại tin nhắn cần cập nhật content
+    const recallableTypes = [
+      "TEXT",
+      "IMAGE",
+      "STICKER",
+      "VIDEO",
+      "FILE",
+      "AUDIO",
+    ];
+
+    if (recallableTypes.includes(message.type)) {
+      message.content = "Tin nhắn đã được thu hồi";
+    }
+
+    // Đánh dấu tin nhắn là đã thu hồi
+    message.isDeleted = true;
+    await message.save();
+
+    // Cập nhật cache nếu cần (tùy chọn)
+    // await this.syncMessageCache(conversationId, [message]);
+
+    return message;
   }
   // lấy tin nhắn theo id
   async getMessageById(messageId) {

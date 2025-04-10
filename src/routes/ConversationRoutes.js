@@ -3,8 +3,8 @@ const router = express.Router();
 const ConversationController = require("../controllers/ConversationController");
 
 // Routes cho hội thoại
-const ConVersationRouter = (io) => {
-  const conversationController = new ConversationController(io);
+const ConVersationRouter = (socketHandler) => {
+  const conversationController = new ConversationController(socketHandler);
   router.get("/", conversationController.getListByUserId);
   router.post(
     "/individuals/:userId",
@@ -16,6 +16,15 @@ const ConVersationRouter = (io) => {
   router.patch("/:id/avatar", conversationController.updateAvatar);
   router.delete("/:id", conversationController.hideConversationBeforeTime);
   router.get("/:id/members", conversationController.getMembersByConversationId);
+  router.post("/:id/members", conversationController.addMembersToConversation);
+  router.delete(
+    "/:id/members/:memberId",
+    conversationController.removeMemberFromConversation
+  );
+  router.post(
+    "/:id/managers",
+    conversationController.addManagersToConversation
+  );
   return router;
 };
 

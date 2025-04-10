@@ -17,6 +17,7 @@ const SOCKET_EVENTS = {
   LEAVE_CONVERSATION: "leave-conversation",
   //Messages
   RECEIVE_MESSAGE: "receive-message",
+  MESSAGE_RECALLED: "message-recalled",
 
   // Typing indicators
   TYPING: "typing",

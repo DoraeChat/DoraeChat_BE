@@ -28,6 +28,7 @@ const memberSchema = new Schema(
       type: Date,
       default: null,
     },
+    leftAt: { type: Date, default: null },
     isNotify: {
       type: Boolean,
       default: true,
@@ -103,10 +104,12 @@ memberSchema.statics.getMembersWithUserInfo = async (conversationId) => {
     throw new NotFoundError("Invalid conversationId");
   }
 
-  const members = await Member.find({ conversationId })
+  const members = await Member.find({
+    conversationId,
+    active: { $ne: false },
+  })
     .populate("userId", "name avatar avatarColor")
     .lean();
-  console.log("members", members);
 
   return members;
 };

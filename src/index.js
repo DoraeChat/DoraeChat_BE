@@ -33,8 +33,10 @@ app.set("io", io);
 app.set("socketHandler", socketHandler);
 
 const friendRouter = require("./routes/FriendRoutes")(io);
-const messageRouter = require("./routes/MessageRoutes")(io);
-const conversationRoutes = require("./routes/ConversationRoutes")(io);
+const messageRouter = require("./routes/MessageRoutes")(socketHandler);
+const conversationRoutes = require("./routes/ConversationRoutes")(
+  socketHandler
+);
 (async () => {
   try {
     await connection();

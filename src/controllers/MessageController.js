@@ -2,17 +2,16 @@ const SOCKET_EVENTS = require("../constants/socketEvents");
 const MessageService = require("../services/MessageService");
 
 class MessageController {
-  constructor(io) {
-    this.io = io;
+  constructor(socketHandler) {
+    this.socketHandler = socketHandler;
     this.sendTextMessage = this.sendTextMessage.bind(this);
-    this.getMessagesByConversation = this.getMessagesByConversation.bind(this);
-    this.getMessagesByChannelId = this.getMessagesByChannelId.bind(this);
+    this.recallMessage = this.recallMessage.bind(this);
   }
   // [POST] /api/message/text - Gửi tin nhắn văn bản
   async sendTextMessage(req, res) {
     try {
-      const { conversationId, content } = req.body;
-      const userId = req._id; // Người gửi tin nhắn
+      const { conversationId, content, channelId } = req.body;
+      const userId = req._id;
 
       if (!conversationId || !content) {
         return res
@@ -23,10 +22,17 @@ class MessageController {
       const message = await MessageService.sendTextMessage(
         userId,
         conversationId,
-        content
+        content,
+        channelId // Truyền channelId (có thể là null)
       );
-      // 🔹 Gửi tin nhắn real-time đến tất cả user trong phòng chat
-      this.io.to(conversationId).emit(SOCKET_EVENTS.RECEIVE_MESSAGE, message);
+
+      // Phát sự kiện socket đến conversationId (và channelId nếu có)
+      this.socketHandler.emitToConversation(
+        conversationId,
+        SOCKET_EVENTS.RECEIVE_MESSAGE,
+        message
+      );
+
       res.status(201).json(message);
     } catch (error) {
       res.status(400).json({ message: error.message });
@@ -74,6 +80,37 @@ class MessageController {
       res.status(200).json(messages);
     } catch (error) {
       res.status(500).json({ message: error.message });
+    }
+  } // [DELETE] /api/message/:id/conversation/:conversationId- Thu hồi tin nhắn
+  async recallMessage(req, res) {
+    try {
+      const { id: messageId, conversationId } = req.params;
+      const userId = req._id;
+
+      if (!conversationId || !messageId) {
+        return res
+          .status(400)
+          .json({ message: "Conversation ID and Message ID are required" });
+      }
+
+      const recalledMessage = await MessageService.recallMessage(
+        conversationId,
+        userId,
+        messageId
+      );
+
+      // Gửi sự kiện real-time đến tất cả user trong phòng chat
+      if (this.socketHandler) {
+        this.socketHandler.emitToConversation(
+          conversationId,
+          SOCKET_EVENTS.MESSAGE_RECALLED,
+          recalledMessage
+        );
+      }
+
+      res.status(200).json(recalledMessage);
+    } catch (error) {
+      res.status(400).json({ message: error.message });
     }
   }
 }

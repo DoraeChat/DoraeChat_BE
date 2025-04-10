@@ -159,6 +159,7 @@ const messageSchema = new Schema(
       type: ObjectId,
       required: true,
       index: true,
+      ref: "Member",
     },
     manipulatedMemberIds: {
       // member được nhắc đến trong thông báo
@@ -168,6 +169,10 @@ const messageSchema = new Schema(
     content: {
       type: String,
       required: true,
+    },
+    action: { type: String, enum: ["ADD", "REMOVE", "UPDATE"] }, // Loại hành động
+    actionData: {
+      targetId: { type: ObjectId }, // Người được thêm
     },
     tags: {
       type: [ObjectId],
@@ -276,24 +281,25 @@ messageSchema.statics.createMessage = async function ({
   memberId,
   content,
   type = "TEXT",
+  action,
+  actionData,
   conversationId,
-  channelId = null,
+  channelId,
 }) {
-  // Kiểm tra các trường bắt buộc
   if (!memberId || !content || !conversationId) {
     throw new Error("memberId, content, and conversationId are required");
   }
 
-  // Tạo tin nhắn mới
   const message = new this({
     memberId,
     content,
     type,
+    action,
+    actionData,
     conversationId,
     channelId,
   });
 
-  // Lưu tin nhắn vào database
   await message.save();
   return message;
 };
@@ -399,25 +405,25 @@ messageSchema.statics.countDocumentsByConversationIdAndUserId = async function (
   }).lean();
 };
 
-messageSchema.statics.getListByConversationIdAndUserIdOfGroup = async function (
-  conversationId,
-  userId,
-  skip,
-  limit
-) {
-  const pipeline = [
-    {
-      $match: {
-        conversationId: ObjectId(conversationId),
-        deletedMemberIds: { $nin: [ObjectId(userId)] },
-      },
-    },
-    ...getBaseGroupMessagePipeline(),
-    ...getPaginationStages(skip, limit),
-  ];
+// messageSchema.statics.getListByConversationIdAndUserIdOfGroup = async function (
+//   conversationId,
+//   userId,
+//   skip,
+//   limit
+// ) {
+//   const pipeline = [
+//     {
+//       $match: {
+//         conversationId: ObjectId(conversationId),
+//         deletedMemberIds: { $nin: [ObjectId(userId)] },
+//       },
+//     },
+//     ...getBaseGroupMessagePipeline(),
+//     ...getPaginationStages(skip, limit),
+//   ];
 
-  return await Message.aggregate(pipeline);
-};
+//   return await Message.aggregate(pipeline);
+// };
 
 messageSchema.statics.getListByConversationIdAndTypeAndUserId = async function (
   conversationId,
@@ -454,7 +460,7 @@ messageSchema.statics.getListByChannelIdAndUserId = async function (
   }
   const conversationId = channel.conversationId;
 
-  // Tìm memberId từ userId và conversationId
+  // Tìm member từ userId và conversationId
   const member = await Member.getByConversationIdAndUserId(
     conversationId,
     userId
@@ -468,10 +474,16 @@ messageSchema.statics.getListByChannelIdAndUserId = async function (
     {
       $match: {
         channelId: new ObjectId(channelId),
-        deletedUserIds: { $nin: [member._id] },
-        ...(member.hideBeforeTime && {
-          createdAt: { $gt: member.hideBeforeTime }, //  hiển thị tin nhắn sau hideBeforeTime
-        }),
+        deletedMemberIds: { $nin: [member._id] },
+        // Điều kiện lọc tin nhắn dựa trên hideBeforeTime và leftAt
+        ...(member.hideBeforeTime || (!member.active && member.leftAt)
+          ? {
+              createdAt: {
+                ...(member.hideBeforeTime && { $gt: member.hideBeforeTime }), // Tin nhắn sau hideBeforeTime
+                ...(!member.active && member.leftAt && { $lte: member.leftAt }), // Tin nhắn trước khi rời nhóm
+              },
+            }
+          : {}),
       },
     },
     ...getBaseGroupMessagePipeline(),
@@ -481,41 +493,40 @@ messageSchema.statics.getListByChannelIdAndUserId = async function (
   return await Message.aggregate(pipeline);
 };
 
-messageSchema.statics.getListByConversationIdAndUserIdOfIndividual =
-  async function (conversationId, userId, skip, limit) {
-    const pipeline = [
-      {
-        $match: {
-          conversationId: ObjectId(conversationId),
-          deletedMemberIds: { $nin: [ObjectId(userId)] },
-        },
-      },
-      commonLookupStages.replyMessageLookup,
-      {
-        $lookup: {
-          from: "members",
-          localField: "conversationId",
-          foreignField: "conversationId",
-          as: "members",
-        },
-      },
-      {
-        $lookup: {
-          from: "users",
-          localField: "members.userId",
-          foreignField: "_id",
-          as: "userInfos",
-        },
-      },
-      {
-        $project: commonProjections.individualMessage,
-      },
-      ...getPaginationStages(skip, limit),
-    ];
-
-    return await Message.aggregate(pipeline);
+messageSchema.statics.getListForIndividualConversation = async function (
+  conversationId,
+  memberId,
+  { skip = 0, limit = 20, beforeTimestamp = null, hideBeforeTime = null } = {}
+) {
+  const query = {
+    conversationId: new ObjectId(conversationId),
+    deletedMemberIds: { $nin: [new ObjectId(memberId)] },
   };
 
+  // Thêm điều kiện hideBeforeTime (nếu có)
+  if (hideBeforeTime) {
+    query.createdAt = { $gt: hideBeforeTime };
+  }
+
+  // Nếu có beforeTimestamp, thêm điều kiện lọc trước thời gian đó
+  if (beforeTimestamp) {
+    query.createdAt = query.createdAt
+      ? { $gt: hideBeforeTime, $lt: new Date(beforeTimestamp) }
+      : { $lt: new Date(beforeTimestamp) };
+  }
+
+  const messages = await this.find(query)
+    .sort({ createdAt: 1 })
+    .skip(skip)
+    .limit(limit)
+    .populate({
+      path: "memberId",
+      select: "userId",
+    })
+    .lean();
+
+  return messages;
+};
 messageSchema.statics.getListFilesByTypeAndConversationId = async function (
   type,
   conversationId,

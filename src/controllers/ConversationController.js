@@ -1,9 +1,14 @@
 const ConversationService = require("../services/ConversationService");
 const MessageService = require("../services/MessageService");
+const { SOCKET_EVENTS } = require("../constants/socketEvents");
 class ConversationController {
-  constructor(io) {
-    this.io = io; // Nhận io từ Socket.IO
-    this.updateAvatar = this.updateAvatar.bind(this); // Bind this để sử dụng trong hàm
+  constructor(socketHandler) {
+    this.socketHandler = socketHandler; // Nhận io từ Socket.IO
+    this.updateAvatar = this.updateAvatar.bind(this);
+    this.removeMemberFromConversation =
+      this.removeMemberFromConversation.bind(this);
+    this.addMembersToConversation = this.addMembersToConversation.bind(this);
+    this.addManagersToConversation = this.addManagersToConversation.bind(this);
   }
   // [GET] /api/conversations - Lấy danh sách hội thoại của người dùng
   async getListByUserId(req, res) {
@@ -104,11 +109,15 @@ class ConversationController {
         avatar
       );
       // Phát sự kiện real-time
-      if (this.io) {
+      if (this.socketHandler) {
         const notifyMessage = await MessageService.getMessageById(
           updatedConversation.lastMessageId
         );
-        this.io.to(conversationId).emit("receive-message", notifyMessage);
+        this.socketHandler.emitToConversation(
+          conversationId,
+          SOCKET_EVENTS.RECEIVE_MESSAGE,
+          notifyMessage
+        );
       }
       res.status(200).json(updatedConversation);
     } catch (error) {
@@ -142,6 +151,136 @@ class ConversationController {
       );
 
       res.status(200).json(members);
+    } catch (error) {
+      res.status(400).json({ message: error.message });
+    }
+  } // [POST] /api/conversations/:id/members - Thêm thành viên vào nhóm
+  async addMembersToConversation(req, res) {
+    try {
+      const conversationId = req.params.id;
+      const userId = req._id;
+      const { userIds } = req.body;
+
+      if (!userIds || !Array.isArray(userIds) || userIds.length === 0) {
+        return res
+          .status(400)
+          .json({ message: "userIds must be a non-empty array" });
+      }
+
+      const { addedMembers, notifyMessages } =
+        await ConversationService.addMembersToConversation(
+          conversationId,
+          userId,
+          userIds
+        );
+
+      if (this.socketHandler) {
+        notifyMessages.forEach((message) => {
+          const targetMember = addedMembers.find(
+            (m) =>
+              m.memberId.toString() === message.actionData.targetId.toString()
+          );
+          const contentForSelf = `Bạn đã được ${message.memberId.name} thêm vào nhóm`;
+          this.socketHandler.emitToConversation(
+            conversationId,
+            SOCKET_EVENTS.RECEIVE_MESSAGE,
+            {
+              ...message.toObject(),
+              content:
+                targetMember.userId.toString() === userId.toString()
+                  ? contentForSelf
+                  : message.content,
+            }
+          );
+        });
+      }
+
+      res.status(201).json(addedMembers);
+    } catch (error) {
+      res.status(400).json({ message: error.message });
+    }
+  }
+  // [DELETE] /api/conversations/:id/members/:memberId - Xóa thành viên khỏi nhóm
+  async removeMemberFromConversation(req, res) {
+    try {
+      const conversationId = req.params.id;
+      const memberIdToRemove = req.params.memberId;
+      const userId = req._id;
+
+      const { removedMember, notifyMessage } =
+        await ConversationService.removeMemberFromConversation(
+          conversationId,
+          userId,
+          memberIdToRemove
+        );
+
+      if (this.socketHandler) {
+        const contentForSelf = `Bạn đã bị ${notifyMessage.memberId.name} xóa khỏi nhóm`;
+        this.socketHandler.emitToConversation(
+          conversationId,
+          SOCKET_EVENTS.RECEIVE_MESSAGE,
+          {
+            ...notifyMessage.toObject(),
+            content:
+              removedMember.userId.toString() === userId.toString()
+                ? contentForSelf
+                : notifyMessage.content,
+          }
+        );
+        // this.io.to(removedMember.userId.toString()).emit("member-removed", {
+        //   conversationId,
+        //   message: "You have been removed from the group",
+        // });
+      }
+
+      res.status(200).json({ removedMember });
+    } catch (error) {
+      res.status(400).json({ message: error.message });
+    }
+  }
+  //[POST] /api/conversations/:id/manages - thêm  phó nhóm
+  async addManagersToConversation(req, res) {
+    try {
+      const conversationId = req.params.id;
+      const userId = req._id;
+      const { memberIds } = req.body;
+
+      if (!memberIds || !Array.isArray(memberIds) || memberIds.length === 0) {
+        return res
+          .status(400)
+          .json({ message: "memberIds must be a non-empty array" });
+      }
+
+      const { addedManagers, notifyMessages } =
+        await ConversationService.addManagersToConversation(
+          conversationId,
+          userId,
+          memberIds
+        );
+
+      if (this.socketHandler) {
+        notifyMessages.forEach((message) => {
+          const targetManager = addedManagers.find(
+            (m) =>
+              m.memberId.toString() === message.actionData.targetId.toString()
+          );
+          const contentForSelf = `Bạn đã được ${message.memberId.name} thêm làm phó nhóm`;
+
+          this.socketHandler.emitToConversation(
+            conversationId,
+            SOCKET_EVENTS.RECEIVE_MESSAGE,
+            {
+              ...message.toObject(),
+              content:
+                targetManager.userId.toString() === userId.toString()
+                  ? contentForSelf
+                  : message.content,
+            }
+          );
+        });
+      }
+
+      res.status(201).json(addedManagers);
     } catch (error) {
       res.status(400).json({ message: error.message });
     }

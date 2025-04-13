@@ -13,12 +13,15 @@ const conversationSchema = new Schema(
       type: [ObjectId],
       default: [],
     },
-    lastMessageId: ObjectId,
+    lastMessageId: {
+      type: ObjectId,
+      ref: "message",
+    },
     pinMessageIds: {
       type: [ObjectId],
       default: [],
     },
-    members: [ObjectId],
+    members: { type: [ObjectId], ref: "Member" },
     joinRequests: {
       type: [ObjectId],
       default: [],
@@ -39,11 +42,60 @@ conversationSchema.statics.getListByUserId = async (userId) => {
   const members = await Member.find({ userId }).lean();
   const memberIds = members.map((m) => m._id);
 
-  return Conversation.find({
-    members: { $in: memberIds }, // Tìm Conversation chứa memberId
+  // Lấy tất cả conversation liên quan đến user, không lọc type
+  const conversations = await Conversation.find({
+    members: { $in: memberIds },
   })
     .sort({ updatedAt: -1 })
+    .populate({
+      path: "lastMessageId",
+      select: "content createdAt",
+    })
     .lean();
+
+  // Nếu không có conversation thì trả luôn
+  if (!conversations.length) return [];
+
+  // Lấy toàn bộ memberIds xuất hiện trong các conversation
+  const allMemberIds = [
+    ...new Set(
+      conversations.flatMap((c) => c.members.map((id) => id.toString()))
+    ),
+  ];
+
+  // Truy vấn Member + User 1 lần, giảm số query
+  const membersData = await Member.find({ _id: { $in: allMemberIds } })
+    .select("name userId")
+    .populate({ path: "userId", select: "avatar" })
+    .lean();
+
+  // Map về dạng object để dễ lookup
+  const memberMap = {};
+  membersData.forEach((m) => {
+    memberMap[m._id.toString()] = {
+      name: m.name,
+      userId: m.userId,
+      avatar: m.userId?.ava || null,
+    };
+  });
+
+  // Map lại conversation: nếu type === false thì bổ sung name + avatar cho members
+  const result = conversations.map((conversation) => {
+    if (conversation.type === false) {
+      conversation.members = conversation.members.map((memberId) => {
+        const info = memberMap[memberId.toString()] || {};
+        return {
+          _id: memberId,
+          userId: info.userId._id,
+          name: info.name || null,
+          avatar: info.avatar || null,
+        };
+      });
+    }
+    return conversation;
+  });
+
+  return result;
 };
 
 conversationSchema.statics.getListGroupByNameContainAndUserId = async (

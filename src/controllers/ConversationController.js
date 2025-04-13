@@ -10,6 +10,15 @@ class ConversationController {
     this.addMembersToConversation = this.addMembersToConversation.bind(this);
     this.addManagersToConversation = this.addManagersToConversation.bind(this);
     this.removeManager = this.removeManager.bind(this);
+    this.toggleJoinApproval = this.toggleJoinApproval.bind(this);
+    this.acceptJoinRequest = this.acceptJoinRequest.bind(this);
+    this.rejectJoinRequest = this.rejectJoinRequest.bind(this);
+    this.acceptAllJoinRequests = this.acceptAllJoinRequests.bind(this);
+    this.rejectAllJoinRequests = this.rejectAllJoinRequests.bind(this);
+    this.getJoinRequests = this.getJoinRequests.bind(this);
+    this.inviteUserToGroup = this.inviteUserToGroup.bind(this);
+    this.createInviteLink = this.createInviteLink.bind(this);
+    this.acceptInvite = this.acceptInvite.bind(this);
   }
   // [GET] /api/conversations - Lấy danh sách hội thoại của người dùng
   async getListByUserId(req, res) {
@@ -314,6 +323,211 @@ class ConversationController {
       );
 
       res.status(200).json({ removedManager, notifyMessage });
+    } catch (error) {
+      res.status(400).json({ message: error.message });
+    }
+  } // PATCH /:id/acceptGroupRequest/:isStatus
+  async toggleJoinApproval(req, res) {
+    try {
+      const { id: conversationId, isStatus } = req.params;
+      const userId = req._id;
+
+      const conversation = await ConversationService.toggleJoinApproval(
+        conversationId,
+        userId,
+        isStatus
+      );
+      res.status(200).json(conversation);
+    } catch (error) {
+      res.status(400).json({ message: error.message });
+    }
+  }
+
+  // POST /:id/groupRequest/accept/:userId
+  async acceptJoinRequest(req, res) {
+    try {
+      const { id: conversationId, userId: requestingUserId } = req.params;
+      const userId = req._id;
+
+      const { newMember, notifyMessage } =
+        await ConversationService.acceptJoinRequest(
+          conversationId,
+          userId,
+          requestingUserId
+        );
+
+      this.socketHandler.emitToConversation(
+        conversationId,
+        SOCKET_EVENTS.RECEIVE_MESSAGE,
+        { newMember, notifyMessage }
+      );
+
+      res.status(200).json({ newMember, notifyMessage });
+    } catch (error) {
+      res.status(400).json({ message: error.message });
+    }
+  }
+
+  // DELETE /:id/groupRequest/reject/:userId
+  async rejectJoinRequest(req, res) {
+    try {
+      const { id: conversationId, userId: requestingUserId } = req.params;
+      const userId = req._id;
+
+      const conversation = await ConversationService.rejectJoinRequest(
+        conversationId,
+        userId,
+        requestingUserId
+      );
+
+      this.socketHandler.emitToUser(
+        requestingUserId,
+        SOCKET_EVENTS.RECEIVE_MESSAGE,
+        { conversationId }
+      );
+
+      res.status(200).json(conversation);
+    } catch (error) {
+      res.status(400).json({ message: error.message });
+    }
+  }
+
+  // POST /:id/groupRequest/accept
+  async acceptAllJoinRequests(req, res) {
+    try {
+      const { id: conversationId } = req.params;
+      const userId = req._id;
+
+      const { newMembers, notifyMessage } =
+        await ConversationService.acceptAllJoinRequests(conversationId, userId);
+
+      this.socketHandler.emitToConversation(
+        conversationId,
+        SOCKET_EVENTS.RECEIVE_MESSAGE,
+        { newMembers, notifyMessage }
+      );
+
+      res.status(200).json({ newMembers, notifyMessage });
+    } catch (error) {
+      res.status(400).json({ message: error.message });
+    }
+  }
+
+  // DELETE /:id/groupRequest/reject
+  async rejectAllJoinRequests(req, res) {
+    try {
+      const { id: conversationId } = req.params;
+      const userId = req._id;
+
+      const conversation = await ConversationService.rejectAllJoinRequests(
+        conversationId,
+        userId
+      );
+
+      this.socketHandler.emitToConversation(
+        conversationId,
+        SOCKET_EVENTS.RECEIVE_MESSAGE,
+        { conversationId }
+      );
+
+      res.status(200).json(conversation);
+    } catch (error) {
+      res.status(400).json({ message: error.message });
+    }
+  }
+
+  // GET /:id/groupRequest
+  async getJoinRequests(req, res) {
+    try {
+      const { id: conversationId } = req.params;
+      const userId = req._id;
+
+      const joinRequests = await ConversationService.getJoinRequests(
+        conversationId,
+        userId
+      );
+      res.status(200).json(joinRequests);
+    } catch (error) {
+      res.status(400).json({ message: error.message });
+    }
+  }
+  // POST /:id/invite
+  async inviteUserToGroup(req, res) {
+    try {
+      const { id: conversationId } = req.params;
+      const { inviteeId } = req.body;
+      const userId = req._id;
+
+      const result = await ConversationService.inviteUserToGroup(
+        conversationId,
+        userId,
+        inviteeId
+      );
+
+      if (result.newMember) {
+        // Nếu tự động tham gia
+        this.socketHandler.emitToConversation(
+          conversationId,
+          SOCKET_EVENTS.MEMBER_JOINED,
+          { newMember: result.newMember, notifyMessage: result.notifyMessage }
+        );
+      } else {
+        // Nếu tạo yêu cầu tham gia
+        this.socketHandler.emitToUser(
+          inviteeId,
+          SOCKET_EVENTS.INVITE_RECEIVED,
+          { conversationId, invite: result.invite }
+        );
+      }
+
+      res.status(201).json(result);
+    } catch (error) {
+      res.status(400).json({ message: error.message });
+    }
+  }
+
+  // POST /:id/invite/link
+  async createInviteLink(req, res) {
+    try {
+      const { id: conversationId } = req.params;
+      const userId = req._id;
+
+      const { inviteLink, invite } = await ConversationService.createInviteLink(
+        conversationId,
+        userId
+      );
+      res.status(201).json({ inviteLink, invite });
+    } catch (error) {
+      res.status(400).json({ message: error.message });
+    }
+  }
+
+  // POST /join/:token
+  async acceptInvite(req, res) {
+    try {
+      const { token } = req.params;
+      const userId = req._id;
+
+      const { newMember, notifyMessage } =
+        await ConversationService.acceptInvite(token, userId);
+
+      if (newMember) {
+        // Nếu tự động tham gia
+        this.socketHandler.emitToConversation(
+          newMember.conversationId,
+          SOCKET_EVENTS.MEMBER_JOINED,
+          { newMember, notifyMessage }
+        );
+      } else {
+        // Nếu tạo yêu cầu tham gia
+        this.socketHandler.emitToConversation(
+          newMember.conversationId,
+          SOCKET_EVENTS.JOIN_REQUEST_ADDED,
+          { userId }
+        );
+      }
+
+      res.status(200).json({ newMember, notifyMessage });
     } catch (error) {
       res.status(400).json({ message: error.message });
     }

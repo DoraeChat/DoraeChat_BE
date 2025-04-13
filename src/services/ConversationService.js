@@ -3,6 +3,8 @@ const Member = require("../models/Member");
 const User = require("../models/User");
 const Message = require("../models/Message");
 const Channel = require("../models/Channel");
+const InviteGroup = require("../models/InviteGroup");
+const crypto = require("crypto");
 const ConversationService = {
   // Lấy danh sách hội thoại của người dùng
   async getListByUserId(userId) {
@@ -539,7 +541,399 @@ const ConversationService = {
 
     return { removedManager: managerMember, notifyMessage };
   },
+  // Thay đổi chế độ phê duyệt thành viên
+  async toggleJoinApproval(conversationId, userId, isJoinFromLink) {
+    const conversation = await Conversation.findById(conversationId);
+    if (!conversation || !conversation.type) {
+      throw new Error("Group conversation not found");
+    }
 
+    const member = await Member.getByConversationIdAndUserId(
+      conversationId,
+      userId
+    );
+    if (conversation.leaderId.toString() !== member._id.toString()) {
+      throw new Error(
+        "Only the group leader can change join approval settings"
+      );
+    }
+
+    conversation.isJoinFromLink = isJoinFromLink === "true"; // Chuyển đổi string thành boolean
+    await conversation.save();
+
+    return conversation;
+  },
+  // Chấp nhận yêu cầu gia nhập nhóm từ một user
+  async acceptJoinRequest(conversationId, userId, requestingUserId) {
+    const conversation = await Conversation.findById(conversationId);
+    if (!conversation || !conversation.type) {
+      throw new Error("Group conversation not found");
+    }
+
+    const leader = await Member.getByConversationIdAndUserId(
+      conversationId,
+      userId
+    );
+    if (!this.checkManager(conversation, leader._id.toString())) {
+      throw new Error("Only the group leader can accept join requests");
+    }
+
+    if (
+      !conversation.joinRequests.some(
+        (id) => id.toString() === requestingUserId.toString()
+      )
+    ) {
+      throw new Error("No join request found for this user");
+    }
+
+    // Tạo member mới
+    const newMember = await Member.create({
+      conversationId,
+      userId: requestingUserId,
+      name: (await User.findById(requestingUserId).lean()).name,
+      active: true,
+    });
+
+    // Cập nhật conversation
+    conversation.members.push(newMember._id);
+    conversation.joinRequests = conversation.joinRequests.filter(
+      (id) => id.toString() !== requestingUserId.toString()
+    );
+    await conversation.save();
+
+    // Tạo tin nhắn NOTIFY
+    const channelId = await this.getDefaultChannelId(conversationId);
+    const notifyMessage = await Message.create({
+      memberId: leader._id,
+      content: `${leader.name} đã chấp nhận ${newMember.name} gia nhập nhóm`,
+      type: "NOTIFY",
+      action: "ACCEPT_JOIN",
+      conversationId,
+      channelId,
+    });
+
+    conversation.lastMessageId = notifyMessage._id;
+    await conversation.save();
+
+    return { newMember, notifyMessage };
+  },
+  // Từ chối yêu cầu gia nhập nhóm từ một user
+  async rejectJoinRequest(conversationId, userId, requestingUserId) {
+    const conversation = await Conversation.findById(conversationId);
+    if (!conversation || !conversation.type) {
+      throw new Error("Group conversation not found");
+    }
+
+    const leader = await Member.getByConversationIdAndUserId(
+      conversationId,
+      userId
+    );
+    if (conversation.leaderId.toString() !== leader._id.toString()) {
+      throw new Error("Only the group leader can reject join requests");
+    }
+
+    if (
+      !conversation.joinRequests.some(
+        (id) => id.toString() === requestingUserId.toString()
+      )
+    ) {
+      throw new Error("No join request found for this user");
+    }
+
+    conversation.joinRequests = conversation.joinRequests.filter(
+      (id) => id.toString() !== requestingUserId.toString()
+    );
+    await conversation.save();
+
+    return conversation;
+  },
+  // Chấp nhận tất cả yêu cầu gia nhập nhóm
+  async acceptAllJoinRequests(conversationId, userId) {
+    const conversation = await Conversation.findById(conversationId);
+    if (!conversation || !conversation.type) {
+      throw new Error("Group conversation not found");
+    }
+
+    const leader = await Member.getByConversationIdAndUserId(
+      conversationId,
+      userId
+    );
+    if (conversation.leaderId.toString() !== leader._id.toString()) {
+      throw new Error("Only the group leader can accept join requests");
+    }
+
+    if (!conversation.joinRequests.length) {
+      throw new Error("No join requests to accept");
+    }
+
+    const newMembers = [];
+    for (const reqUserId of conversation.joinRequests) {
+      const user = await User.findById(reqUserId).lean();
+      const newMember = await Member.create({
+        conversationId,
+        userId: reqUserId,
+        name: user.name,
+        active: true,
+      });
+      newMembers.push(newMember);
+      conversation.members.push(newMember._id);
+    }
+
+    conversation.joinRequests = [];
+    const channelId = await this.getDefaultChannelId(conversationId);
+    const notifyMessage = await Message.create({
+      memberId: leader._id,
+      content: `${leader.name} đã chấp nhận tất cả yêu cầu gia nhập nhóm`,
+      type: "NOTIFY",
+      action: "ACCEPT_ALL_JOIN",
+      conversationId,
+      channelId,
+    });
+
+    conversation.lastMessageId = notifyMessage._id;
+    await conversation.save();
+
+    return { newMembers, notifyMessage };
+  },
+
+  // Từ chối tất cả yêu cầu gia nhập nhóm
+  async rejectAllJoinRequests(conversationId, userId) {
+    const conversation = await Conversation.findById(conversationId);
+    if (!conversation || !conversation.type) {
+      throw new Error("Group conversation not found");
+    }
+
+    const leader = await Member.getByConversationIdAndUserId(
+      conversationId,
+      userId
+    );
+    if (!this.checkManager(conversation, leader._id.toString())) {
+      throw new Error(
+        "Only the group leader or manager can reject join requests"
+      );
+    }
+
+    if (!conversation.joinRequests.length) {
+      throw new Error("No join requests to reject");
+    }
+
+    conversation.joinRequests = [];
+    await conversation.save();
+
+    return conversation;
+  },
+
+  // Lấy danh sách yêu cầu gia nhập nhóm
+  async getJoinRequests(conversationId, userId) {
+    const conversation = await Conversation.findById(conversationId);
+    if (!conversation || !conversation.type) {
+      throw new Error("Group conversation not found");
+    }
+
+    const member = await Member.getByConversationIdAndUserId(
+      conversationId,
+      userId
+    );
+    if (conversation.leaderId.toString() !== member._id.toString()) {
+      throw new Error("Only the group leader can view join requests");
+    }
+
+    const joinRequests = await User.find({
+      _id: { $in: conversation.joinRequests },
+    })
+      .select("name avatar avatarColor")
+      .lean();
+
+    return joinRequests;
+  },
+  // Mời một user vào nhóm
+  async inviteUserToGroup(conversationId, userId, inviteeId) {
+    const conversation = await Conversation.findById(conversationId);
+    if (!conversation || !conversation.type) {
+      throw new Error("Group conversation not found");
+    }
+
+    const inviter = await Member.getByConversationIdAndUserId(
+      conversationId,
+      userId
+    );
+    if (!inviter.active) {
+      throw new Error("You are not an active member of this group");
+    }
+
+    const invitee = await User.findById(inviteeId);
+    if (!invitee) {
+      throw new Error("User to invite not found");
+    }
+
+    const existingMember = await Member.findOne({
+      conversationId,
+      userId: inviteeId,
+    });
+    if (existingMember && existingMember.active) {
+      throw new Error("User is already a member of this group");
+    }
+
+    const token = crypto.randomBytes(32).toString("hex");
+    const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // Hết hạn sau 7 ngày
+
+    const invite = await InviteGroup.createOrUpdateInvite(
+      conversationId,
+      userId,
+      inviteeId,
+      token,
+      expiresAt
+    );
+
+    // Nếu không cần phê duyệt (isJoinFromLink = true), tự động thêm vào nhóm
+    if (conversation.isJoinFromLink) {
+      let newMember = existingMember;
+      if (!newMember) {
+        newMember = await Member.create({
+          conversationId,
+          userId: inviteeId,
+          name: invitee.name,
+          active: true,
+        });
+        conversation.members.push(newMember._id);
+      } else {
+        newMember.active = true;
+        newMember.leftAt = null;
+        await newMember.save();
+      }
+
+      invite.status = "accepted";
+      await invite.save();
+
+      const channelId = await this.getDefaultChannelId(conversationId);
+      const notifyMessage = await Message.create({
+        memberId: newMember._id,
+        content: `${newMember.name} đã gia nhập nhóm qua lời mời của ${inviter.name}`,
+        type: "NOTIFY",
+        action: "JOIN_GROUP",
+        conversationId,
+        channelId,
+      });
+
+      conversation.lastMessageId = notifyMessage._id;
+      await conversation.save();
+
+      return { invite, newMember, notifyMessage };
+    }
+
+    // Nếu cần phê duyệt, thêm vào joinRequests
+    if (
+      !conversation.joinRequests.some(
+        (id) => id.toString() === inviteeId.toString()
+      )
+    ) {
+      conversation.joinRequests.push(inviteeId);
+      await conversation.save();
+    }
+
+    return { invite };
+  }, // Tạo link mời tham gia nhóm
+  async createInviteLink(conversationId, userId) {
+    const conversation = await Conversation.findById(conversationId);
+    if (!conversation || !conversation.type) {
+      throw new Error("Group conversation not found");
+    }
+
+    const inviter = await Member.getByConversationIdAndUserId(
+      conversationId,
+      userId
+    );
+    if (!inviter.active) {
+      throw new Error("You are not an active member of this group");
+    }
+
+    const token = crypto.randomBytes(32).toString("hex");
+    const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // Hết hạn sau 7 ngày
+
+    const invite = await InviteGroup.create({
+      conversationId,
+      inviterId: userId,
+      inviteeId: null, // Link chung
+      token,
+      expiresAt,
+    });
+
+    const inviteLink = `${process.env.APP_URL}/join/${token}`;
+    return { inviteLink, invite };
+  },
+  // Chấp nhận lời mời hoặc link tham gia nhóm
+  async acceptInvite(token, userId) {
+    const invite = await InviteGroup.findOne({ token, status: "pending" });
+    if (!invite || invite.expiresAt < new Date()) {
+      throw new Error("Invalid or expired invite");
+    }
+
+    const conversation = await Conversation.findById(invite.conversationId);
+    if (!conversation || !conversation.type) {
+      throw new Error("Group conversation not found");
+    }
+
+    if (invite.inviteeId && invite.inviteeId.toString() !== userId.toString()) {
+      throw new Error("This invite is not for you");
+    }
+
+    const existingMember = await Member.findOne({
+      conversationId: invite.conversationId,
+      userId,
+    });
+    if (existingMember && existingMember.active) {
+      throw new Error("You are already a member of this group");
+    }
+
+    let newMember;
+    let notifyMessage;
+    invite.status = "accepted";
+    await invite.save();
+
+    // Nếu không cần phê duyệt (isJoinFromLink = true), thêm vào nhóm
+    if (conversation.isJoinFromLink) {
+      if (existingMember) {
+        existingMember.active = true;
+        existingMember.leftAt = null;
+        await existingMember.save();
+        newMember = existingMember;
+      } else {
+        const user = await User.findById(userId);
+        newMember = await Member.create({
+          conversationId: invite.conversationId,
+          userId,
+          name: user.name,
+          active: true,
+        });
+        conversation.members.push(newMember._id);
+      }
+
+      const channelId = await this.getDefaultChannelId(invite.conversationId);
+      const inviter = await User.findById(invite.inviterId);
+      notifyMessage = await Message.create({
+        memberId: newMember._id,
+        content: `${newMember.name} đã gia nhập nhóm qua lời mời của ${inviter.name}`,
+        type: "NOTIFY",
+        action: "JOIN_GROUP",
+        conversationId: invite.conversationId,
+        channelId,
+      });
+
+      conversation.lastMessageId = notifyMessage._id;
+    } else {
+      // Nếu cần phê duyệt, thêm vào joinRequests
+      if (
+        !conversation.joinRequests.some(
+          (id) => id.toString() === userId.toString()
+        )
+      ) {
+        conversation.joinRequests.push(userId);
+      }
+    }
+
+    await conversation.save();
+    return { newMember, notifyMessage };
+  },
   async getDefaultChannelId(conversationId) {
     const channel = await Channel.findOne({
       conversationId,

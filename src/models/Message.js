@@ -172,7 +172,14 @@ const messageSchema = new Schema(
     },
     action: {
       type: String,
-      enum: ["ADD", "REMOVE", "UPDATE", "REMOVE_MANAGER", "ADD_MANAGER"],
+      enum: [
+        "ADD",
+        "REMOVE",
+        "UPDATE",
+        "REMOVE_MANAGER",
+        "ADD_MANAGER",
+        "JOIN_GROUP",
+      ],
     }, // Loại hành động
     actionData: {
       targetId: { type: ObjectId }, // Người được thêm

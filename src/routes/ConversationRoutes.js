@@ -26,6 +26,42 @@ const ConVersationRouter = (socketHandler) => {
     conversationController.addManagersToConversation
   );
   router.delete("/:id/managers", conversationController.removeManager);
+  router.patch(
+    "/:id/acceptGroupRequest/:isStatus",
+    conversationController.toggleJoinApproval.bind(conversationController)
+  );
+  router.post(
+    "/:id/groupRequest/accept/:userId",
+    conversationController.acceptJoinRequest.bind(conversationController)
+  );
+  router.delete(
+    "/:id/groupRequest/reject/:userId",
+    conversationController.rejectJoinRequest.bind(conversationController)
+  );
+  router.post(
+    "/:id/groupRequest/accept",
+    conversationController.acceptAllJoinRequests.bind(conversationController)
+  );
+  router.delete(
+    "/:id/groupRequest/reject",
+    conversationController.rejectAllJoinRequests.bind(conversationController)
+  );
+  router.get(
+    "/:id/groupRequest",
+    conversationController.getJoinRequests.bind(conversationController)
+  );
+  router.post(
+    "/:id/invite",
+    conversationController.inviteUserToGroup.bind(conversationController)
+  );
+  router.post(
+    "/:id/invite/link",
+    conversationController.createInviteLink.bind(conversationController)
+  );
+  router.post(
+    "/join/:token",
+    conversationController.acceptInvite.bind(conversationController)
+  );
   return router;
 };
 

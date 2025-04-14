@@ -203,6 +203,43 @@ const uploadImages = async (files, userId, type) => {
   }
 };
 
+// Upload video
+const uploadVideo = async (file, userId, type = "videos") => {
+  const uniqueSuffix = userId + "-" + formatDateToYYYYMMDD(Date.now()) + "-" + uuidv4();
+  const filename = "video-" + uniqueSuffix;
+  
+  try {
+    const uploadOptions = {
+      folder: type || "videos",
+      allowed_formats: ["mp4", "mov", "avi", "wmv", "flv", "webm"],
+      resource_type: "video",
+      chunk_size: 6000000, // 6MB chunks for better upload handling
+      eager: [
+        { format: "mp4", transformation: [
+          { quality: "auto" },
+          { bit_rate: "1m" }
+        ]},
+      ],
+      eager_async: true,
+      overwrite: true,
+      unique_filename: true,
+      public_id: filename,
+    };
+    
+    const result = await cloudinary.uploader.upload(file, uploadOptions);
+    
+    return {
+      url: result.secure_url,
+      publicId: result.public_id,
+      duration: result.duration, // Video duration in seconds
+      format: result.format,
+    };
+  } catch (error) {
+    console.error("Video upload error:", error);
+    throw error;
+  }
+};
+
 // Hàm xóa avatar cũ
 const deleteImage = async (publicId) => {
   try {
@@ -231,4 +268,5 @@ module.exports = {
   deleteImage,
   uploadImages,
   checkFileSize,
+  uploadVideo,
 };

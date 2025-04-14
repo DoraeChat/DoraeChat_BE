@@ -38,11 +38,6 @@ const getFileTypeCategory = (mimetype) => {
     return "powerpoint";
   if (
     [
-      // "application/zip",
-      // "application/x-rar-compressed",
-      // "application/x-7z-compressed",
-      // "application/x-tar",
-      // "application/gzip",
       "application/zip",
       "application/x-zip",
       "application/x-zip-compressed",
@@ -54,7 +49,6 @@ const getFileTypeCategory = (mimetype) => {
       "application/gzip",
       "application/x-gzip",
       "application/x-gzip-compressed",
-      // for .rar files
       "application/vnd.rar",
       "application/x-rar",
       "application/x-rar-compress",
@@ -91,28 +85,28 @@ const fileTypeConfigs = {
     allowedMimeTypes: ["application/pdf"],
   },
   doc: {
-    maxSize: 15 * 1024 * 1024, // 15MB
+    maxSize: 10 * 1024 * 1024, // 10MB
     allowedMimeTypes: [
       "application/msword",
       "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
     ],
   },
   excel: {
-    maxSize: 15 * 1024 * 1024, // 15MB
+    maxSize: 10 * 1024 * 1024, // 10MB
     allowedMimeTypes: [
       "application/vnd.ms-excel",
       "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
     ],
   },
   powerpoint: {
-    maxSize: 20 * 1024 * 1024, // 20MB
+    maxSize: 10 * 1024 * 1024, // 10MB
     allowedMimeTypes: [
       "application/vnd.ms-powerpoint",
       "application/vnd.openxmlformats-officedocument.presentationml.presentation",
     ],
   },
   archive: {
-    maxSize: 50 * 1024 * 1024, // 50MB
+    maxSize: 10 * 1024 * 1024, // 10MB
     allowedMimeTypes: [
       // "application/zip",
       // "application/x-rar-compressed",
@@ -139,7 +133,7 @@ const fileTypeConfigs = {
     ],
   },
   text: {
-    maxSize: 5 * 1024 * 1024, // 5MB
+    maxSize: 10 * 1024 * 1024, // 10MB
     allowedMimeTypes: ["text/plain", "text/csv"],
   },
 };

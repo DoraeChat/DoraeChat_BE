@@ -330,9 +330,9 @@ const uploadFile = async (file, userId, originalFilename) => {
   let resourceType = "";
   let fileType = fileCategory;
 
-  if (fileCategory === "pdf") {
+  if (fileCategory === "pdf" || fileCategory === "audio") {
     resourceType = "raw";
-  }
+  } 
 
   try {
     const uploadOptions = {
@@ -344,7 +344,7 @@ const uploadFile = async (file, userId, originalFilename) => {
     };
 
     const result = await cloudinary.uploader.upload(file.path, uploadOptions);
-
+    
     fs.unlinkSync(file.path); 
 
     return {

@@ -63,7 +63,7 @@ const getFileTypeCategory = (mimetype) => {
 
 const fileTypeConfigs = {
   image: {
-    maxSize: 5 * 1024 * 1024, // 5MB
+    maxSize: 10 * 1024 * 1024, // 10MB
     allowedMimeTypes: ["image/jpeg", "image/png", "image/webp", "image/gif"],
   },
   video: {
@@ -77,7 +77,7 @@ const fileTypeConfigs = {
     ],
   },
   audio: {
-    maxSize: 20 * 1024 * 1024, // 20MB
+    maxSize: 10 * 1024 * 1024, // 10MB
     allowedMimeTypes: ["audio/mpeg", "audio/wav", "audio/ogg", "audio/aac"],
   },
   pdf: {
@@ -108,11 +108,6 @@ const fileTypeConfigs = {
   archive: {
     maxSize: 10 * 1024 * 1024, // 10MB
     allowedMimeTypes: [
-      // "application/zip",
-      // "application/x-rar-compressed",
-      // "application/x-7z-compressed",
-      // "application/x-tar",
-      // "application/gzip",
       "application/zip",
       "application/x-zip",
       "application/x-zip-compressed",
@@ -124,7 +119,6 @@ const fileTypeConfigs = {
       "application/gzip",
       "application/x-gzip",
       "application/x-gzip-compressed",
-      // for .rar files
       "application/vnd.rar",
       "application/x-rar",
       "application/x-rar-compress",
@@ -155,9 +149,7 @@ const upload = multer({
       cb(null, uploadPath);
     },
     filename: (req, file, cb) => {
-      const userId = req.userId || "unknown";
-      const uniqueSuffix =
-        userId + "-" + formatDateToYYYYMMDD(Date.now()) + "-" + uuidv4();
+      const uniqueSuffix = formatDateToYYYYMMDD(Date.now()) + "-" + uuidv4();
       const fileCategory = getFileTypeCategory(file.mimetype);
 
       cb(

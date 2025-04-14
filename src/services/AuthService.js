@@ -119,7 +119,7 @@ class AuthService {
 
             // Gửi OTP qua email
             await this.transporter.sendMail({
-                from: process.env.GOOGLE_USERNAME,
+                from: 'DoraChat',
                 to: email,
                 subject: 'Mã xác minh DORA',
                 text: `Mã xác minh của bạn là: ${otp}`,

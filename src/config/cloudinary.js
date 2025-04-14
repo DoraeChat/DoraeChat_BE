@@ -38,11 +38,28 @@ const getFileTypeCategory = (mimetype) => {
     return "powerpoint";
   if (
     [
+      // "application/zip",
+      // "application/x-rar-compressed",
+      // "application/x-7z-compressed",
+      // "application/x-tar",
+      // "application/gzip",
       "application/zip",
-      "application/x-rar-compressed",
+      "application/x-zip",
+      "application/x-zip-compressed",
+      "application/x-compress",
+      "application/x-compressed",
+      "application/x-compress-archive",
       "application/x-7z-compressed",
       "application/x-tar",
       "application/gzip",
+      "application/x-gzip",
+      "application/x-gzip-compressed",
+      // for .rar files
+      "application/vnd.rar",
+      "application/x-rar",
+      "application/x-rar-compress",
+      "application/x-rar-compressed",
+      "application/x-rar-compress-archive",
     ].includes(mimetype)
   )
     return "archive";
@@ -97,11 +114,28 @@ const fileTypeConfigs = {
   archive: {
     maxSize: 50 * 1024 * 1024, // 50MB
     allowedMimeTypes: [
+      // "application/zip",
+      // "application/x-rar-compressed",
+      // "application/x-7z-compressed",
+      // "application/x-tar",
+      // "application/gzip",
       "application/zip",
-      "application/x-rar-compressed",
+      "application/x-zip",
+      "application/x-zip-compressed",
+      "application/x-compress",
+      "application/x-compressed",
+      "application/x-compress-archive",
       "application/x-7z-compressed",
       "application/x-tar",
       "application/gzip",
+      "application/x-gzip",
+      "application/x-gzip-compressed",
+      // for .rar files
+      "application/vnd.rar",
+      "application/x-rar",
+      "application/x-rar-compress",
+      "application/x-rar-compressed",
+      "application/x-rar-compress-archive",
     ],
   },
   text: {
@@ -332,7 +366,9 @@ const uploadFile = async (file, userId, originalFilename) => {
  
   if (fileCategory === "pdf" || fileCategory === "audio" || fileCategory === "doc" || fileCategory === "excel" || fileCategory === "powerpoint") {
     resourceType = "raw";
-  } 
+  } else if (fileCategory === "archive") {
+    resourceType = "raw";
+  }
 
   try {
     const uploadOptions = {

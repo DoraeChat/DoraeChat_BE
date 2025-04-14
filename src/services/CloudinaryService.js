@@ -10,7 +10,6 @@ const CloudinaryService = {
         if (!Array.isArray(files)) {
             files = [files];
         }
-        // console.log('files', files);
     
         try {
             const uploadResult = await uploadImages(files, userId, 'images');
@@ -19,7 +18,6 @@ const CloudinaryService = {
                 url: result.url,
                 publicId: result.publicId,
             }));
-            return null;
         } catch (error) {
             throw error;
         }

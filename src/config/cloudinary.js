@@ -329,8 +329,8 @@ const uploadFile = async (file, userId, originalFilename) => {
   let folderName = "files/" + fileCategory;
   let resourceType = "";
   let fileType = fileCategory;
-
-  if (fileCategory === "pdf" || fileCategory === "audio" || fileCategory === "doc" || fileCategory === "excel") {
+ 
+  if (fileCategory === "pdf" || fileCategory === "audio" || fileCategory === "doc" || fileCategory === "excel" || fileCategory === "powerpoint") {
     resourceType = "raw";
   } 
 

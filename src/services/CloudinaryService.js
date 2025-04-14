@@ -1,6 +1,6 @@
 const User = require('../models/User');
 const NotFoundError = require('../exceptions/NotFoundError');
-const { uploadImages, uploadVideo } = require('../config/cloudinary');
+const { uploadImages, uploadVideo, uploadFile } = require('../config/cloudinary');
 const fs = require('fs').promises;
 
 const CloudinaryService = {
@@ -42,6 +42,23 @@ const CloudinaryService = {
             throw error;
         }
     },
+
+    async uploadFileMessage(userId, file) {
+        if (!file) {
+            throw new Error('Please provide a file');
+        }
+    
+        try {
+            const uploadResult = await uploadFile(file, userId, file.originalname);
+    
+            return {
+                url: uploadResult.url,
+                publicId: uploadResult.publicId,
+            };
+        } catch (error) {
+            throw error;
+        }
+    }
 }
 
 module.exports = CloudinaryService;

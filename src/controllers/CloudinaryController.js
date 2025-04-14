@@ -29,6 +29,20 @@ const CloudinaryController = {
       next(error);
     }
   },
+
+  async uploadFile(req, res, next) {
+    try {
+      const { id } = req.body;
+      const uploadFile = await CloudinaryService.uploadFileMessage(id, req.file);
+
+      res.json({
+        message: "File is uploaded successfully!",
+        file: uploadFile,
+      });
+    } catch (error) {
+      next(error);
+    }
+  },
 };
 
 module.exports = CloudinaryController;

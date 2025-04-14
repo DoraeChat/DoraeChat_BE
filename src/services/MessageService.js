@@ -86,7 +86,7 @@ class MessageService {
   async getMessagesByConversationId(
     conversationId,
     userId,
-    { skip = 0, limit = 20, beforeTimestamp = null } = {}
+    { skip = 0, limit = 100, beforeTimestamp = null } = {}
   ) {
     // 1. Validate conversation
     const conversation = await Conversation.findById(conversationId);

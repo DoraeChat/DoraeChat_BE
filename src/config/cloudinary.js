@@ -1,17 +1,8 @@
 const cloudinary = require("cloudinary").v2;
 const multer = require("multer");
 const path = require("path");
-
-const formatDateToYYYYMMDD = (timestamp) => {
-  const date = new Date(timestamp);
-
-  const year = date.getFullYear();
-  // getMonth() trả về giá trị từ 0-11, nên cần +1 và đảm bảo luôn có 2 chữ số
-  const month = String(date.getMonth() + 1).padStart(2, "0");
-  const day = String(date.getDate()).padStart(2, "0");
-
-  return `${year}${month}${day}`;
-};
+const fs = require("fs");
+const { v4: uuidv4 } = require('uuid');
 
 cloudinary.config({
   cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
@@ -19,34 +10,132 @@ cloudinary.config({
   api_secret: process.env.CLOUDINARY_API_SECRET,
 });
 
+const getFileTypeCategory = (mimetype) => {
+  if (mimetype.startsWith('image/')) return 'image';
+  if (mimetype.startsWith('video/')) return 'video';
+  if (mimetype.startsWith('audio/')) return 'audio';
+  if (['application/pdf'].includes(mimetype)) return 'pdf';
+  if (['application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'].includes(mimetype)) return 'doc';
+  if (['application/vnd.ms-excel', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'].includes(mimetype)) return 'excel';
+  if (['application/vnd.ms-powerpoint', 'application/vnd.openxmlformats-officedocument.presentationml.presentation'].includes(mimetype)) return 'powerpoint';
+  if (['application/zip', 'application/x-rar-compressed', 'application/x-7z-compressed', 'application/x-tar', 'application/gzip'].includes(mimetype)) return 'archive';
+  if (mimetype === 'text/plain' || mimetype === 'text/csv') return 'text';
+  return 'other';
+};
+
+const fileTypeConfigs = {
+  image: {
+    maxSize: 5 * 1024 * 1024, // 5MB
+    allowedMimeTypes: ['image/jpeg', 'image/png', 'image/webp', 'image/gif']
+  },
+  video: {
+    maxSize: 100 * 1024 * 1024, // 100MB
+    allowedMimeTypes: ['video/mp4', 'video/webm', 'video/quicktime', 'video/x-msvideo', 'video/x-ms-wmv']
+  },
+  audio: {
+    maxSize: 20 * 1024 * 1024, // 20MB
+    allowedMimeTypes: ['audio/mpeg', 'audio/wav', 'audio/ogg', 'audio/aac']
+  },
+  pdf: {
+    maxSize: 10 * 1024 * 1024, // 10MB
+    allowedMimeTypes: ['application/pdf']
+  },
+  doc: {
+    maxSize: 15 * 1024 * 1024, // 15MB
+    allowedMimeTypes: ['application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document']
+  },
+  excel: {
+    maxSize: 15 * 1024 * 1024, // 15MB
+    allowedMimeTypes: ['application/vnd.ms-excel', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet']
+  },
+  powerpoint: {
+    maxSize: 20 * 1024 * 1024, // 20MB
+    allowedMimeTypes: ['application/vnd.ms-powerpoint', 'application/vnd.openxmlformats-officedocument.presentationml.presentation']
+  },
+  archive: {
+    maxSize: 50 * 1024 * 1024, // 50MB
+    allowedMimeTypes: ['application/zip', 'application/x-rar-compressed', 'application/x-7z-compressed', 'application/x-tar', 'application/gzip']
+  },
+  text: {
+    maxSize: 5 * 1024 * 1024, // 5MB
+    allowedMimeTypes: ['text/plain', 'text/csv']
+  },
+};
+
+const allAllowedMimeTypes = Object.values(fileTypeConfigs)
+  .flatMap(config => config.allowedMimeTypes);
+
+
 // Cấu hình upload với multer
 const upload = multer({
   storage: multer.diskStorage({
     destination: (req, file, cb) => {
-      cb(null, "uploads/");
+      // Create folder structure based on file type
+      const fileCategory = getFileTypeCategory(file.mimetype);
+      const uploadPath = path.join("uploads", fileCategory);
+      
+      // Ensure the directory exists
+      fs.mkdirSync(uploadPath, { recursive: true });
+      cb(null, uploadPath);
     },
     filename: (req, file, cb) => {
       const userId = req.userId || "unknown";
-      const uniqueSuffix = userId + "-" + formatDateToYYYYMMDD(Date.now());
+      const uniqueSuffix = userId + "-" + formatDateToYYYYMMDD(Date.now()) + '-' + uuidv4();
+      const fileCategory = getFileTypeCategory(file.mimetype);
+      
       cb(
         null,
-        file.fieldname + "-" + uniqueSuffix + path.extname(file.originalname)
+        fileCategory + "-" + file.fieldname + "-" + uniqueSuffix + path.extname(file.originalname)
       );
     },
   }),
   limits: {
-    fileSize: 5 * 1024 * 1024, // Giới hạn 5MB
+    fileSize: 100 * 1024 * 1024, // Max 100MB
   },
   fileFilter: (req, file, cb) => {
-    const allowedTypes = ["image/jpeg", "image/png", "image/webp"];
-    if (allowedTypes.includes(file.mimetype)) {
-      cb(null, true);
-    } else {
-      cb(new Error("Format is invalid"), false);
+    const fileCategory = getFileTypeCategory(file.mimetype);
+    const config = fileTypeConfigs[fileCategory];
+    
+    // Check if mimetype is allowed
+    if (!allAllowedMimeTypes.includes(file.mimetype)) {
+      return cb(new Error(`File format '${file.mimetype}' is not supported`), false);
     }
+    
+    // Set file size limit based on file type
+    req.fileSizeLimit = config.maxSize;
+    
+    // multer's limits 
+    if (file.size && file.size > config.maxSize) {
+      return cb(new Error(`File size exceeds the limit for ${fileCategory} files (${config.maxSize / (1024 * 1024)}MB)`), false);
+    }
+    
+    // Store file category for later use
+    file.fileCategory = fileCategory;
+    cb(null, true);
   },
 });
 
+// Custom middleware to check file size after multer
+const checkFileSize = (req, res, next) => {
+  if (!req.file && !req.files) return next();
+  
+  const files = req.files || [req.file];
+  
+  for (const file of files) {
+    const fileCategory = file.fileCategory || getFileTypeCategory(file.mimetype);
+    const maxSize = fileTypeConfigs[fileCategory].maxSize;
+    
+    if (file.size > maxSize) {
+      // Delete the uploaded file
+      fs.unlinkSync(file.path);
+      return next(new Error(`File '${file.originalname}' exceeds the maximum size limit for ${fileCategory} files (${maxSize / (1024 * 1024)}MB)`));
+    }
+  }
+  
+  next();
+};
+
+// upload avatar và cover
 const uploadImage = async (file, userId, type) => {
   const uniqueSuffix = userId + "-" + formatDateToYYYYMMDD(Date.now());
   const filename =
@@ -76,6 +165,44 @@ const uploadImage = async (file, userId, type) => {
   }
 };
 
+// upload multiple images cho message
+const uploadImages = async (files, userId, type) => {
+  try {
+    // Ensure files is an array
+    const fileArray = Array.isArray(files) ? files : [files];
+    
+    const uploadPromises = fileArray.map(async (file) => {
+      const uniqueSuffix = userId + "-" + formatDateToYYYYMMDD(Date.now());
+      const filename = 'image' + "-" + uniqueSuffix + '-' + file.path.slice(-36);
+      
+      const uploadOptions = {
+        folder: type || "images",
+        allowed_formats: ["jpg", "png", "jpeg", "webp"],
+        transformation: [
+          { width: 800, height: 800, crop: "limit" },
+          { quality: "auto" },
+        ],
+        unique_filename: true,
+        public_id: filename,
+      };
+      
+      const result = await cloudinary.uploader.upload(file.path, uploadOptions);
+      
+      fs.unlinkSync(file.path);
+
+      return {
+        url: result.secure_url,
+        publicId: result.public_id,
+      };
+    });
+    
+    return Promise.all(uploadPromises);
+  } catch (error) {
+    console.error("Multiple images upload error:", error);
+    throw error;
+  }
+};
+
 // Hàm xóa avatar cũ
 const deleteImage = async (publicId) => {
   try {
@@ -86,9 +213,22 @@ const deleteImage = async (publicId) => {
   }
 };
 
+const formatDateToYYYYMMDD = (timestamp) => {
+  const date = new Date(timestamp);
+
+  const year = date.getFullYear();
+  // getMonth() trả về giá trị từ 0-11, nên cần +1 và đảm bảo luôn có 2 chữ số
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+
+  return `${year}${month}${day}`;
+};
+
 module.exports = {
   cloudinary,
   upload,
   uploadImage,
   deleteImage,
+  uploadImages,
+  checkFileSize,
 };

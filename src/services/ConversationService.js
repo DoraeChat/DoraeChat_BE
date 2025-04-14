@@ -38,11 +38,13 @@ const ConversationService = {
         conversationId: conversation._id,
         userId: userId1,
         name: user1.name,
+        active: true,
       },
       {
         conversationId: conversation._id,
         userId: userId2,
         name: user2.name,
+        active: true,
       },
     ];
     const createdMembers = await Member.insertMany(membersToCreate);

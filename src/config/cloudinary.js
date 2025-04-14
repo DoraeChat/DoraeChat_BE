@@ -38,22 +38,20 @@ const getFileTypeCategory = (mimetype) => {
     return "powerpoint";
   if (
     [
-      "application/zip",
-      "application/x-zip",
-      "application/x-zip-compressed",
-      "application/x-compress",
-      "application/x-compressed",
-      "application/x-compress-archive",
-      "application/x-7z-compressed",
-      "application/x-tar",
-      "application/gzip",
-      "application/x-gzip",
-      "application/x-gzip-compressed",
-      "application/vnd.rar",
-      "application/x-rar",
-      "application/x-rar-compress",
-      "application/x-rar-compressed",
-      "application/x-rar-compress-archive",
+      // ZIP
+      "application/zip",              // Chuẩn chính thức (IANA)
+      "application/x-zip-compressed", // Dự phòng cho ZIP
+
+      // RAR
+      "application/vnd.rar",          // Chuẩn hiện đại (từ 2015)
+      "application/x-rar-compressed", // Phổ biến trước đây
+
+      // 7Z
+      "application/x-7z-compressed",  // Dành cho file .7z
+
+      // TAR
+      "application/x-tar",            // Dành cho file .tar
+      "application/gzip",             // Dành cho .tar.gz (nếu cần)
     ].includes(mimetype)
   )
     return "archive";
@@ -108,22 +106,20 @@ const fileTypeConfigs = {
   archive: {
     maxSize: 10 * 1024 * 1024, // 10MB
     allowedMimeTypes: [
-      "application/zip",
-      "application/x-zip",
-      "application/x-zip-compressed",
-      "application/x-compress",
-      "application/x-compressed",
-      "application/x-compress-archive",
-      "application/x-7z-compressed",
-      "application/x-tar",
-      "application/gzip",
-      "application/x-gzip",
-      "application/x-gzip-compressed",
-      "application/vnd.rar",
-      "application/x-rar",
-      "application/x-rar-compress",
-      "application/x-rar-compressed",
-      "application/x-rar-compress-archive",
+      // ZIP
+      "application/zip",              // Chuẩn chính thức (IANA)
+      "application/x-zip-compressed", // Dự phòng cho ZIP
+
+      // RAR
+      "application/vnd.rar",          // Chuẩn hiện đại (từ 2015)
+      "application/x-rar-compressed", // Phổ biến trước đây
+
+      // 7Z
+      "application/x-7z-compressed",  // Dành cho file .7z
+
+      // TAR
+      "application/x-tar",            // Dành cho file .tar
+      "application/gzip",             // Dành cho .tar.gz (nếu cần)
     ],
   },
   text: {
@@ -341,18 +337,27 @@ const uploadFile = async (file, userId, originalFilename) => {
     .extname(originalFilename)
     .toLowerCase()
     .substring(1);
-  const uniqueSuffix = userId + "-" + formatDateToYYYYMMDD(Date.now()) + "-" + uuidv4();
+  const uniqueSuffix =
+    userId + "-" + formatDateToYYYYMMDD(Date.now()) + "-" + uuidv4();
   const filename = "file-" + uniqueSuffix;
 
   // Determine folder and resource type based on file extension
   const fileCategory = getFileTypeCategory(file.mimetype);
   let folderName = "files/" + fileCategory;
-  let resourceType = "";
+  let resourceType = "auto";
   let fileType = fileCategory;
- 
-  if (fileCategory === "pdf" || fileCategory === "audio" || fileCategory === "doc" || fileCategory === "excel" || fileCategory === "powerpoint" || fileCategory === "archive") {
+
+  if (
+    fileCategory === "pdf" ||
+    fileCategory === "audio" ||
+    fileCategory === "doc" ||
+    fileCategory === "excel" ||
+    fileCategory === "powerpoint" ||
+    fileCategory === "archive"
+  ) {
     resourceType = "raw";
   }
+
   try {
     const uploadOptions = {
       folder: folderName,
@@ -363,8 +368,8 @@ const uploadFile = async (file, userId, originalFilename) => {
     };
 
     const result = await cloudinary.uploader.upload(file.path, uploadOptions);
-    
-    fs.unlinkSync(file.path); 
+
+    fs.unlinkSync(file.path);
 
     return {
       url: result.secure_url,

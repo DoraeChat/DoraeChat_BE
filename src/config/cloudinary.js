@@ -364,12 +364,9 @@ const uploadFile = async (file, userId, originalFilename) => {
   let resourceType = "";
   let fileType = fileCategory;
  
-  if (fileCategory === "pdf" || fileCategory === "audio" || fileCategory === "doc" || fileCategory === "excel" || fileCategory === "powerpoint") {
-    resourceType = "raw";
-  } else if (fileCategory === "archive") {
+  if (fileCategory === "pdf" || fileCategory === "audio" || fileCategory === "doc" || fileCategory === "excel" || fileCategory === "powerpoint" || fileCategory === "archive") {
     resourceType = "raw";
   }
-
   try {
     const uploadOptions = {
       folder: folderName,

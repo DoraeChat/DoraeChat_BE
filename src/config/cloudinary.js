@@ -321,7 +321,7 @@ const uploadFile = async (file, userId, originalFilename) => {
     .extname(originalFilename)
     .toLowerCase()
     .substring(1);
-  const uniqueSuffix = userId + "-" + formatDateToYYYYMMDD(Date.now());
+  const uniqueSuffix = userId + "-" + formatDateToYYYYMMDD(Date.now()) + "-" + uuidv4();
   const filename = "file-" + uniqueSuffix;
 
   // Determine folder and resource type based on file extension
@@ -332,7 +332,9 @@ const uploadFile = async (file, userId, originalFilename) => {
 
   if (fileCategory === "pdf" || fileCategory === "audio") {
     resourceType = "raw";
-  } 
+  } else if (fileCategory === "doc") {
+    resourceType = "raw";
+  }
 
   try {
     const uploadOptions = {

@@ -1,9 +1,4 @@
-const User = require('../models/User');
 const MeService = require('../services/MeService');
-const CustomError = require('../exceptions/CustomError');
-const NotFoundError = require('../exceptions/NotFoundError');
-const { console } = require('inspector');
-const fs = require('fs').promises;
 
 const UserController = {
 

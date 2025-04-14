@@ -35,6 +35,7 @@ class AuthService {
 
         return { message: 'Email hợp lệ để đăng ký' };
     }
+
     randomColor() {
         const colors = [
             'red',
@@ -53,6 +54,7 @@ class AuthService {
         const randomIndex = Math.floor(Math.random() * colors.length);
         return colors[randomIndex];
     }
+    
     async saveUserInfo(submitInformation) {
         try {
             // Kiểm tra toàn bộ thông tin đầu vào

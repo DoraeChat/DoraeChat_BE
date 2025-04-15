@@ -14,7 +14,7 @@ class MessageService {
     if (!content.trim()) {
       throw new Error("Message content cannot be empty");
     }
-    content = emoji.emojify(content); 
+    content = emoji.emojify(content);
 
     // Kiểm tra member
     const member = await Member.getByConversationIdAndUserId(
@@ -91,7 +91,7 @@ class MessageService {
   async getMessagesByConversationId(
     conversationId,
     userId,
-    { skip = 0, limit = 100, beforeTimestamp = null } = {}
+    { skip = 0, limit = 1000, beforeTimestamp = null } = {}
   ) {
     // 1. Validate conversation
     const conversation = await Conversation.findById(conversationId);
@@ -297,10 +297,10 @@ class MessageService {
   async sendImageMessage(userId, conversationId, files, channelId = null) {
     const member = await Member.getByConversationIdAndUserId(conversationId, userId);
     if (!member || !member.active) throw new CustomError("Invalid member", 400);
-  
+
     const conversation = await Conversation.findById(conversationId);
     if (!conversation) throw new NotFoundError("Conversation");
-  
+
     let validChannelId = null;
     if (conversation.type) {
       if (!channelId) throw new CustomError("Channel ID required", 400);
@@ -309,9 +309,9 @@ class MessageService {
         throw new CustomError("Invalid channel", 400);
       validChannelId = channel._id;
     }
-  
+
     const uploaded = await CloudinaryService.uploadImagesMessage(conversationId, files);
-  
+
     const messages = await Promise.all(uploaded.map(async (img) => {
       const message = await Message.create({
         memberId: member._id,
@@ -322,24 +322,24 @@ class MessageService {
       });
       return Message.findById(message._id).populate("memberId", "userId").lean();
     }));
-  
+
     // Cập nhật lastMessageId cho cuộc trò chuyện
     const last = messages[messages.length - 1];
     if (last) {
       conversation.lastMessageId = last._id;
       await conversation.save();
     }
-  
+
     return messages;
   }
 
   async sendVideoMessage(userId, conversationId, file, channelId = null) {
     const member = await Member.getByConversationIdAndUserId(conversationId, userId);
     if (!member || !member.active) throw new CustomError("Invalid member", 400);
-  
+
     const conversation = await Conversation.findById(conversationId);
     if (!conversation) throw new NotFoundError("Conversation");
-  
+
     let validChannelId = null;
     if (conversation.type) {
       if (!channelId) throw new CustomError("Channel ID required", 400);
@@ -348,9 +348,9 @@ class MessageService {
         throw new CustomError("Invalid channel", 400);
       validChannelId = channel._id;
     }
-  
+
     const uploaded = await CloudinaryService.uploadVideoMessage(conversationId, file);
-  
+
     const message = await Message.create({
       memberId: member._id,
       content: uploaded.url,
@@ -358,21 +358,21 @@ class MessageService {
       conversationId,
       ...(validChannelId && { channelId: validChannelId }),
     });
-  
+
     // Cập nhật lastMessageId cho cuộc trò chuyện
     conversation.lastMessageId = message._id;
     await conversation.save();
-  
+
     return Message.findById(message._id).populate("memberId", "userId").lean();
   }
 
   async sendFileMessage(userId, conversationId, file, channelId = null) {
     const member = await Member.getByConversationIdAndUserId(conversationId, userId);
     if (!member || !member.active) throw new CustomError("Invalid member", 400);
-  
+
     const conversation = await Conversation.findById(conversationId);
     if (!conversation) throw new NotFoundError("Conversation");
-  
+
     let validChannelId = null;
     if (conversation.type) {
       if (!channelId) throw new CustomError("Channel ID required", 400);
@@ -381,9 +381,9 @@ class MessageService {
         throw new CustomError("Invalid channel", 400);
       validChannelId = channel._id;
     }
-  
+
     const uploaded = await CloudinaryService.uploadFileMessage(conversationId, file);
-  
+
     const message = await Message.create({
       memberId: member._id,
       content: uploaded.url,
@@ -391,11 +391,11 @@ class MessageService {
       conversationId,
       ...(validChannelId && { channelId: validChannelId }),
     });
-  
+
     // Cập nhật lastMessageId cho cuộc trò chuyện
     conversation.lastMessageId = message._id;
     await conversation.save();
-  
+
     return Message.findById(message._id).populate("memberId", "userId").lean();
   }
 }

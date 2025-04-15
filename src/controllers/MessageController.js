@@ -10,7 +10,7 @@ class MessageController {
   // [POST] /api/message/text - Gửi tin nhắn văn bản
   async sendTextMessage(req, res) {
     try {
-      const { conversationId, content, channelId } = req.body;
+      const { conversationId, content, channelId, type } = req.body;
       const userId = req._id;
 
       if (!conversationId || !content) {
@@ -23,7 +23,8 @@ class MessageController {
         userId,
         conversationId,
         content,
-        channelId // Truyền channelId (có thể là null)
+        channelId, // Truyền channelId (có thể là null)
+        type
       );
 
       // Phát sự kiện socket đến conversationId (và channelId nếu có)

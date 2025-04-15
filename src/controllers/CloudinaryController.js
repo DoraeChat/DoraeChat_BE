@@ -5,7 +5,10 @@ const CloudinaryController = {
   async uploadImages(req, res, next) {
     try {
       const { id } = req.body;
-      const uploadImages = await CloudinaryService.uploadImagesMessage(id, req.files);
+      const uploadImages = await CloudinaryService.uploadImagesMessage(
+        id,
+        req.files
+      );
 
       res.json({
         message: "Images are uploaded successfully!",
@@ -19,7 +22,10 @@ const CloudinaryController = {
   async uploadVideo(req, res, next) {
     try {
       const { id } = req.body;
-      const uploadVideo = await CloudinaryService.uploadVideoMessage(id, req.file);
+      const uploadVideo = await CloudinaryService.uploadVideoMessage(
+        id,
+        req.file
+      );
 
       res.json({
         message: "Video is uploaded successfully!",
@@ -33,7 +39,10 @@ const CloudinaryController = {
   async uploadFile(req, res, next) {
     try {
       const { id } = req.body;
-      const uploadFile = await CloudinaryService.uploadFileMessage(id, req.file);
+      const uploadFile = await CloudinaryService.uploadFileMessage(
+        id,
+        req.file
+      );
 
       res.json({
         message: "File is uploaded successfully!",

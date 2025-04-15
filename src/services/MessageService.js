@@ -6,7 +6,13 @@ const redisClient = require("../config/redis");
 
 class MessageService {
   // 🔹 Gửi tin nhắn văn bản
-  async sendTextMessage(userId, conversationId, content, channelId = null) {
+  async sendTextMessage(
+    userId,
+    conversationId,
+    content,
+    channelId = null,
+    type
+  ) {
     if (!content.trim()) {
       throw new Error("Message content cannot be empty");
     }
@@ -60,7 +66,7 @@ class MessageService {
     const newMessage = await Message.create({
       memberId: member._id,
       content,
-      type: "TEXT",
+      type: type || "TEXT",
       conversationId,
       ...(validChannelId && { channelId: validChannelId }), // Chỉ thêm channelId nếu có
     });

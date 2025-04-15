@@ -371,8 +371,17 @@ const uploadFile = async (file, userId, originalFilename) => {
 
     fs.unlinkSync(file.path);
 
+    let downloadUrl = result.secure_url;
+    if (fileCategory !== 'image' && fileCategory !== 'video') {
+      // Thêm flags=attachment để báo hiệu tải xuống
+      downloadUrl = result.secure_url.replace(
+        /^https?:\/\//,
+        '$0fl_attachment/'
+      );
+    }
+
     return {
-      url: result.secure_url,
+      url: downloadUrl,
       publicId: result.public_id,
       fileType: fileType,
       format: fileExtension,

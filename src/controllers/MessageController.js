@@ -6,6 +6,9 @@ class MessageController {
     this.socketHandler = socketHandler;
     this.sendTextMessage = this.sendTextMessage.bind(this);
     this.recallMessage = this.recallMessage.bind(this);
+    this.sendImageMessage = this.sendImageMessage.bind(this);
+    this.sendFileMessage = this.sendFileMessage.bind(this);
+    this.sendVideoMessage = this.sendVideoMessage.bind(this);
   }
   // [POST] /api/message/text - Gửi tin nhắn văn bản
   async sendTextMessage(req, res) {
@@ -101,15 +104,99 @@ class MessageController {
       );
 
       // Gửi sự kiện real-time đến tất cả user trong phòng chat
-      if (this.socketHandler) {
-        this.socketHandler.emitToConversation(
-          conversationId,
-          SOCKET_EVENTS.MESSAGE_RECALLED,
-          recalledMessage
-        );
-      }
+      this.socketHandler.emitToConversation(
+        conversationId,
+        SOCKET_EVENTS.MESSAGE_RECALLED,
+        recalledMessage
+      );
 
       res.status(200).json(recalledMessage);
+    } catch (error) {
+      res.status(400).json({ message: error.message });
+    }
+  }
+
+  async sendImageMessage(req, res) {
+    try {
+      const { conversationId, channelId } = req.body;
+      const userId = req._id;
+
+      if (!conversationId || !req.files || req.files.length === 0)
+        return res.status(400).json({ message: "Invalid image message" });
+
+      const messages = await MessageService.sendImageMessage(
+        userId,
+        conversationId,
+        req.files,
+        channelId
+      );
+
+      // Emit từng ảnh
+      if (this.socketHandler) {
+        for (const message of messages) {
+          this.socketHandler.emitToConversation(
+            conversationId,
+            SOCKET_EVENTS.RECEIVE_MESSAGE,
+            message
+          );
+        }
+      }
+
+      res.status(201).json(messages);
+    } catch (error) {
+      res.status(400).json({ message: error.message });
+    }
+  }
+
+  async sendVideoMessage(req, res) {
+    try {
+      const { conversationId, channelId } = req.body;
+      const userId = req._id;
+
+      if (!conversationId || !req.file)
+        return res.status(400).json({ message: "Invalid video message" });
+
+      const message = await MessageService.sendVideoMessage(
+        userId,
+        conversationId,
+        req.file,
+        channelId
+      );
+
+      this.socketHandler.emitToConversation(
+        conversationId,
+        SOCKET_EVENTS.RECEIVE_MESSAGE,
+        message
+      );
+
+      res.status(201).json(message);
+    } catch (error) {
+      res.status(400).json({ message: error.message });
+    }
+  }
+
+  async sendFileMessage(req, res) {
+    try {
+      const { conversationId, channelId } = req.body;
+      const userId = req._id;
+
+      if (!conversationId || !req.file)
+        return res.status(400).json({ message: "Invalid file message" });
+
+      const message = await MessageService.sendFileMessage(
+        userId,
+        conversationId,
+        req.file,
+        channelId
+      );
+
+      this.socketHandler.emitToConversation(
+        conversationId,
+        SOCKET_EVENTS.RECEIVE_MESSAGE,
+        message
+      );
+
+      res.status(201).json(message);
     } catch (error) {
       res.status(400).json({ message: error.message });
     }

@@ -50,7 +50,6 @@ const CloudinaryService = {
     
         try {
             const uploadResult = await uploadFile(file, userId, file.originalname);
-    
             return {
                 url: uploadResult.url,
                 publicId: uploadResult.publicId,

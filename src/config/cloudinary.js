@@ -371,8 +371,14 @@ const uploadFile = async (file, userId, originalFilename) => {
 
     fs.unlinkSync(file.path);
 
+    let downloadUrl;
+    if (fileCategory === "pdf" || fileCategory === "archive") {
+      // Thêm flags=attachment để báo hiệu tải xuống
+      downloadUrl = `https://res.cloudinary.com/${cloudinary.config().cloud_name}/raw/upload/files/${fileCategory}/${result.display_name}`;
+    }
+
     return {
-      url: result.secure_url,
+      url: fileCategory === "pdf" || "archive" ? downloadUrl : result.secure_url,
       publicId: result.public_id,
       fileType: fileType,
       format: fileExtension,

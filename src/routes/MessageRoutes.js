@@ -1,6 +1,7 @@
 const express = require("express");
 const router = express.Router();
 const MessageController = require("../controllers/MessageController");
+const { upload } = require('../config/cloudinary');
 
 const MessageRouter = (socketHandler) => {
   const messageController = new MessageController(socketHandler);
@@ -12,6 +13,10 @@ const MessageRouter = (socketHandler) => {
     "/:id/conversation/:conversationId",
     messageController.recallMessage
   );
+  router.post("/images", upload.array('image'), messageController.sendImageMessage);
+  router.post("/video", upload.single('video'), messageController.sendVideoMessage);
+  router.post("/file", upload.single('file'), messageController.sendFileMessage);
+
   return router;
 };
 

@@ -196,10 +196,9 @@ const messageSchema = new Schema(
         "IMAGE",
         "STICKER",
         "VIDEO",
-        "FILE", // docx, pdf, pptx, xlsx, zip, rar, txt, gif
+        "FILE", // docx, pdf, pptx, xlsx, zip, rar, txt, gif, mp3
         "NOTIFY", // Thông báo
         "VOTE",
-        "AUDIO",
       ],
       required: true,
       index: true,

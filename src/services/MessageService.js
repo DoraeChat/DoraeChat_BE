@@ -3,6 +3,10 @@ const Conversation = require("../models/Conversation");
 const Member = require("../models/Member");
 const Channel = require("../models/Channel");
 const redisClient = require("../config/redis");
+const CustomError = require("../exceptions/CustomError");
+const NotFoundError = require("../exceptions/NotFoundError");
+const CloudinaryService = require("./CloudinaryService");
+const emoji = require('node-emoji');
 
 class MessageService {
   // 🔹 Gửi tin nhắn văn bản
@@ -16,6 +20,7 @@ class MessageService {
     if (!content.trim()) {
       throw new Error("Message content cannot be empty");
     }
+    content = emoji.emojify(content); 
 
     // Kiểm tra member
     const member = await Member.getByConversationIdAndUserId(
@@ -293,6 +298,111 @@ class MessageService {
   // Đếm tin nhắn chưa đọc
   async countUnreadMessages(time, conversationId) {
     return await Message.countUnread(time, conversationId);
+  }
+
+  async sendImageMessage(userId, conversationId, files, channelId = null) {
+    const member = await Member.getByConversationIdAndUserId(conversationId, userId);
+    if (!member || !member.active) throw new CustomError("Invalid member", 400);
+  
+    const conversation = await Conversation.findById(conversationId);
+    if (!conversation) throw new NotFoundError("Conversation");
+  
+    let validChannelId = null;
+    if (conversation.type) {
+      if (!channelId) throw new CustomError("Channel ID required", 400);
+      const channel = await Channel.findById(channelId);
+      if (!channel || channel.conversationId.toString() !== conversationId.toString())
+        throw new CustomError("Invalid channel", 400);
+      validChannelId = channel._id;
+    }
+  
+    const uploaded = await CloudinaryService.uploadImagesMessage(conversationId, files);
+  
+    const messages = await Promise.all(uploaded.map(async (img) => {
+      const message = await Message.create({
+        memberId: member._id,
+        content: img.url,
+        type: "IMAGE",
+        conversationId,
+        ...(validChannelId && { channelId: validChannelId }),
+      });
+      return Message.findById(message._id).populate("memberId", "userId").lean();
+    }));
+  
+    // Cập nhật lastMessageId cho cuộc trò chuyện
+    const last = messages[messages.length - 1];
+    if (last) {
+      conversation.lastMessageId = last._id;
+      await conversation.save();
+    }
+  
+    return messages;
+  }
+
+  async sendVideoMessage(userId, conversationId, file, channelId = null) {
+    const member = await Member.getByConversationIdAndUserId(conversationId, userId);
+    if (!member || !member.active) throw new CustomError("Invalid member", 400);
+  
+    const conversation = await Conversation.findById(conversationId);
+    if (!conversation) throw new NotFoundError("Conversation");
+  
+    let validChannelId = null;
+    if (conversation.type) {
+      if (!channelId) throw new CustomError("Channel ID required", 400);
+      const channel = await Channel.findById(channelId);
+      if (!channel || channel.conversationId.toString() !== conversationId.toString())
+        throw new CustomError("Invalid channel", 400);
+      validChannelId = channel._id;
+    }
+  
+    const uploaded = await CloudinaryService.uploadVideoMessage(conversationId, file);
+  
+    const message = await Message.create({
+      memberId: member._id,
+      content: uploaded.url,
+      type: "VIDEO",
+      conversationId,
+      ...(validChannelId && { channelId: validChannelId }),
+    });
+  
+    // Cập nhật lastMessageId cho cuộc trò chuyện
+    conversation.lastMessageId = message._id;
+    await conversation.save();
+  
+    return Message.findById(message._id).populate("memberId", "userId").lean();
+  }
+
+  async sendFileMessage(userId, conversationId, file, channelId = null) {
+    const member = await Member.getByConversationIdAndUserId(conversationId, userId);
+    if (!member || !member.active) throw new CustomError("Invalid member", 400);
+  
+    const conversation = await Conversation.findById(conversationId);
+    if (!conversation) throw new NotFoundError("Conversation");
+  
+    let validChannelId = null;
+    if (conversation.type) {
+      if (!channelId) throw new CustomError("Channel ID required", 400);
+      const channel = await Channel.findById(channelId);
+      if (!channel || channel.conversationId.toString() !== conversationId.toString())
+        throw new CustomError("Invalid channel", 400);
+      validChannelId = channel._id;
+    }
+  
+    const uploaded = await CloudinaryService.uploadFileMessage(conversationId, file);
+  
+    const message = await Message.create({
+      memberId: member._id,
+      content: uploaded.url,
+      type: "FILE",
+      conversationId,
+      ...(validChannelId && { channelId: validChannelId }),
+    });
+  
+    // Cập nhật lastMessageId cho cuộc trò chuyện
+    conversation.lastMessageId = message._id;
+    await conversation.save();
+  
+    return Message.findById(message._id).populate("memberId", "userId").lean();
   }
 }
 

@@ -293,8 +293,8 @@ class MessageService {
   }
 
   async sendImageMessage(userId, conversationId, files, channelId = null) {
-    // const member = await Member.getByConversationIdAndUserId(conversationId, userId);
-    // if (!member || !member.active) throw new CustomError("Invalid member", 400);
+    const member = await Member.getByConversationIdAndUserId(conversationId, userId);
+    if (!member || !member.active) throw new CustomError("Invalid member", 400);
   
     const conversation = await Conversation.findById(conversationId);
     if (!conversation) throw new NotFoundError("Conversation");
@@ -312,7 +312,7 @@ class MessageService {
   
     const messages = await Promise.all(uploaded.map(async (img) => {
       const message = await Message.create({
-        memberId: '67f508c57cb29a9ef5d58cd3',
+        memberId: member._id,
         content: img.url,
         type: "IMAGE",
         conversationId,

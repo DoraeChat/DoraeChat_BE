@@ -45,6 +45,7 @@ const getFileTypeCategory = (mimetype) => {
       // RAR
       "application/vnd.rar",          // Chuẩn hiện đại (từ 2015)
       "application/x-rar-compressed", // Phổ biến trước đây
+      "application/x-compressed",
 
       // 7Z
       "application/x-7z-compressed",  // Dành cho file .7z
@@ -113,6 +114,7 @@ const fileTypeConfigs = {
       // RAR
       "application/vnd.rar",          // Chuẩn hiện đại (từ 2015)
       "application/x-rar-compressed", // Phổ biến trước đây
+      "application/x-compressed",
 
       // 7Z
       "application/x-7z-compressed",  // Dành cho file .7z
@@ -378,7 +380,7 @@ const uploadFile = async (file, userId, originalFilename) => {
     }
 
     return {
-      url: fileCategory === "pdf" || "archive" ? downloadUrl : result.secure_url,
+      url: (fileCategory === "pdf" || fileCategory === "archive") ? downloadUrl : result.secure_url,
       publicId: result.public_id,
       fileType: fileType,
       format: fileExtension,

@@ -41,10 +41,11 @@ const getFileTypeCategory = (mimetype) => {
       // ZIP
       "application/zip",              // Chuẩn chính thức (IANA)
       "application/x-zip-compressed", // Dự phòng cho ZIP
-
+      "application/x-compressed",
       // RAR
       "application/vnd.rar",          // Chuẩn hiện đại (từ 2015)
       "application/x-rar-compressed", // Phổ biến trước đây
+      "application/x-compressed",
 
       // 7Z
       "application/x-7z-compressed",  // Dành cho file .7z
@@ -109,10 +110,11 @@ const fileTypeConfigs = {
       // ZIP
       "application/zip",              // Chuẩn chính thức (IANA)
       "application/x-zip-compressed", // Dự phòng cho ZIP
-
+      "application/x-compressed",
       // RAR
       "application/vnd.rar",          // Chuẩn hiện đại (từ 2015)
       "application/x-rar-compressed", // Phổ biến trước đây
+      "application/x-compressed",
 
       // 7Z
       "application/x-7z-compressed",  // Dành cho file .7z
@@ -151,11 +153,11 @@ const upload = multer({
       cb(
         null,
         fileCategory +
-          "-" +
-          file.fieldname +
-          "-" +
-          uniqueSuffix +
-          path.extname(file.originalname)
+        "-" +
+        file.fieldname +
+        "-" +
+        uniqueSuffix +
+        path.extname(file.originalname)
       );
     },
   }),
@@ -181,8 +183,7 @@ const upload = multer({
     if (file.size && file.size > config.maxSize) {
       return cb(
         new Error(
-          `File size exceeds the limit for ${fileCategory} files (${
-            config.maxSize / (1024 * 1024)
+          `File size exceeds the limit for ${fileCategory} files (${config.maxSize / (1024 * 1024)
           }MB)`
         ),
         false
@@ -211,10 +212,8 @@ const checkFileSize = (req, res, next) => {
       fs.unlinkSync(file.path);
       return next(
         new Error(
-          `File '${
-            file.originalname
-          }' exceeds the maximum size limit for ${fileCategory} files (${
-            maxSize / (1024 * 1024)
+          `File '${file.originalname
+          }' exceeds the maximum size limit for ${fileCategory} files (${maxSize / (1024 * 1024)
           }MB)`
         )
       );
@@ -378,7 +377,7 @@ const uploadFile = async (file, userId, originalFilename) => {
     }
 
     return {
-      url: fileCategory === "pdf" || "archive" ? downloadUrl : result.secure_url,
+      url: (fileCategory === "pdf" || fileCategory === "archive") ? downloadUrl : result.secure_url,
       publicId: result.public_id,
       fileType: fileType,
       format: fileExtension,

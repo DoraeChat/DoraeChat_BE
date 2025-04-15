@@ -215,22 +215,29 @@ class MessageController {
           .json({ message: "Conversation ID and Message ID are required" });
       }
 
-      const deletedMessage = await MessageService.deleteMessageForMe(
-        conversationId,
-        userId,
-        messageId
-      );
+      const { deletedMessage, newLastMessage } =
+        await MessageService.deleteMessageForMe(
+          conversationId,
+          userId,
+          messageId
+        );
 
       // Gửi sự kiện socket đến chính người dùng
       if (this.socketHandler) {
         this.socketHandler.emitToUser(
           userId,
           SOCKET_EVENTS.MESSAGE_DELETED_FOR_ME,
-          deletedMessage
+          {
+            deletedMessage,
+            newLastMessage,
+          }
         );
       }
 
-      res.status(200).json(deletedMessage);
+      res.status(200).json({
+        deletedMessage,
+        newLastMessage,
+      });
     } catch (error) {
       res.status(400).json({ message: error.message });
     }

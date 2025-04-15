@@ -470,16 +470,43 @@ class MessageService {
     message.deletedMemberIds.push(member._id);
     await message.save();
 
-    // Cập nhật cache nếu cần
-    // await this.syncMessageCache(conversationId, [message]);
+    // Kiểm tra và cập nhật lastMessageId
+    let newLastMessage = null;
+    if (
+      conversation.lastMessageId &&
+      conversation.lastMessageId.toString() === messageId
+    ) {
+      // Tìm tin nhắn hợp lệ trước đó
+      const previousMessage = await Message.findOne({
+        conversationId,
+        _id: { $ne: messageId }, // Không lấy tin nhắn vừa xóa
+        deletedMemberIds: { $nin: [member._id] }, // Không bị xóa bởi người dùng này
+      })
+        .sort({ createdAt: -1 }) // Tin nhắn mới nhất
+        .lean();
 
+      if (previousMessage) {
+        conversation.lastMessageId = previousMessage._id;
+        newLastMessage = previousMessage;
+      } else {
+        conversation.lastMessageId = null; // Không còn tin nhắn nào hợp lệ
+      }
+      await conversation.save();
+    }
+
+    // Populate dữ liệu trả về
     const populatedMessage = await Message.findById(message._id)
       .populate({
         path: "memberId",
         select: "userId",
       })
       .lean();
-    return populatedMessage;
+
+    // Trả về cả tin nhắn đã xóa và lastMessage mới (nếu có)
+    return {
+      deletedMessage: populatedMessage,
+      newLastMessage,
+    };
   }
 }
 

@@ -41,6 +41,10 @@ conversationSchema.statics.getListByUserId = async (userId) => {
   // Tìm tất cả Member của userId
   const members = await Member.find({ userId }).lean();
   const memberIds = members.map((m) => m._id);
+  const memberIdMap = {};
+  members.forEach((m) => {
+    memberIdMap[m.conversationId.toString()] = m._id;
+  });
 
   // Lấy tất cả conversation liên quan đến user, không lọc type
   const conversations = await Conversation.find({
@@ -49,6 +53,10 @@ conversationSchema.statics.getListByUserId = async (userId) => {
     .sort({ updatedAt: -1 })
     .populate({
       path: "lastMessageId",
+      match: (conversation) => ({
+        deletedMemberIds: { $nin: [memberIdMap[conversation._id.toString()]] },
+        isDeleted: { $ne: true },
+      }),
       select: "content createdAt",
     })
     .lean();

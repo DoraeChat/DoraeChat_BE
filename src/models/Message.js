@@ -530,7 +530,7 @@ messageSchema.statics.getListForIndividualConversation = async function (
     .limit(limit)
     .populate({
       path: "memberId",
-      select: "userId",
+      select: "userId name",
     })
     .lean();
 

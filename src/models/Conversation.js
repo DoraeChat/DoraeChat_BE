@@ -196,15 +196,29 @@ conversationSchema.statics.existsIndividualConversation = async (
   userId1,
   userId2
 ) => {
-  const member1 = await Member.findOne({ userId: userId1 }).lean();
-  const member2 = await Member.findOne({ userId: userId2 }).lean();
-  if (!member1 || !member2) return null;
+  // Lấy danh sách các conversation cá nhân có chứa cả 2 user dưới dạng Member
+  const user1MemberIds = await Member.find({ userId: userId1 })
+    .select("conversationId")
+    .lean();
+  const user2MemberIds = await Member.find({ userId: userId2 })
+    .select("conversationId")
+    .lean();
 
-  const conversation = await Conversation.findOne({
-    members: { $all: [member1._id, member2._id] },
+  const convIds1 = user1MemberIds.map((m) => m.conversationId.toString());
+  const convIds2 = user2MemberIds.map((m) => m.conversationId.toString());
+
+  // Tìm những conversationId mà cả hai user đều có mặt
+  const commonConversationIds = convIds1.filter((id) => convIds2.includes(id));
+
+  if (commonConversationIds.length === 0) return null;
+
+  // Kiểm tra xem conversation đó có phải là chat cá nhân không
+  const existingConversation = await Conversation.findOne({
+    _id: { $in: commonConversationIds },
     type: false,
   }).lean();
-  return conversation ? conversation._id : null;
+
+  return existingConversation ? existingConversation._id : null;
 };
 
 conversationSchema.statics.getByIdAndUserId = async (
@@ -225,8 +239,36 @@ conversationSchema.statics.getByIdAndUserId = async (
 };
 
 conversationSchema.statics.getById = async (_id, message = "Conversation") => {
-  const conversation = await Conversation.findById(_id).lean();
+  // Tìm conversation theo id
+  const conversation = await Conversation.findById(_id)
+    .populate({
+      path: "lastMessageId",
+      select: "content createdAt",
+    })
+    .lean();
+
   if (!conversation) throw new NotFoundError(message);
+
+  // Chỉ format lại members nếu có members và type === false
+  if (conversation.members?.length && conversation.type === false) {
+    // Lấy tất cả member IDs trong conversation
+    const memberIds = conversation.members;
+
+    // Truy vấn Member và populate User để lấy thông tin chi tiết
+    const membersData = await Member.find({ _id: { $in: memberIds } })
+      .select("name userId")
+      .populate({ path: "userId", select: "avatar" })
+      .lean();
+
+    // Map lại thành viên với thông tin chi tiết
+    conversation.members = membersData.map((member) => ({
+      _id: member._id,
+      userId: member.userId?._id,
+      name: member.name || null,
+      avatar: member.userId?.avatar || null,
+    }));
+  }
+
   return conversation;
 };
 

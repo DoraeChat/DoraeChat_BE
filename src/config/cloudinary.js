@@ -372,13 +372,13 @@ const uploadFile = async (file, userId, originalFilename) => {
     fs.unlinkSync(file.path);
 
     let downloadUrl;
-    if (fileCategory === "pdf") {
+    if (fileCategory === "pdf" || fileCategory === "archive") {
       // Thêm flags=attachment để báo hiệu tải xuống
       downloadUrl = `https://res-console.cloudinary.com/${cloudinary.config().cloud_name}/media_explorer_thumbnails/${result.asset_id}/download?attachment=true`;
     }
 
     return {
-      url: fileCategory === "pdf" ? downloadUrl : result.secure_url,
+      url: fileCategory === "pdf" || "archive" ? downloadUrl : result.secure_url,
       publicId: result.public_id,
       fileType: fileType,
       format: fileExtension,

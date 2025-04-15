@@ -367,8 +367,8 @@ class MessageService {
   }
 
   async sendFileMessage(userId, conversationId, file, channelId = null) {
-    // const member = await Member.getByConversationIdAndUserId(conversationId, userId);
-    // if (!member || !member.active) throw new CustomError("Invalid member", 400);
+    const member = await Member.getByConversationIdAndUserId(conversationId, userId);
+    if (!member || !member.active) throw new CustomError("Invalid member", 400);
   
     const conversation = await Conversation.findById(conversationId);
     if (!conversation) throw new NotFoundError("Conversation");
@@ -385,7 +385,7 @@ class MessageService {
     const uploaded = await CloudinaryService.uploadFileMessage(conversationId, file);
   
     const message = await Message.create({
-      memberId: '67ee2539dc14e5903dc8b4d1',
+      memberId: member._id,
       content: uploaded.url,
       type: "FILE",
       conversationId,

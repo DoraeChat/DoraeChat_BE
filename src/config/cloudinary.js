@@ -372,7 +372,6 @@ const uploadFile = async (file, userId, originalFilename) => {
     fs.unlinkSync(file.path);
 
     let downloadUrl;
-    // https://res.cloudinary.com/dicvz8vw5/raw/upload/files/archive/file-67dcf8eac3a67270b6534c60-20250415-8aa6a095-1b6d-444c-8e92-ee91db2510aa.rar
     if (fileCategory === "pdf" || fileCategory === "archive") {
       // Thêm flags=attachment để báo hiệu tải xuống
       downloadUrl = `https://res.cloudinary.com/${cloudinary.config().cloud_name}/raw/upload/files/${fileCategory}/${result.display_name}`;

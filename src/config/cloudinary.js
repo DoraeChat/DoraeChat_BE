@@ -371,17 +371,14 @@ const uploadFile = async (file, userId, originalFilename) => {
 
     fs.unlinkSync(file.path);
 
-    let downloadUrl = result.secure_url;
-    if (fileCategory !== 'image' && fileCategory !== 'video') {
+    let downloadUrl;
+    if (fileCategory === "pdf") {
       // Thêm flags=attachment để báo hiệu tải xuống
-      downloadUrl = result.secure_url.replace(
-        /^https?:\/\//,
-        '$0fl_attachment/'
-      );
+      downloadUrl = `https://res-console.cloudinary.com/${cloudinary.config().cloud_name}/media_explorer_thumbnails/${result.asset_id}/download?attachment=true`;
     }
 
     return {
-      url: downloadUrl,
+      url: fileCategory === "pdf" ? downloadUrl : result.secure_url,
       publicId: result.public_id,
       fileType: fileType,
       format: fileExtension,

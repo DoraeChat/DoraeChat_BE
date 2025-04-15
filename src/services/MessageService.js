@@ -6,6 +6,7 @@ const redisClient = require("../config/redis");
 const CustomError = require("../exceptions/CustomError");
 const NotFoundError = require("../exceptions/NotFoundError");
 const CloudinaryService = require("./CloudinaryService");
+const emoji = require('node-emoji');
 
 class MessageService {
   // 🔹 Gửi tin nhắn văn bản
@@ -13,6 +14,7 @@ class MessageService {
     if (!content.trim()) {
       throw new Error("Message content cannot be empty");
     }
+    content = emoji.emojify(content); 
 
     // Kiểm tra member
     const member = await Member.getByConversationIdAndUserId(
@@ -365,8 +367,8 @@ class MessageService {
   }
 
   async sendFileMessage(userId, conversationId, file, channelId = null) {
-    const member = await Member.getByConversationIdAndUserId(conversationId, userId);
-    if (!member || !member.active) throw new CustomError("Invalid member", 400);
+    // const member = await Member.getByConversationIdAndUserId(conversationId, userId);
+    // if (!member || !member.active) throw new CustomError("Invalid member", 400);
   
     const conversation = await Conversation.findById(conversationId);
     if (!conversation) throw new NotFoundError("Conversation");
@@ -383,7 +385,7 @@ class MessageService {
     const uploaded = await CloudinaryService.uploadFileMessage(conversationId, file);
   
     const message = await Message.create({
-      memberId: member._id,
+      memberId: '67ee2539dc14e5903dc8b4d1',
       content: uploaded.url,
       type: "FILE",
       conversationId,

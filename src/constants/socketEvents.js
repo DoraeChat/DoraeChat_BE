@@ -18,6 +18,7 @@ const SOCKET_EVENTS = {
   //Messages
   RECEIVE_MESSAGE: "receive-message",
   MESSAGE_RECALLED: "message-recalled",
+  MESSAGE_DELETED_FOR_ME: "message_deleted_for_me",
 
   // Typing indicators
   TYPING: "typing",

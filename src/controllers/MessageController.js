@@ -9,6 +9,7 @@ class MessageController {
     this.sendImageMessage = this.sendImageMessage.bind(this);
     this.sendFileMessage = this.sendFileMessage.bind(this);
     this.sendVideoMessage = this.sendVideoMessage.bind(this);
+    this.deleteMessageForMe = this.deleteMessageForMe.bind(this);
   }
   // [POST] /api/message/text - Gửi tin nhắn văn bản
   async sendTextMessage(req, res) {
@@ -197,6 +198,39 @@ class MessageController {
       );
 
       res.status(201).json(message);
+    } catch (error) {
+      res.status(400).json({ message: error.message });
+    }
+  }
+  // [DELETE] /api/message/:id/only - Xóa tin nhắn chỉ phía người dùng hiện tại
+  async deleteMessageForMe(req, res) {
+    try {
+      const { id: messageId } = req.params;
+      const { conversationId } = req.body; // Nhận conversationId từ body
+      const userId = req._id;
+
+      if (!conversationId || !messageId) {
+        return res
+          .status(400)
+          .json({ message: "Conversation ID and Message ID are required" });
+      }
+
+      const deletedMessage = await MessageService.deleteMessageForMe(
+        conversationId,
+        userId,
+        messageId
+      );
+
+      // Gửi sự kiện socket đến chính người dùng
+      if (this.socketHandler) {
+        this.socketHandler.emitToUser(
+          userId,
+          SOCKET_EVENTS.MESSAGE_DELETED_FOR_ME,
+          deletedMessage
+        );
+      }
+
+      res.status(200).json(deletedMessage);
     } catch (error) {
       res.status(400).json({ message: error.message });
     }

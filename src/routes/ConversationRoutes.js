@@ -12,7 +12,7 @@ const ConVersationRouter = (socketHandler) => {
   );
   router.post("/groups", conversationController.createGroupConversation);
   router.patch("/:id/name", conversationController.updateGroupName);
-  router.get("/conversations/:id", conversationController.getConversationById);
+  router.get("/:id", conversationController.getConversationById);
   router.patch("/:id/avatar", conversationController.updateAvatar);
   router.delete("/:id", conversationController.hideConversationBeforeTime);
   router.get("/:id/members", conversationController.getMembersByConversationId);

@@ -330,6 +330,39 @@ class MessageService {
   
     return messages;
   }
+
+  async sendFileMessage(userId, conversationId, file, channelId = null) {
+    const member = await Member.getByConversationIdAndUserId(conversationId, userId);
+    if (!member || !member.active) throw new CustomError("Invalid member", 400);
+  
+    const conversation = await Conversation.findById(conversationId);
+    if (!conversation) throw new NotFoundError("Conversation");
+  
+    let validChannelId = null;
+    if (conversation.type) {
+      if (!channelId) throw new CustomError("Channel ID required", 400);
+      const channel = await Channel.findById(channelId);
+      if (!channel || channel.conversationId.toString() !== conversationId.toString())
+        throw new CustomError("Invalid channel", 400);
+      validChannelId = channel._id;
+    }
+  
+    const uploaded = await CloudinaryService.uploadFileMessage(conversationId, file);
+  
+    const message = await Message.create({
+      memberId: member._id,
+      content: uploaded.url,
+      type: "FILE",
+      conversationId,
+      ...(validChannelId && { channelId: validChannelId }),
+    });
+  
+    // Cập nhật lastMessageId cho cuộc trò chuyện
+    conversation.lastMessageId = message._id;
+    await conversation.save();
+  
+    return Message.findById(message._id).populate("memberId", "userId").lean();
+  }
 }
 
 module.exports = new MessageService();

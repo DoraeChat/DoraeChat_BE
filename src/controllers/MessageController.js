@@ -7,6 +7,7 @@ class MessageController {
     this.sendTextMessage = this.sendTextMessage.bind(this);
     this.recallMessage = this.recallMessage.bind(this);
     this.sendImageMessage = this.sendImageMessage.bind(this);
+    this.sendFileMessage = this.sendFileMessage.bind(this);
   }
   // [POST] /api/message/text - Gửi tin nhắn văn bản
   async sendTextMessage(req, res) {
@@ -145,7 +146,32 @@ class MessageController {
     }
   }
 
- 
+  async sendFileMessage(req, res) {
+    try {
+      const { conversationId, channelId } = req.body;
+      const userId = req._id;
+
+      if (!conversationId || !req.file)
+        return res.status(400).json({ message: "Invalid file message" });
+
+      const message = await MessageService.sendFileMessage(
+        userId,
+        conversationId,
+        req.file,
+        channelId
+      );
+
+      this.socketHandler.emitToConversation(
+        conversationId,
+        SOCKET_EVENTS.RECEIVE_MESSAGE,
+        message
+      );
+
+      res.status(201).json(message);
+    } catch (error) {
+      res.status(400).json({ message: error.message });
+    }
+  }
 }
 
 module.exports = MessageController;

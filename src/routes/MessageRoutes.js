@@ -14,6 +14,7 @@ const MessageRouter = (socketHandler) => {
     messageController.recallMessage
   );
   router.post("/images", upload.array('image'), messageController.sendImageMessage);
+  router.post("/file", upload.single('file'), messageController.sendFileMessage);
 
   return router;
 };

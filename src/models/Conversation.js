@@ -83,7 +83,7 @@ conversationSchema.statics.getListByUserId = async (userId) => {
     memberMap[m._id.toString()] = {
       name: m.name,
       userId: m.userId,
-      avatar: m.userId?.ava || null,
+      avatar: m.userId?.avatar || null,
     };
   });
 

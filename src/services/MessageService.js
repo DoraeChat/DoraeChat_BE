@@ -213,6 +213,7 @@ class MessageService {
 
     if (recallableTypes.includes(message.type)) {
       message.content = "Tin nhắn đã được thu hồi";
+      message.type = "TEXT";
     }
 
     // Đánh dấu tin nhắn là đã thu hồi

@@ -33,7 +33,7 @@ const { io, socketHandler } = setupSocket(server);
 app.set("io", io);
 app.set("socketHandler", socketHandler);
 
-const friendRouter = require("./routes/FriendRoutes")(io);
+const friendRouter = require("./routes/FriendRoutes")(socketHandler);
 const messageRouter = require("./routes/MessageRoutes")(socketHandler);
 const conversationRoutes = require("./routes/ConversationRoutes")(
   socketHandler

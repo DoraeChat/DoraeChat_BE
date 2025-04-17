@@ -6,6 +6,7 @@ const ObjectId = require('mongoose').Types.ObjectId;
 const CustomError = require('../exceptions/CustomError');
 const userService = require('./UserService');
 const conversationService = require('./ConversationService');
+const messageService = require('./MessageService');
 
 class FriendService {
     async getList(name, _id) {
@@ -49,8 +50,29 @@ class FriendService {
     async deleteFriend(_id, userId) {
         if (!_id || !userId)
             throw new CustomError('Both user IDs are required');
+        const friendExists = await Friend.existsByIds(_id, userId);
+        if (!friendExists)
+            throw new CustomError('Friend does not exist');
 
-        await Friend.deleteByIds(_id, userId);
+        const result = await Friend.deleteByIds(_id, userId);
+
+        const conversation = await conversationService.findOrCreateIndividualConversation(_id, userId);
+
+        const message = await messageService.sendNotify(
+            _id,
+            conversation._id,
+            "You and this user are not friends",
+            "FRIEND",
+            { targetId: userId },
+            null
+        );
+
+        return {
+            result,
+            conversation,
+            message
+        };
+
     }
 
     async sendFriendInvite(_id, userId) {
@@ -98,7 +120,22 @@ class FriendService {
         const friend = new Friend({ userIds: [_id, senderId] });
         await friend.save();
 
-        return friend;
+        const conversation = await conversationService.findOrCreateIndividualConversation(_id, senderId);
+
+        const message = await messageService.sendNotify(
+            _id,
+            conversation._id,
+            "You and this user are now friends",
+            "FRIEND",
+            { targetId: senderId },
+            null
+        );
+
+        return {
+            friend,
+            conversation,
+            message
+        };
     }
 
     async getListInvites(_id) {

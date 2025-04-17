@@ -56,22 +56,8 @@ class FriendService {
 
         const result = await Friend.deleteByIds(_id, userId);
 
-        const conversation = await conversationService.findOrCreateIndividualConversation(_id, userId);
 
-        const message = await messageService.sendNotify(
-            _id,
-            conversation._id,
-            "You and this user are not friends",
-            "FRIEND",
-            { targetId: userId },
-            null
-        );
-
-        return {
-            result,
-            conversation,
-            message
-        };
+        return result;
 
     }
 
@@ -120,22 +106,8 @@ class FriendService {
         const friend = new Friend({ userIds: [_id, senderId] });
         await friend.save();
 
-        const conversation = await conversationService.findOrCreateIndividualConversation(_id, senderId);
 
-        const message = await messageService.sendNotify(
-            _id,
-            conversation._id,
-            "You and this user are now friends",
-            "FRIEND",
-            { targetId: senderId },
-            null
-        );
-
-        return {
-            friend,
-            conversation,
-            message
-        };
+        return friend;
     }
 
     async getListInvites(_id) {

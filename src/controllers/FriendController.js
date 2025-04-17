@@ -2,6 +2,9 @@ const friendService = require('../services/FriendService');
 const CustomError = require('../exceptions/CustomError');
 const MeService = require('../services/MeService');
 const SOCKET_EVENTS = require('../constants/socketEvents');
+const Conversation = require('../models/Conversation');
+const ConversationService = require('../services/ConversationService');
+const MessageService = require('../services/MessageService');
 
 // Add this at the top of the file
 const requestCache = new Map();
@@ -55,16 +58,29 @@ class FriendController {
         try {
             const result = await friendService.deleteFriend(_id, userId);
 
-            this.socketHandler.emitToUser(userId, SOCKET_EVENTS.DELETED_FRIEND, _id);
+            const conversation = await ConversationService.findOrCreateIndividualConversation(_id, userId);
+            const conversationToSocket = await Conversation.getById(conversation._id);
 
-            this.socketHandler.emitToUser(_id, SOCKET_EVENTS.DELETED_FRIEND, {
-                _id: userId,
-            });
 
-            const { conversation, message } = result;
-            console.log('conversation', conversation);
-            this.socketHandler.emitToConversation(
+            this.socketHandler.emitToUser(userId, SOCKET_EVENTS.DELETED_FRIEND, { _id });
+            this.socketHandler.emitToUser(_id, SOCKET_EVENTS.DELETED_FRIEND, { _id: userId });
+
+            // Inside acceptFriend function
+            const message = await MessageService.sendNotify(
+                _id,
                 conversation._id,
+                "You and this user are not friends",
+                "FRIEND",
+                { targetId: userId },
+                null
+            );
+
+            // Check what type the conversationId is
+            console.log("Message object:", message);
+            console.log("ConversationId type:", typeof message.conversationId.toString());
+
+            this.socketHandler.emitToConversation(
+                message.conversationId.toString(),
                 SOCKET_EVENTS.RECEIVE_MESSAGE,
                 message
             );
@@ -153,36 +169,50 @@ class FriendController {
     async acceptFriend(req, res, next) {
         const { _id } = req;
         const { userId } = req.params;
-        console.log('acceptFriend', _id, userId);
+        console.log("acceptFriend", _id, userId);
+
         try {
             const result = await friendService.acceptFriend(_id, userId);
-
             const user = await MeService.getById(_id);
             const { name, avatar } = user;
 
-            this.socketHandler.emitToUser(userId, SOCKET_EVENTS.ACCEPT_FRIEND, {
+            const conversation = await ConversationService.findOrCreateIndividualConversation(_id, userId);
+            const conversationToSocket = await Conversation.getById(conversation._id);
+
+            // Gửi JOIN_CONVERSATION
+            this.socketHandler.emitToUser(userId, SOCKET_EVENTS.JOIN_CONVERSATION, conversationToSocket);
+            this.socketHandler.emitToUser(_id, SOCKET_EVENTS.JOIN_CONVERSATION, conversationToSocket);
+
+            // Gửi ACCEPT_FRIEND
+            this.socketHandler.emitToUser(userId, SOCKET_EVENTS.ACCEPT_FRIEND, { _id, name, avatar });
+            this.socketHandler.emitToUser(_id, SOCKET_EVENTS.ACCEPT_FRIEND, { _id: userId });
+
+            // Inside acceptFriend function
+            const message = await MessageService.sendNotify(
                 _id,
-                name,
-                avatar,
-            });
-
-            this.socketHandler.emitToUser(_id, SOCKET_EVENTS.ACCEPT_FRIEND, {
-                _id: userId,
-            });
-
-            const { conversation, message } = result;
-            this.socketHandler.emitToConversation(
                 conversation._id,
+                "You and this user are now friends",
+                "FRIEND",
+                { targetId: userId },
+                null
+            );
+
+            // Check what type the conversationId is
+            console.log("Message object:", message);
+            console.log("ConversationId type:", typeof message.conversationId.toString());
+
+            this.socketHandler.emitToConversation(
+                message.conversationId.toString(),
                 SOCKET_EVENTS.RECEIVE_MESSAGE,
                 message
             );
 
-
-            res.status(201).json(result);
+            res.status(201).json();
         } catch (err) {
             next(err);
         }
     }
+
 
     // [GET] /invites/me
     async getListFriendInvitesWasSend(req, res, next) {

@@ -55,8 +55,8 @@ const ConversationService = {
   },
   // tạo cuộc trò chuyện nhóm
   async createGroupConversation(name, members, leaderId) {
-    if (members.length < 2) {
-      throw new Error("Group conversation must have at least 2 members");
+    if (members.length < 1) {
+      throw new Error("Group conversation must have at least 1 member");
     }
     const conversation = new Conversation({
       name,

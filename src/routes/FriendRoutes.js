@@ -14,6 +14,8 @@ const FriendRouter = (io) => {
   router.get('/invites/me', friendController.getListFriendInvitesWasSend);
   router.get('/suggest', friendController.getSuggestFriends);
   router.get('/invites', friendController.getListFriendInvites);
+  router.get('/is-friend', friendController.isFriend);
+
   return router;
 };
 

@@ -231,6 +231,22 @@ class FriendService {
         const end = start + size;
         return result.slice(start, end);
     }
+
+    async isFriend(userId1, userId2) {
+        console.log('isFriend', userId1, userId2);
+        if (!userId1 || !userId2)
+            throw new CustomError('Both user IDs are required');
+
+        if (userId1.toString() === userId2.toString())
+            throw new CustomError('Cannot check friendship with yourself');
+
+        const friend = await Friend.findOne({
+            userIds: { $all: [userId1, userId2] }
+        });
+
+        return !!friend;
+    }
+        
 }
 
 module.exports = new FriendService();

@@ -183,6 +183,19 @@ class FriendController {
             next(err);
         }
     }
+
+    async isFriend(req, res, next) {
+        const { userId1, userId2 } = req.query;
+        console.log('isFriend', userId1, userId2);
+
+        try {
+            const isFriend = await friendService.isFriend(userId1, userId2);
+
+            res.json(isFriend);
+        } catch (err) {
+            next(err);
+        }
+    }
 }
 
 module.exports = FriendController;

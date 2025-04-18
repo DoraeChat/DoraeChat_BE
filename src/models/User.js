@@ -134,6 +134,7 @@ userSchema.statics.getById = async (_id, message = "User") => {
     coverImage,
     phoneBooks,
     hobbies,
+    phoneNumber,
   } = user;
   return {
     _id,
@@ -146,6 +147,7 @@ userSchema.statics.getById = async (_id, message = "User") => {
     coverImage,
     phoneBooks,
     hobbies,
+    phoneNumber,
   };
 };
 

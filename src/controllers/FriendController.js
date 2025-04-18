@@ -2,14 +2,17 @@ const friendService = require('../services/FriendService');
 const CustomError = require('../exceptions/CustomError');
 const MeService = require('../services/MeService');
 const SOCKET_EVENTS = require('../constants/socketEvents');
+const Conversation = require('../models/Conversation');
+const ConversationService = require('../services/ConversationService');
+const MessageService = require('../services/MessageService');
 
 // Add this at the top of the file
 const requestCache = new Map();
 const CACHE_TTL = 1000;
 
 class FriendController {
-    constructor(io) {
-        this.io = io;
+    constructor(socketHandler) {
+        this.socketHandler = socketHandler;
         this.acceptFriend = this.acceptFriend.bind(this);
         this.sendFriendInvite = this.sendFriendInvite.bind(this);
         this.deleteFriend = this.deleteFriend.bind(this);
@@ -32,8 +35,6 @@ class FriendController {
                 friendsTempt.push(friendResult);
             }
 
-            console.log('friendsTempt', friendsTempt);
-
 
             res.json(friendsTempt);
         } catch (err) {
@@ -55,9 +56,34 @@ class FriendController {
         const { _id } = req;
         const { userId } = req.params;
         try {
-            await friendService.deleteFriend(_id, userId);
+            const result = await friendService.deleteFriend(_id, userId);
 
-            this.io.to(userId + '').emit(SOCKET_EVENTS.DELETED_FRIEND, _id);
+            const conversation = await ConversationService.findOrCreateIndividualConversation(_id, userId);
+            const conversationToSocket = await Conversation.getById(conversation._id);
+
+
+            this.socketHandler.emitToUser(userId, SOCKET_EVENTS.DELETED_FRIEND, { _id });
+            this.socketHandler.emitToUser(_id, SOCKET_EVENTS.DELETED_FRIEND, { _id: userId });
+
+            // Inside acceptFriend function
+            const message = await MessageService.sendNotify(
+                _id,
+                conversation._id,
+                "You and this user are not friends",
+                "FRIEND",
+                { targetId: userId },
+                null
+            );
+
+            // Check what type the conversationId is
+            console.log("Message object:", message);
+            console.log("ConversationId type:", typeof message.conversationId.toString());
+
+            this.socketHandler.emitToConversation(
+                message.conversationId.toString(),
+                SOCKET_EVENTS.RECEIVE_MESSAGE,
+                message
+            );
 
             res.status(204).json();
         } catch (err) {
@@ -72,7 +98,7 @@ class FriendController {
 
         try {
             await friendService.deleteFriendInvite(_id, userId);
-            this.io.to(userId + '').emit(SOCKET_EVENTS.DELETED_FRIEND_INVITE, _id);
+            this.socketHandler.emitToUser(userId, SOCKET_EVENTS.DELETED_FRIEND_INVITE, _id);
 
             res.status(204).json();
         } catch (err) {
@@ -88,15 +114,22 @@ class FriendController {
             await friendService.sendFriendInvite(_id, userId);
 
             try {
-                // Fix: friendId is not defined, should be _id
                 const user = await MeService.getById(_id);
                 const { name, avatar } = user;
-                this.io
-                    .to(userId + '')
-                    .emit(SOCKET_EVENTS.SEND_FRIEND_INVITE, { _id, name, avatar });
+                this.socketHandler.emitToUser(userId, SOCKET_EVENTS.SEND_FRIEND_INVITE, {
+                    _id,
+                    name,
+                    avatar,
+                });
+
+                this.socketHandler.emitToUser(_id, SOCKET_EVENTS.SEND_FRIEND_INVITE, {
+                    userId,
+                });
             } catch (error) {
                 console.error('Error getting user data:', error);
-                this.io.to(userId + '').emit(SOCKET_EVENTS.SEND_FRIEND_INVITE, { _id });
+                this.socketHandler.emitToUser(userId, SOCKET_EVENTS.SEND_FRIEND_INVITE, {
+                    _id,
+                });
             }
 
             res.status(201).json();
@@ -112,7 +145,7 @@ class FriendController {
 
         try {
             await friendService.deleteInviteWasSend(_id, userId);
-            this.io.to(userId + '').emit(SOCKET_EVENTS.DELETED_INVITE_WAS_SEND, _id);
+            this.socketHandler.emitToUser(userId, SOCKET_EVENTS.DELETED_INVITE_WAS_SEND, _id);
             res.status(204).json();
         } catch (err) {
             next(err);
@@ -136,21 +169,50 @@ class FriendController {
     async acceptFriend(req, res, next) {
         const { _id } = req;
         const { userId } = req.params;
-        console.log('acceptFriend', _id, userId);
+        console.log("acceptFriend", _id, userId);
+
         try {
             const result = await friendService.acceptFriend(_id, userId);
-
             const user = await MeService.getById(_id);
             const { name, avatar } = user;
-            // this.io
-            //     .to(userId + '')
-            //     .emit(SOCKET_EVENTS.ACCEPT_FRIEND, { _id, name, avatar });
 
-            res.status(201).json(result);
+            const conversation = await ConversationService.findOrCreateIndividualConversation(_id, userId);
+            const conversationToSocket = await Conversation.getById(conversation._id);
+
+            // Gửi JOIN_CONVERSATION
+            this.socketHandler.emitToUser(userId, SOCKET_EVENTS.JOIN_CONVERSATION, conversationToSocket);
+            this.socketHandler.emitToUser(_id, SOCKET_EVENTS.JOIN_CONVERSATION, conversationToSocket);
+
+            // Gửi ACCEPT_FRIEND
+            this.socketHandler.emitToUser(userId, SOCKET_EVENTS.ACCEPT_FRIEND, { _id, name, avatar });
+            this.socketHandler.emitToUser(_id, SOCKET_EVENTS.ACCEPT_FRIEND, { _id: userId });
+
+            // Inside acceptFriend function
+            const message = await MessageService.sendNotify(
+                _id,
+                conversation._id,
+                "You and this user are now friends",
+                "FRIEND",
+                { targetId: userId },
+                null
+            );
+
+            // Check what type the conversationId is
+            console.log("Message object:", message);
+            console.log("ConversationId type:", typeof message.conversationId.toString());
+
+            this.socketHandler.emitToConversation(
+                message.conversationId.toString(),
+                SOCKET_EVENTS.RECEIVE_MESSAGE,
+                message
+            );
+
+            res.status(201).json();
         } catch (err) {
             next(err);
         }
     }
+
 
     // [GET] /invites/me
     async getListFriendInvitesWasSend(req, res, next) {
@@ -159,7 +221,6 @@ class FriendController {
             const friendInvites = await friendService.getListInvitesWasSend(
                 _id
             );
-            console.log('friendInvites', friendInvites);
             res.json(friendInvites);
         } catch (err) {
             next(err);

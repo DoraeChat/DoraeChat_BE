@@ -93,10 +93,10 @@ class SocketHandler {
     try {
       const updatePromise = channelId
         ? lastViewService.updateLastViewOfChannel(
-            conversationId,
-            channelId,
-            userId
-          )
+          conversationId,
+          channelId,
+          userId
+        )
         : lastViewService.updateLastViewOfConversation(conversationId, userId);
 
       await updatePromise;
@@ -267,10 +267,12 @@ class SocketHandler {
 
   // Helper methods for emitting events from controllers
   emitToUser(userId, event, data) {
+    console.log(`Emitting to user ${userId}: ${event}`, data);
     this.io.to(userId).emit(event, data);
   }
 
   emitToConversation(conversationId, event, data) {
+    console.log(`Emitting to conversation ${conversationId}: ${event}`, data);
     this.io.to(conversationId).emit(event, data);
   }
 

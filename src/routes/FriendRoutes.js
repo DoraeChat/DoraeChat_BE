@@ -2,8 +2,8 @@ const express = require("express");
 const router = express.Router();
 const FriendController = require("../controllers/FriendController");
 
-const FriendRouter = (io) => {
-  const friendController = new FriendController(io);
+const FriendRouter = (socketHandler) => {
+  const friendController = new FriendController(socketHandler);
 
   router.get("", friendController.getListFriends);
   router.delete("/:userId", friendController.deleteFriend);

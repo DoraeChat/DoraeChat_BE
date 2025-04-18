@@ -161,11 +161,6 @@ const messageSchema = new Schema(
       index: true,
       ref: "Member",
     },
-    manipulatedMemberIds: {
-      // member được nhắc đến trong thông báo
-      type: [ObjectId],
-      default: [],
-    },
     content: {
       type: String,
       required: true,
@@ -179,6 +174,10 @@ const messageSchema = new Schema(
         "REMOVE_MANAGER",
         "ADD_MANAGER",
         "JOIN_GROUP",
+        "LEAVE_GROUP",
+        "INVITE",
+        "KICK",
+        "FRIEND",
       ],
     }, // Loại hành động
     actionData: {
@@ -203,6 +202,7 @@ const messageSchema = new Schema(
       required: true,
       index: true,
     },
+    fileName: String,
     reacts: {
       type: [
         {
@@ -487,11 +487,11 @@ messageSchema.statics.getListByChannelIdAndUserId = async function (
         // Điều kiện lọc tin nhắn dựa trên hideBeforeTime và leftAt
         ...(member.hideBeforeTime || (!member.active && member.leftAt)
           ? {
-              createdAt: {
-                ...(member.hideBeforeTime && { $gt: member.hideBeforeTime }), // Tin nhắn sau hideBeforeTime
-                ...(!member.active && member.leftAt && { $lte: member.leftAt }), // Tin nhắn trước khi rời nhóm
-              },
-            }
+            createdAt: {
+              ...(member.hideBeforeTime && { $gt: member.hideBeforeTime }), // Tin nhắn sau hideBeforeTime
+              ...(!member.active && member.leftAt && { $lte: member.leftAt }), // Tin nhắn trước khi rời nhóm
+            },
+          }
           : {}),
       },
     },

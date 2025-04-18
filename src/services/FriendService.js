@@ -6,6 +6,7 @@ const ObjectId = require('mongoose').Types.ObjectId;
 const CustomError = require('../exceptions/CustomError');
 const userService = require('./UserService');
 const conversationService = require('./ConversationService');
+const messageService = require('./MessageService');
 
 class FriendService {
     async getList(name, _id) {
@@ -49,8 +50,15 @@ class FriendService {
     async deleteFriend(_id, userId) {
         if (!_id || !userId)
             throw new CustomError('Both user IDs are required');
+        const friendExists = await Friend.existsByIds(_id, userId);
+        if (!friendExists)
+            throw new CustomError('Friend does not exist');
 
-        await Friend.deleteByIds(_id, userId);
+        const result = await Friend.deleteByIds(_id, userId);
+
+
+        return result;
+
     }
 
     async sendFriendInvite(_id, userId) {
@@ -97,6 +105,7 @@ class FriendService {
 
         const friend = new Friend({ userIds: [_id, senderId] });
         await friend.save();
+
 
         return friend;
     }

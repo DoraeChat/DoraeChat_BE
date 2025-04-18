@@ -93,11 +93,96 @@ class MessageService {
     return populatedMessage;
   }
 
+  async sendNotify(userId, conversationId, content, action, actionData, channelId = null) {
+    if (!content || !content.trim()) {
+      throw new Error("Notify message content cannot be empty");
+    }
+
+    // Kiểm tra action
+    const validActions = [
+      "ADD",
+      "REMOVE",
+      "UPDATE",
+      "REMOVE_MANAGER",
+      "ADD_MANAGER",
+      "JOIN_GROUP",
+      "LEAVE_GROUP",
+      "INVITE",
+      "KICK",
+      "FRIEND",
+    ];
+    if (!validActions.includes(action)) {
+      throw new Error(`Invalid action type: ${action}`);
+    }
+
+    if (!actionData || !actionData.targetId) {
+      throw new Error("Action data with targetId is required");
+    }
+
+    // Kiểm tra member
+    const member = await Member.getByConversationIdAndUserId(conversationId, userId);
+    if (!member) {
+      throw new Error("You are not a member of this conversation");
+    }
+    if (!member.active) {
+      throw new Error("You are no longer an active member of this conversation");
+    }
+
+    // Kiểm tra conversation
+    const conversation = await Conversation.findById(conversationId);
+    if (!conversation) {
+      throw new Error("Conversation not found");
+    }
+
+    // Kiểm tra channel
+    let validChannelId = null;
+    if (conversation.type && !channelId) {
+      throw new Error("Channel ID is required for group conversations");
+    }
+    if (!conversation.type && channelId) {
+      throw new Error("Channel ID is not applicable for individual conversations");
+    }
+
+    if (conversation.type) {
+      const channel = await Channel.findById(channelId);
+      if (!channel || channel.conversationId.toString() !== conversationId.toString()) {
+        throw new Error("Invalid or non-existent channel for this conversation");
+      }
+      validChannelId = channel._id;
+    }
+
+    // Tạo tin nhắn NOTIFY
+    const newMessage = await Message.create({
+      memberId: member._id,
+      content,
+      type: "NOTIFY",
+      action,
+      actionData,
+      conversationId,
+      ...(validChannelId && { channelId: validChannelId }),
+    });
+
+
+    const populatedMessage = await Message.findById(newMessage._id)
+      .populate({
+        path: "memberId",
+        select: "userId",
+      })
+      .lean();
+
+    // Cập nhật lastMessageId
+    conversation.lastMessageId = newMessage._id;
+    await conversation.save();
+
+    return populatedMessage;
+  }
+
+
   // Lấy danh sách tin nhắn theo hội thoại giới hạn 20 tin nhắn
   async getMessagesByConversationId(
     conversationId,
     userId,
-    { skip = 0, limit = 1000, beforeTimestamp = null } = {}
+    { skip = 0, limit = 100, beforeTimestamp = null } = {}
   ) {
     // 1. Validate conversation
     const conversation = await Conversation.findById(conversationId);

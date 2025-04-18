@@ -242,7 +242,6 @@ class FriendService {
     }
 
     async isFriend(userId1, userId2) {
-        console.log('isFriend', userId1, userId2);
         if (!userId1 || !userId2)
             throw new CustomError('Both user IDs are required');
 

@@ -10,7 +10,7 @@ router.get('/exists/:id', UserController.existsById);
 router.get('/exists/username/:username', UserController.existsByUsername);
 router.get('/search/id/:id', UserController.getById);
 router.get('/search/username/:username', UserController.findByUsername);
-router.get('/search/phoneNumber/:phoneNumber', UserController.getUserByPhoneNumber);
+router.get('/search/phone-number/:phoneNumber', UserController.getUserByPhoneNumber);
 router.get('/check/:id', UserController.checkById);
 router.post('/check-ids', UserController.checkByIds);
 router.get('/summary/:id', UserController.getSummaryById);

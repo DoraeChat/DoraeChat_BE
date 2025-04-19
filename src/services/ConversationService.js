@@ -939,7 +939,7 @@ const ConversationService = {
   async getDefaultChannelId(conversationId) {
     const channel = await Channel.findOne({
       conversationId,
-      name: "Main",
+      name: "General",
     }).lean();
     return channel ? channel._id : null;
   },

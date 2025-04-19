@@ -250,8 +250,8 @@ class FriendService {
 
         const friend = await Friend.findOne({
             userIds: { $all: [userId1, userId2] }
-        });
-
+        }); 
+        
         return !!friend;
     }
         

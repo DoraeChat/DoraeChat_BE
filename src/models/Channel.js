@@ -17,7 +17,7 @@ const channelSchema = new Schema(
   { timestamps: true }
 );
 
-channelSchema.index({ conversationId: 1 });
+channelSchema.index({ conversationId: 1, createdAt: 1 });
 
 channelSchema.statics.checkExistence = async (query, message) => {
   const channel = await Channel.findOne(query).lean();
@@ -34,7 +34,10 @@ channelSchema.statics.getById = async (_id, message = "Channel") => {
 channelSchema.statics.getAllChannelByConversationId = async (
   conversationId
 ) => {
-  const channels = await Channel.find({ conversationId }).lean();
+  // sort by createdAt desc
+  const channels = await Channel.find({ conversationId })
+    .sort({ createdAt: 1 })
+    .lean();
   if (!channels) throw new NotFoundError("Channel");
   return channels;
 };

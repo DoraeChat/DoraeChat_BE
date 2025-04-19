@@ -89,9 +89,9 @@ const ConversationService = {
     const leaderMember = createdMembers.find(
       (member) => member.userId.toString() === leaderId.toString()
     );
-    // Tạo channel mặc định "Main"
+    // Tạo channel mặc định "General"
     const defaultChannel = new Channel({
-      name: "Main",
+      name: "General",
       conversationId: conversation._id,
     });
     await defaultChannel.save();

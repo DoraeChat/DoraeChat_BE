@@ -169,6 +169,14 @@ class SocketHandler {
         );
       });
 
+      socket.on("JOINED_CONVERSATION", (data) => {
+        if (!data || !data.conversationId) return;
+        socket.join(data.conversationId);
+        console.log(
+          `User ${socket.userId} joined conversation: ${data.conversationId}`
+        );
+      });
+
       // Rời khỏi cuộc trò chuyện
       socket.on(SOCKET_EVENTS.LEAVE_CONVERSATION, (conversationId) => {
         if (!conversationId) return;
@@ -269,6 +277,13 @@ class SocketHandler {
   emitToUser(userId, event, data) {
     console.log(`Emitting to user ${userId}: ${event}`, data);
     this.io.to(userId).emit(event, data);
+  }
+
+  emitToUsers(userIds, event, data) {
+    console.log(`Emitting to users ${userIds.join(", ")}: ${event}`, data);
+    userIds.forEach((userId) => {
+      this.io.to(userId).emit(event, data);
+    });
   }
 
   emitToConversation(conversationId, event, data) {

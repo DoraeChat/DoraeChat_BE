@@ -1,6 +1,9 @@
 const SOCKET_EVENTS = require("../constants/socketEvents");
 const redisDb = require("../config/redis");
 const lastViewService = require("../services/LastViewService");
+const { validateCallPermission } = require("../validates/callValidate");
+const Member = require("../models/Member");
+const Conversation = require("../models/Conversation");
 
 const REDIS_TTL = 86400;
 
@@ -204,26 +207,73 @@ class SocketHandler {
         this.getUserOnline(userId, cb);
       });
 
-      // Gọi video
+      // --- SIMPLE PEER ---
       socket.on(
-        SOCKET_EVENTS.SUBSCRIBE_CALL_VIDEO,
-        ({ conversationId, userId, peerId }) => {
-          if (!conversationId || !userId || !peerId) return;
+        SOCKET_EVENTS.CALL_USER,
+        async ({ from, signal, conversationId }) => {
+          console.log(`📥 Backend nhận CALL_USER từ ${from} → conv: ${conversationId}`);
+          console.log("CALL_USER payload:", { from, signal, conversationId });
 
-          const roomId = `call:${conversationId}`;
-          socket.join(roomId);
-
-          console.log(
-            `Video call subscription: Room=${roomId}, User=${userId}, PeerId=${peerId}`
-          );
-
-          socket.broadcast.to(roomId).emit(SOCKET_EVENTS.NEW_USER_CALL, {
+          // Lấy thành viên phòng gọi
+          socket.broadcast.to(conversationId).emit(SOCKET_EVENTS.RECEIVE_SIGNAL, {
+            from,
+            signal,
             conversationId,
-            userId,
-            peerId,
           });
         }
       );
+
+      socket.on(
+        SOCKET_EVENTS.CALL_USER,
+        async ({ from, signal, conversationId }) => {
+          console.log(`📥 Backend nhận CALL_USER từ ${from} → conv: ${conversationId}`);
+          console.log("CALL_USER payload:", { from, signal, conversationId });
+
+          socket.broadcast.to(conversationId).emit(SOCKET_EVENTS.RECEIVE_SIGNAL, {
+            from,
+            signal,
+            conversationId,
+          });
+        }
+      );
+
+
+      socket.on(
+        SOCKET_EVENTS.RECEIVE_SIGNAL,
+        ({ to, from, signal, conversationId }) => {
+          console.log(
+            `📥 Backend nhận ICE/CANDIDATE từ ${from} → gửi tới ${to} (conv: ${conversationId})`
+          );
+          this.io.to(to).emit(SOCKET_EVENTS.RECEIVE_SIGNAL, { from, signal, conversationId });
+        }
+      );
+
+      // ở SocketHandler, trong SUBSCRIBE_CALL_AUDIO / SUBSCRIBE_CALL_VIDEO
+      socket.on(SOCKET_EVENTS.SUBSCRIBE_CALL_AUDIO, ({ conversationId, userId, peerId }) => {
+        const room = `call:${conversationId}`;
+        socket.join(room);
+        // sender (initiator) tự nhận initiator=true, broadcast ra others với initiator=false
+        socket.emit(SOCKET_EVENTS.NEW_USER_CALL, { conversationId, userId, peerId, type: 'audio', startedAt: Date.now(), initiator: true });
+        socket.broadcast.to(room).emit(SOCKET_EVENTS.NEW_USER_CALL, { conversationId, userId, peerId, type: 'audio', startedAt: Date.now(), initiator: false });
+      });
+
+
+      socket.on(SOCKET_EVENTS.SUBSCRIBE_CALL_VIDEO, ({ conversationId, userId, peerId }) => {
+        const room = `call:${conversationId}`;
+        socket.join(room);
+        socket.broadcast.to(room).emit(SOCKET_EVENTS.NEW_USER_CALL, { conversationId, userId, peerId, type: 'video', startedAt: Date.now(), initiator: true });
+      });
+
+      socket.on(SOCKET_EVENTS.REJECT_CALL, ({ conversationId, userId }) => {
+        const room = `call:${conversationId}`;
+        socket.broadcast.to(room).emit(SOCKET_EVENTS.CALL_REJECTED, { userId });
+      });
+
+      socket.on(SOCKET_EVENTS.END_CALL, ({ conversationId, userId }) => {
+        const room = `call:${conversationId}`;
+        socket.broadcast.to(room).emit(SOCKET_EVENTS.CALL_ENDED, { userId });
+      });
+
 
       // Cập nhật last view
       socket.on(

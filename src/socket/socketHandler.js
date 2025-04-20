@@ -95,76 +95,88 @@ class SocketHandler {
         this.getUserOnline(userId, cb);
       });
 
-      socket.on(SOCKET_EVENTS.SUBSCRIBE_CALL_AUDIO, async ({ conversationId, peerId }) => {
-        const userId = socket.userId;            // lấy từ socket
-        const room = `call:${conversationId}`;
-        socket.join(room);
+      // --- Call subscription (audio & video) ---
+      socket.on(SOCKET_EVENTS.SUBSCRIBE_CALL_AUDIO, payload =>
+        this.handleSubscribeCall(payload, "audio", socket)
+      );
+      socket.on(SOCKET_EVENTS.SUBSCRIBE_CALL_VIDEO, payload =>
+        this.handleSubscribeCall(payload, "video", socket)
+      );
 
-        // Notify caller chính nó và broadcast cho những ai trong room
-        socket.emit(SOCKET_EVENTS.NEW_USER_CALL, {
-          conversationId,
-          peerId,
-          userId,
-          type: 'audio',
-          initiator: true
-        });
-        socket.broadcast.to(room).emit(SOCKET_EVENTS.NEW_USER_CALL, {
-          conversationId,
-          peerId,
-          userId,
-          type: 'audio',
-          initiator: false
-        });
-
-        // Gửi CALL_USER trực tiếp tới từng callee (ko cần join room yet)
-        try {
-          const conv = await Conversation.findById(conversationId).populate('members');
-          if (!conv) return;
-          const receivers = conv.members
-            .map(m => m.userId.toString())
-            .filter(id => id !== userId);
-          const fromName = (await User.findById(userId))?.name || '';
-          for (const rid of receivers) {
-            this.io.to(rid).emit(SOCKET_EVENTS.CALL_USER, {
-              from: userId,
-              peerId,
-              type: 'audio',
-              fromName,
-              conversationId
-            });
-          }
-        } catch (e) {
-          console.error('Error in SUBSCRIBE_CALL_AUDIO:', e);
-        }
-      });
-
-      // 3) Callee ACCEPT → chỉ notify room (optional)
+      // --- Callee accepts ---
       socket.on(SOCKET_EVENTS.ACCEPT_CALL, ({ conversationId }) => {
         const room = `call:${conversationId}`;
         socket.broadcast.to(room).emit(SOCKET_EVENTS.CALL_ACCEPTED, {
           conversationId,
-          userId: socket.userId
+          userId: socket.userId,
         });
       });
 
-      // 4) WebRTC signaling: chỉ broadcast vào room call:…
-      socket.on(SOCKET_EVENTS.CALL_USER, ({ signal, conversationId }) => {
-        const from = socket.userId;
-        const room = `call:${conversationId}`;
-        socket.broadcast.to(room)
-          .emit(SOCKET_EVENTS.RECEIVE_SIGNAL, { from, signal, conversationId });
-      });
+      // --- WebRTC signaling ---
+      socket.on(SOCKET_EVENTS.CALL_USER, ({ signal, conversationId }) =>
+        this.handleSignal(socket, signal, conversationId)
+      );
 
-      // Không cần listener thứ hai cho RECEIVE_SIGNAL ở server
+      // --- End & leave ---
+      socket.on(SOCKET_EVENTS.END_CALL, ({ conversationId }) =>
+        this.handleEndCall(socket, conversationId)
+      );
+      socket.on(SOCKET_EVENTS.LEAVE_CALL, (conversationId) =>
+        socket.leave(`call:${conversationId}`)
+      );
+    });
+  }
 
-      // 5) END_CALL
-      socket.on(SOCKET_EVENTS.END_CALL, ({ conversationId }) => {
-        const room = `call:${conversationId}`;
-        console.log(`User ${socket.userId} ended call in room ${room}`);
-        socket.broadcast.to(room).emit(SOCKET_EVENTS.CALL_ENDED, {
-          userId: socket.userId
+  h// --- Subscription for both audio/video ---
+  async handleSubscribeCall({ conversationId, peerId }, type, socket) {
+    const userId = socket.userId;
+    const room = `call:${conversationId}`;
+    socket.join(room);
+
+    // 1) NEW_USER_CALL broadcast
+    socket.emit(SOCKET_EVENTS.NEW_USER_CALL, {
+      conversationId, peerId, userId, type, initiator: true
+    });
+    socket.broadcast.to(room).emit(SOCKET_EVENTS.NEW_USER_CALL, {
+      conversationId, peerId, userId, type, initiator: false
+    });
+
+    // 2) CALL_USER direct to all other members
+    try {
+      const conv = await Conversation.findById(conversationId).populate("members");
+      if (!conv) return;
+      const receivers = conv.members
+        .map(m => m.userId.toString())
+        .filter(id => id !== userId);
+      const fromName = (await User.findById(userId))?.name || "";
+      for (const rid of receivers) {
+        this.io.to(rid).emit(SOCKET_EVENTS.CALL_USER, {
+          from: userId,
+          conversationId,
+          peerId,
+          type,
+          fromName,
         });
-      });
+      }
+    } catch (e) {
+      console.error("Error in handleSubscribeCall:", e);
+    }
+  }
+
+  // --- Signaling: broadcast offer/answer into proper room ---
+  handleSignal(socket, signal, conversationId) {
+    const from = socket.userId;
+    const room = `call:${conversationId}`;
+    socket.broadcast.to(room)
+      .emit(SOCKET_EVENTS.RECEIVE_SIGNAL, { from, signal, conversationId });
+  }
+
+  // --- End call: notify & cleanup room ---
+  handleEndCall(socket, conversationId) {
+    const room = `call:${conversationId}`;
+    console.log(`User ${socket.userId} ended call in ${room}`);
+    socket.broadcast.to(room).emit(SOCKET_EVENTS.CALL_ENDED, {
+      userId: socket.userId,
     });
   }
 

@@ -114,6 +114,19 @@ memberSchema.statics.getMembersWithUserInfo = async (conversationId) => {
   return members;
 };
 
+memberSchema.statics.isMember = async (conversationId, userId) => {
+  if (!ObjectId.isValid(conversationId) || !ObjectId.isValid(userId)) {
+    throw new NotFoundError("Invalid conversationId or userId");
+  }
+
+  const member = await Member.findOne({
+    conversationId,
+    userId,
+  }).lean();
+  
+  return !!member;
+}
+
 const Member = mongoose.model("Member", memberSchema);
 
 module.exports = Member;

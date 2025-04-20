@@ -12,6 +12,7 @@ const voteRoutes = require("./routes/VoteRoutes");
 const colorRoutes = require("./routes/ColorRoutes");
 const classifyRoutes = require("./routes/ClassifyRoutes");
 const cloudinaryRoutes = require("./routes/CloudinaryRoutes");
+const memberRoutes = require("./routes/MemberRoutes");
 
 const handleError = require("./middleware/handleError");
 const cors = require("cors");
@@ -55,6 +56,7 @@ const conversationRoutes = require("./routes/ConversationRoutes")(
     app.use("/api/colors", colorRoutes);
     app.use("/api/classifies", classifyRoutes);
     app.use("/api/uploads", cloudinaryRoutes);
+    app.use("/api/members", memberRoutes);
     app.use(handleError);
     server.listen(port, () => {
       console.log(`Backend Nodejs App listening on port ${port}`);

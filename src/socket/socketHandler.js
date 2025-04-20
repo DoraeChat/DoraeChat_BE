@@ -95,47 +95,75 @@ class SocketHandler {
         this.getUserOnline(userId, cb);
       });
 
-      // Caller subscribes to call room
-      socket.on(SOCKET_EVENTS.SUBSCRIBE_CALL_AUDIO, async ({ conversationId, userId, peerId }) => {
+      socket.on(SOCKET_EVENTS.SUBSCRIBE_CALL_AUDIO, async ({ conversationId, peerId }) => {
+        const userId = socket.userId;            // lấy từ socket
         const room = `call:${conversationId}`;
         socket.join(room);
 
-        // Notify both caller and callee
-        socket.emit(SOCKET_EVENTS.NEW_USER_CALL, { conversationId, userId, peerId, type: 'audio', initiator: true });
-        socket.broadcast.to(room).emit(SOCKET_EVENTS.NEW_USER_CALL, { conversationId, userId, peerId, type: 'audio', initiator: false });
+        // Notify caller chính nó và broadcast cho những ai trong room
+        socket.emit(SOCKET_EVENTS.NEW_USER_CALL, {
+          conversationId,
+          peerId,
+          userId,
+          type: 'audio',
+          initiator: true
+        });
+        socket.broadcast.to(room).emit(SOCKET_EVENTS.NEW_USER_CALL, {
+          conversationId,
+          peerId,
+          userId,
+          type: 'audio',
+          initiator: false
+        });
 
+        // Gửi CALL_USER trực tiếp tới từng callee (ko cần join room yet)
         try {
           const conv = await Conversation.findById(conversationId).populate('members');
           if (!conv) return;
-          const receivers = conv.members.filter(m => m.userId.toString() !== userId).map(m => m.userId.toString());
-          const userDoc = await User.findById(userId);
-          const fromName = userDoc?.name || '';
+          const receivers = conv.members
+            .map(m => m.userId.toString())
+            .filter(id => id !== userId);
+          const fromName = (await User.findById(userId))?.name || '';
           for (const rid of receivers) {
-            this.io.to(rid).emit(SOCKET_EVENTS.CALL_USER, { from: userId, fromName, conversationId });
+            this.io.to(rid).emit(SOCKET_EVENTS.CALL_USER, {
+              from: userId,
+              peerId,
+              type: 'audio',
+              fromName,
+              conversationId
+            });
           }
         } catch (e) {
           console.error('Error in SUBSCRIBE_CALL_AUDIO:', e);
         }
       });
 
-      // Callee accepts the call
-      socket.on(SOCKET_EVENTS.ACCEPT_CALL, ({ conversationId, userId }) => {
+      // 3) Callee ACCEPT → chỉ notify room (optional)
+      socket.on(SOCKET_EVENTS.ACCEPT_CALL, ({ conversationId }) => {
         const room = `call:${conversationId}`;
-        console.log(`✅ ${userId} accepted call, notifying others in ${room}`);
-        socket.broadcast.to(room).emit(SOCKET_EVENTS.CALL_ACCEPTED, { conversationId, userId });
+        socket.broadcast.to(room).emit(SOCKET_EVENTS.CALL_ACCEPTED, {
+          conversationId,
+          userId: socket.userId
+        });
       });
 
-
-      // WebRTC signaling
-      socket.on(SOCKET_EVENTS.CALL_USER, ({ from, signal, conversationId }) => {
-        socket.broadcast.to(conversationId).emit(SOCKET_EVENTS.RECEIVE_SIGNAL, { from, signal, conversationId });
+      // 4) WebRTC signaling: chỉ broadcast vào room call:…
+      socket.on(SOCKET_EVENTS.CALL_USER, ({ signal, conversationId }) => {
+        const from = socket.userId;
+        const room = `call:${conversationId}`;
+        socket.broadcast.to(room)
+          .emit(SOCKET_EVENTS.RECEIVE_SIGNAL, { from, signal, conversationId });
       });
-      socket.on(SOCKET_EVENTS.RECEIVE_SIGNAL, ({ to, from, signal, conversationId }) => {
-        this.io.to(to).emit(SOCKET_EVENTS.RECEIVE_SIGNAL, { from, signal, conversationId });
-      });
 
-      socket.on(SOCKET_EVENTS.END_CALL, ({ conversationId, userId }) => {
-        socket.broadcast.to(`call:${conversationId}`).emit(SOCKET_EVENTS.CALL_ENDED, { userId });
+      // Không cần listener thứ hai cho RECEIVE_SIGNAL ở server
+
+      // 5) END_CALL
+      socket.on(SOCKET_EVENTS.END_CALL, ({ conversationId }) => {
+        const room = `call:${conversationId}`;
+        console.log(`User ${socket.userId} ended call in room ${room}`);
+        socket.broadcast.to(room).emit(SOCKET_EVENTS.CALL_ENDED, {
+          userId: socket.userId
+        });
       });
     });
   }

@@ -532,5 +532,15 @@ class ConversationController {
       res.status(400).json({ message: error.message });
     }
   }
+  async disbandConversation(req, res) {
+    try {
+      const { id } = req.params;
+      const userId = req._id;
+      await ConversationService.disbandConversation(id, userId);
+      res.status(200).json({ message: "Conversation disbanded successfully" });
+    } catch (error) {
+      res.status(400).json({ message: error.message });
+    }
+  }
 }
 module.exports = ConversationController;

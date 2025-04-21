@@ -936,6 +936,45 @@ const ConversationService = {
     await conversation.save();
     return { newMember, notifyMessage };
   },
+  async disbandConversation(conversationId, userId) {
+    // Tìm conversation
+    const conversation = await Conversation.findById(conversationId);
+    if (!conversation) {
+      throw new Error("Conversation not found");
+    }
+    if (!conversation.type) {
+      throw new Error("Only group conversations can be disbanded");
+    }
+
+    // Kiểm tra quyền admin
+    const member = await Member.findOne({
+      conversationId,
+      userId,
+    });
+    if (!member) {
+      throw new Error("You are not authorized to disband this group");
+    }
+    if (conversation.leaderId.toString() !== member._id.toString()) {
+      throw new Error("Only the group leader can disband this group");
+    }
+
+    // Lấy danh sách userId của thành viên
+    const members = await Member.find({ conversationId }).lean();
+    const userIds = members.map((m) => m.userId.toString());
+
+    // Xóa dữ liệu
+    await Promise.all([
+      Conversation.deleteOne({ _id: conversationId }),
+      Member.deleteMany({ conversationId }),
+      Message.deleteMany({ conversationId }),
+      Channel.deleteMany({ conversationId }),
+      // redisClient.del(`conversation:${conversationId}:*`), // Xóa cache nếu có
+    ]);
+
+    // Thông báo qua socket
+    // SocketHandler.notifyConversationDisbanded(conversationId, userIds);
+    return true;
+  },
   async getDefaultChannelId(conversationId) {
     const channel = await Channel.findOne({
       conversationId,

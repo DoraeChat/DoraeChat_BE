@@ -28,40 +28,28 @@ const ConVersationRouter = (socketHandler) => {
   router.delete("/:id/managers", conversationController.removeManager);
   router.patch(
     "/:id/acceptGroupRequest/:isStatus",
-    conversationController.toggleJoinApproval.bind(conversationController)
+    conversationController.toggleJoinApproval
   );
   router.post(
     "/:id/groupRequest/accept/:userId",
-    conversationController.acceptJoinRequest.bind(conversationController)
+    conversationController.acceptJoinRequest
   );
   router.delete(
     "/:id/groupRequest/reject/:userId",
-    conversationController.rejectJoinRequest.bind(conversationController)
+    conversationController.rejectJoinRequest
   );
   router.post(
     "/:id/groupRequest/accept",
-    conversationController.acceptAllJoinRequests.bind(conversationController)
+    conversationController.acceptAllJoinRequests
   );
   router.delete(
     "/:id/groupRequest/reject",
-    conversationController.rejectAllJoinRequests.bind(conversationController)
+    conversationController.rejectAllJoinRequests
   );
-  router.get(
-    "/:id/groupRequest",
-    conversationController.getJoinRequests.bind(conversationController)
-  );
-  router.post(
-    "/:id/invite",
-    conversationController.inviteUserToGroup.bind(conversationController)
-  );
-  router.post(
-    "/:id/invite/link",
-    conversationController.createInviteLink.bind(conversationController)
-  );
-  router.post(
-    "/join/:token",
-    conversationController.acceptInvite.bind(conversationController)
-  );
+  router.get("/:id/groupRequest", conversationController.getJoinRequests);
+  router.post("/:id/invite", conversationController.inviteUserToGroup);
+  router.post("/:id/invite/link", conversationController.createInviteLink);
+  router.post("/join/:token", conversationController.acceptInvite);
   return router;
 };
 

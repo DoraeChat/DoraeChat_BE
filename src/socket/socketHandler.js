@@ -4,6 +4,7 @@ const lastViewService = require("../services/LastViewService");
 const Member = require("../models/Member");
 const User = require("../models/User");
 const Conversation = require("../models/Conversation");
+const { validateCallPermission } = require("../validates/callValidate");
 
 const REDIS_TTL = 86400;
 
@@ -124,12 +125,52 @@ class SocketHandler {
       socket.on(SOCKET_EVENTS.LEAVE_CALL, (conversationId) =>
         socket.leave(`call:${conversationId}`)
       );
+
+      socket.on(SOCKET_EVENTS.REJECT_CALL, ({ conversationId, userId, reason }) => {
+        const room = `call:${conversationId}`;
+        console.log(`User ${userId} từ chối cuộc gọi (reason: ${reason || "manual"})`);
+        socket.broadcast.to(room).emit(SOCKET_EVENTS.CALL_REJECTED, {
+          userId,
+          reason,
+          conversationId
+        });
+
+        try {
+          const conv = Conversation.findById(conversationId).populate("members");
+          const caller = conv.members.find(m => m.userId.toString() !== userId);
+          if (caller) {
+            this.io.to(caller.userId.toString()).emit(SOCKET_EVENTS.CALL_REJECTED, {
+              userId,
+              reason,
+              conversationId,
+            });
+          }
+        } catch (err) {
+          console.error("❌ Error while emitting reject directly:", err);
+        }
+      });
+
     });
   }
 
-  h// --- Subscription for both audio/video ---
+  // --- Subscription for both audio/video ---
   async handleSubscribeCall({ conversationId, peerId }, type, socket) {
     const userId = socket.userId;
+    console.log(`User ${userId} is subscribing to call in conversation ${conversationId}`);
+    const hasPermission = await validateCallPermission(conversationId, userId, null);
+    console.log(`Permission check passed for user ${userId} in conversation ${conversationId}: ${hasPermission}`);
+    if (!hasPermission) {
+      console.warn(`❌ User ${userId} không có quyền gọi trong cuộc trò chuyện ${conversationId}`);
+
+      socket.emit(SOCKET_EVENTS.CALL_REJECTED, {
+        conversationId,
+        userId,
+        reason: "permission_denied",
+      });
+      return;
+    }
+    console.log(`User ${userId} joined call room: ${conversationId}`);
+
     const room = `call:${conversationId}`;
     socket.join(room);
 

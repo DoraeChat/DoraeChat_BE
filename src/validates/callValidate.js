@@ -1,4 +1,3 @@
-// callValidate.js
 const mongoose = require("mongoose");
 const Member = require("../models/Member");
 const Conversation = require("../models/Conversation");

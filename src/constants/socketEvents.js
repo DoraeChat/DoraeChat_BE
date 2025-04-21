@@ -15,6 +15,8 @@ const SOCKET_EVENTS = {
   JOIN_CONVERSATIONS: "join-conversations",
   JOIN_CONVERSATION: "join-conversation",
   LEAVE_CONVERSATION: "leave-conversation",
+  NEW_GROUP_CONVERSATION: "new-group-conversation",
+
   //Messages
   RECEIVE_MESSAGE: "receive-message",
   MESSAGE_RECALLED: "message-recalled",

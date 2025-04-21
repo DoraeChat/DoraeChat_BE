@@ -19,6 +19,7 @@ class ConversationController {
     this.inviteUserToGroup = this.inviteUserToGroup.bind(this);
     this.createInviteLink = this.createInviteLink.bind(this);
     this.acceptInvite = this.acceptInvite.bind(this);
+    this.createGroupConversation = this.createGroupConversation.bind(this);
   }
   // [GET] /api/conversations - Lấy danh sách hội thoại của người dùng
   async getListByUserId(req, res) {
@@ -67,6 +68,14 @@ class ConversationController {
         members,
         leaderId
       );
+      // Phát sự kiện socket real-time createGroupConversation
+      if (this.socketHandler) {
+        this.socketHandler.emitToUsers(
+          members,
+          SOCKET_EVENTS.NEW_GROUP_CONVERSATION,
+          conversation
+        );
+      }
       res.status(201).json(conversation);
     } catch (error) {
       res.status(400).json({ message: error.message });

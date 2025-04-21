@@ -2,6 +2,7 @@ const mongoose = require("mongoose");
 const Schema = mongoose.Schema;
 const ObjectId = mongoose.Types.ObjectId;
 const NotFoundError = require("../exceptions/NotFoundError");
+const User = require("./User");
 
 const memberSchema = new Schema(
   {
@@ -52,6 +53,9 @@ memberSchema.statics.getByConversationIdAndUserId = async (
     userId,
   }).lean();
   if (!member) throw new NotFoundError(message);
+  const user = await User.findById(userId).lean();
+
+  member.avatar = user.avatar;
   return member;
 };
 
@@ -112,6 +116,42 @@ memberSchema.statics.getMembersWithUserInfo = async (conversationId) => {
     .lean();
 
   return members;
+};
+
+memberSchema.statics.isMember = async (conversationId, userId) => {
+  if (!ObjectId.isValid(conversationId) || !ObjectId.isValid(userId)) {
+    throw new NotFoundError("Invalid conversationId or userId");
+  }
+
+  const member = await Member.findOne({
+    conversationId,
+    userId,
+  }).lean();
+
+  return !!member;
+};
+
+memberSchema.statics.getByConversationId = async (conversationId) => {
+  if (!ObjectId.isValid(conversationId)) {
+    throw new NotFoundError("Invalid conversationId");
+  }
+
+  const members = await Member.find({
+    conversationId,
+    active: { $ne: false },
+  }).lean();
+
+  const membersWithAvatars = await Promise.all(
+    members.map(async (member) => {
+      const user = await User.findById(member.userId).lean();
+      return {
+        ...member,
+        avatar: user.avatar,
+      };
+    })
+  );
+
+  return membersWithAvatars;
 };
 
 const Member = mongoose.model("Member", memberSchema);

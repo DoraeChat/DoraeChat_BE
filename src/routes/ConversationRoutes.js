@@ -50,6 +50,7 @@ const ConVersationRouter = (socketHandler) => {
   router.post("/:id/invite", conversationController.inviteUserToGroup);
   router.post("/:id/invite/link", conversationController.createInviteLink);
   router.post("/join/:token", conversationController.acceptInvite);
+  router.delete("/:id", conversationController.disbandConversation);
   return router;
 };
 

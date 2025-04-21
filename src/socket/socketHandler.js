@@ -93,10 +93,10 @@ class SocketHandler {
     try {
       const updatePromise = channelId
         ? lastViewService.updateLastViewOfChannel(
-          conversationId,
-          channelId,
-          userId
-        )
+            conversationId,
+            channelId,
+            userId
+          )
         : lastViewService.updateLastViewOfConversation(conversationId, userId);
 
       await updatePromise;
@@ -120,6 +120,14 @@ class SocketHandler {
         error
       );
     }
+  }
+  // thong báo cuộc trò chuyện đã bị giai tan
+  async notifyConversationDisbanded(conversationId, userIds) {
+    userIds.forEach((userId) => {
+      this.io
+        .to(userId)
+        .emit(SOCKET_EVENTS.DISBANDED_CONVERSATION, { conversationId });
+    });
   }
 
   setupSocketEvents() {

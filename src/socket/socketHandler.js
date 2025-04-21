@@ -1,6 +1,10 @@
 const SOCKET_EVENTS = require("../constants/socketEvents");
 const redisDb = require("../config/redis");
 const lastViewService = require("../services/LastViewService");
+const Member = require("../models/Member");
+const User = require("../models/User");
+const Conversation = require("../models/Conversation");
+const { validateCallPermission } = require("../validates/callValidate");
 
 const REDIS_TTL = 86400;
 
@@ -278,6 +282,61 @@ class SocketHandler {
         if (!data || !data.userId) return;
         socket.to(data.userId).emit(SOCKET_EVENTS.DELETED_FRIEND, data);
       });
+
+
+      // --- Call subscription (audio & video) ---
+      socket.on(SOCKET_EVENTS.SUBSCRIBE_CALL_AUDIO, payload =>
+        this.handleSubscribeCall(payload, "audio", socket)
+      );
+      socket.on(SOCKET_EVENTS.SUBSCRIBE_CALL_VIDEO, payload =>
+        this.handleSubscribeCall(payload, "video", socket)
+      );
+
+      // --- Callee accepts ---
+      socket.on(SOCKET_EVENTS.ACCEPT_CALL, ({ conversationId }) => {
+        const room = `call:${conversationId}`;
+        socket.broadcast.to(room).emit(SOCKET_EVENTS.CALL_ACCEPTED, {
+          conversationId,
+          userId: socket.userId,
+        });
+      });
+
+      // --- WebRTC signaling ---
+      socket.on(SOCKET_EVENTS.CALL_USER, ({ signal, conversationId }) =>
+        this.handleSignal(socket, signal, conversationId)
+      );
+
+      // --- End & leave ---
+      socket.on(SOCKET_EVENTS.END_CALL, ({ conversationId }) =>
+        this.handleEndCall(socket, conversationId)
+      );
+      socket.on(SOCKET_EVENTS.LEAVE_CALL, (conversationId) =>
+        socket.leave(`call:${conversationId}`)
+      );
+
+      socket.on(SOCKET_EVENTS.REJECT_CALL, ({ conversationId, userId, reason }) => {
+        const room = `call:${conversationId}`;
+        console.log(`User ${userId} từ chối cuộc gọi (reason: ${reason || "manual"})`);
+        socket.broadcast.to(room).emit(SOCKET_EVENTS.CALL_REJECTED, {
+          userId,
+          reason,
+          conversationId
+        });
+
+        try {
+          const conv = Conversation.findById(conversationId).populate("members");
+          const caller = conv.members.find(m => m.userId.toString() !== userId);
+          if (caller) {
+            this.io.to(caller.userId.toString()).emit(SOCKET_EVENTS.CALL_REJECTED, {
+              userId,
+              reason,
+              conversationId,
+            });
+          }
+        } catch (err) {
+          console.error("❌ Error while emitting reject directly:", err);
+        }
+      });
     });
   }
 
@@ -301,6 +360,75 @@ class SocketHandler {
 
   emitToAll(event, data) {
     this.io.emit(event, data);
+  }
+
+
+  // --- Subscription for both audio/video ---
+  async handleSubscribeCall({ conversationId, peerId }, type, socket) {
+    const userId = socket.userId;
+    console.log(`User ${userId} is subscribing to call in conversation ${conversationId}`);
+    const hasPermission = await validateCallPermission(conversationId, userId, null);
+    console.log(`Permission check passed for user ${userId} in conversation ${conversationId}: ${hasPermission}`);
+    if (!hasPermission) {
+      console.warn(`❌ User ${userId} không có quyền gọi trong cuộc trò chuyện ${conversationId}`);
+
+      socket.emit(SOCKET_EVENTS.CALL_REJECTED, {
+        conversationId,
+        userId,
+        reason: "permission_denied",
+      });
+      return;
+    }
+    console.log(`User ${userId} joined call room: ${conversationId}`);
+
+    const room = `call:${conversationId}`;
+    socket.join(room);
+
+    // 1) NEW_USER_CALL broadcast
+    socket.emit(SOCKET_EVENTS.NEW_USER_CALL, {
+      conversationId, peerId, userId, type, initiator: true
+    });
+    socket.broadcast.to(room).emit(SOCKET_EVENTS.NEW_USER_CALL, {
+      conversationId, peerId, userId, type, initiator: false
+    });
+
+    // 2) CALL_USER direct to all other members
+    try {
+      const conv = await Conversation.findById(conversationId).populate("members");
+      if (!conv) return;
+      const receivers = conv.members
+        .map(m => m.userId.toString())
+        .filter(id => id !== userId);
+      const fromName = (await User.findById(userId))?.name || "";
+      for (const rid of receivers) {
+        this.io.to(rid).emit(SOCKET_EVENTS.CALL_USER, {
+          from: userId,
+          conversationId,
+          peerId,
+          type,
+          fromName,
+        });
+      }
+    } catch (e) {
+      console.error("Error in handleSubscribeCall:", e);
+    }
+  }
+
+  // --- Signaling: broadcast offer/answer into proper room ---
+  handleSignal(socket, signal, conversationId) {
+    const from = socket.userId;
+    const room = `call:${conversationId}`;
+    socket.broadcast.to(room)
+      .emit(SOCKET_EVENTS.RECEIVE_SIGNAL, { from, signal, conversationId });
+  }
+
+  // --- End call: notify & cleanup room ---
+  handleEndCall(socket, conversationId) {
+    const room = `call:${conversationId}`;
+    console.log(`User ${socket.userId} ended call in ${room}`);
+    socket.broadcast.to(room).emit(SOCKET_EVENTS.CALL_ENDED, {
+      userId: socket.userId,
+    });
   }
 }
 

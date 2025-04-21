@@ -30,9 +30,19 @@ const SOCKET_EVENTS = {
   // Online status
   GET_USER_ONLINE: "get-user-online",
 
-  // Video call
+  // Call - for simple-peer
   SUBSCRIBE_CALL_VIDEO: "subscribe-call-video",
+  SUBSCRIBE_CALL_AUDIO: "subscribe-call-audio",
   NEW_USER_CALL: "new-user-call",
+  REJECT_CALL: "reject-call",
+  CALL_REJECTED: "call-rejected",
+  END_CALL: "end-call",
+  CALL_ENDED: "call-ended",
+  CALL_USER: "call-user",
+  ANSWER_CALL: "answer-call",
+  RECEIVE_SIGNAL: "receive-signal",
+  LEAVE_CALL: "leave-call",
+
 
   // Last view tracking
   CONVERSATION_LAST_VIEW: "conversation-last-view",

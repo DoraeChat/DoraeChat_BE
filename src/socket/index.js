@@ -6,8 +6,9 @@ function setupSocket(server) {
     cors: {
       origin: "*",
       methods: ["GET", "POST", "PUT", "DELETE"],
-      credentials: true,
+      // credentials: true,
     },
+    transports: ["websocket", "polling"]
   });
 
   const socketHandler = new SocketHandler(io);

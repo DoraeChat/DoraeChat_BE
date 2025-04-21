@@ -975,6 +975,105 @@ const ConversationService = {
     // SocketHandler.notifyConversationDisbanded(conversationId, userIds);
     return true;
   },
+  async leaveConversation(conversationId, userId) {
+    // Tìm conversation
+    const conversation = await Conversation.findById(conversationId);
+    if (!conversation) {
+      throw new Error("Conversation not found");
+    }
+    if (!conversation.type) {
+      throw new Error("Only group conversations can be left");
+    }
+
+    // Tìm member
+    const member = await Member.findOne({ conversationId, userId });
+    if (!member) {
+      throw new Error("You are not a member of this group");
+    }
+
+    // Không cho admin rời (tùy chọn, có thể bỏ)
+    if (conversation.leaderId.toString() === member._id.toString()) {
+      throw new Error(
+        "Leader cannot leave the group. Please disband or transfer admin role."
+      );
+    }
+
+    // Lấy danh sách userId trước khi xóa
+    const members = await Member.find({ conversationId }).lean();
+    const userIds = members.map((m) => m.userId.toString());
+    const channelId = await this.getDefaultChannelId(conversationId);
+    const notifyMessage = await Message.create({
+      memberId: member._id,
+      content: `${member.name} đã rời khỏi nhóm`,
+      type: "NOTIFY",
+      action: "LEAVE_GROUP",
+      conversationId,
+      channelId,
+    });
+    conversation.lastMessageId = notifyMessage._id;
+    await conversation.save();
+    member.active = false;
+    member.leftAt = new Date();
+    await member.save();
+    // // cập nhật member false
+
+    // Cập nhật conversation.members
+    // conversation.members = conversation.members.filter(
+    //   (m) => m.toString() !== member._id.toString()
+    // );
+    // // Thông báo member rời
+    // SocketHandler.notifyMemberLeft(conversationId, userId, userIds);
+
+    return { member, notifyMessage };
+  },
+  async transferAdmin(conversationId, userId, newAdminId) {
+    // Tìm conversation
+    const conversation = await Conversation.findById(conversationId);
+    if (!conversation) {
+      throw new Error("Conversation not found");
+    }
+    if (!conversation.type) {
+      throw new Error("Only group conversations can have admin transferred");
+    }
+
+    // Kiểm tra admin hiện tại
+    const currentAdmin = await Member.findOne({
+      conversationId,
+      userId,
+    });
+    if (
+      !currentAdmin ||
+      conversation.leaderId.toString() !== currentAdmin._id.toString()
+    ) {
+      throw new Error("You are not authorized to transfer admin role");
+    }
+
+    // Kiểm tra new admin
+    const newAdmin = await Member.findOne({
+      conversationId,
+      userId: newAdminId,
+    });
+    if (!newAdmin) {
+      throw new Error("New admin is not a valid member of this group");
+    }
+    // Cập nhật role
+    conversation.leaderId = newAdmin._id;
+    const channelId = await this.getDefaultChannelId(conversationId);
+    // Thông báo qua socket
+    const notifyMessage = await Message.create({
+      memberId: currentAdmin._id,
+      content: `${currentAdmin.name} đã trao quyền trưởng nhóm cho ${newAdmin.name}`,
+      type: "NOTIFY",
+      action: "ADD_MANAGER",
+      conversationId,
+      channelId,
+    });
+
+    conversation.lastMessageId = notifyMessage._id;
+    await conversation.save();
+
+    return { newAdmin, notifyMessage };
+  },
   async getDefaultChannelId(conversationId) {
     const channel = await Channel.findOne({
       conversationId,

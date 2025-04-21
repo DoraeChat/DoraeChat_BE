@@ -11,6 +11,23 @@ const MemberService = {
     const member = await Member.getByConversationId(conversationId);
     return member;
   },
+  async getByConversationIdAndUserId(conversationId, userId) {
+    const member = await Member.getByConversationIdAndUserId(
+      conversationId,
+      userId
+    );
+    return member;
+  },
+  async updateMemberUnActive(conversationId, userId) {
+    const member = await Member.findOne({
+      conversationId,
+      userId,
+    });
+    member.active = false;
+    member.leftAt = new Date();
+    await member.save();
+    return member;
+  },
 };
 
 module.exports = MemberService;

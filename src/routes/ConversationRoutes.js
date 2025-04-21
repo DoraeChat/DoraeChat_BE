@@ -51,6 +51,8 @@ const ConVersationRouter = (socketHandler) => {
   router.post("/:id/invite/link", conversationController.createInviteLink);
   router.post("/join/:token", conversationController.acceptInvite);
   router.delete("/disband/:id", conversationController.disbandConversation);
+  router.delete("/members/leave/:id", conversationController.leaveConversation);
+  router.patch("/transfer-admin/:id", conversationController.transferAdmin);
   return router;
 };
 

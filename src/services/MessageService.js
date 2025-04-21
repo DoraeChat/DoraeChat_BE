@@ -93,7 +93,14 @@ class MessageService {
     return populatedMessage;
   }
 
-  async sendNotify(userId, conversationId, content, action, actionData, channelId = null) {
+  async sendNotify(
+    userId,
+    conversationId,
+    content,
+    action,
+    actionData,
+    channelId = null
+  ) {
     if (!content || !content.trim()) {
       throw new Error("Notify message content cannot be empty");
     }
@@ -120,12 +127,17 @@ class MessageService {
     }
 
     // Kiểm tra member
-    const member = await Member.getByConversationIdAndUserId(conversationId, userId);
+    const member = await Member.getByConversationIdAndUserId(
+      conversationId,
+      userId
+    );
     if (!member) {
       throw new Error("You are not a member of this conversation");
     }
     if (!member.active) {
-      throw new Error("You are no longer an active member of this conversation");
+      throw new Error(
+        "You are no longer an active member of this conversation"
+      );
     }
 
     // Kiểm tra conversation
@@ -140,13 +152,20 @@ class MessageService {
       throw new Error("Channel ID is required for group conversations");
     }
     if (!conversation.type && channelId) {
-      throw new Error("Channel ID is not applicable for individual conversations");
+      throw new Error(
+        "Channel ID is not applicable for individual conversations"
+      );
     }
 
     if (conversation.type) {
       const channel = await Channel.findById(channelId);
-      if (!channel || channel.conversationId.toString() !== conversationId.toString()) {
-        throw new Error("Invalid or non-existent channel for this conversation");
+      if (
+        !channel ||
+        channel.conversationId.toString() !== conversationId.toString()
+      ) {
+        throw new Error(
+          "Invalid or non-existent channel for this conversation"
+        );
       }
       validChannelId = channel._id;
     }
@@ -162,7 +181,6 @@ class MessageService {
       ...(validChannelId && { channelId: validChannelId }),
     });
 
-
     const populatedMessage = await Message.findById(newMessage._id)
       .populate({
         path: "memberId",
@@ -176,7 +194,6 @@ class MessageService {
 
     return populatedMessage;
   }
-
 
   // Lấy danh sách tin nhắn theo hội thoại giới hạn 20 tin nhắn
   async getMessagesByConversationId(

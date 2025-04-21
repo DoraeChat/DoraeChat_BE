@@ -1,5 +1,6 @@
 const ConversationService = require("../services/ConversationService");
 const MessageService = require("../services/MessageService");
+const MemberService = require("../services/MemberService");
 const SOCKET_EVENTS = require("../constants/socketEvents");
 class ConversationController {
   constructor(socketHandler) {
@@ -547,6 +548,30 @@ class ConversationController {
       const userId = req._id;
       await ConversationService.disbandConversation(id, userId);
       res.status(200).json({ message: "Conversation disbanded successfully" });
+    } catch (error) {
+      res.status(400).json({ message: error.message });
+    }
+  }
+  async leaveConversation(req, res) {
+    try {
+      const { id } = req.params;
+      const userId = req._id;
+      console.log("success", id, userId);
+      const { member, notifyMessage } =
+        await ConversationService.leaveConversation(id, userId);
+      res.status(200).json({ member, notifyMessage });
+    } catch (error) {
+      res.status(400).json({ message: error.message });
+    }
+  }
+  async transferAdmin(req, res) {
+    try {
+      const { id } = req.params;
+      const { newAdminId } = req.body;
+      const userId = req._id;
+      const { newAdmin, notifyMessage } =
+        await ConversationService.transferAdmin(id, userId, newAdminId);
+      res.status(200).json({ newAdmin, notifyMessage });
     } catch (error) {
       res.status(400).json({ message: error.message });
     }

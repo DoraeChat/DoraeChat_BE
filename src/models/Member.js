@@ -138,6 +138,7 @@ memberSchema.statics.getByConversationId = async (conversationId) => {
 
   const members = await Member.find({
     conversationId,
+    active: { $ne: false },
   }).lean();
 
   const membersWithAvatars = await Promise.all(

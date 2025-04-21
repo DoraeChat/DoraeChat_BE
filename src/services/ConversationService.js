@@ -497,7 +497,7 @@ const ConversationService = {
       conversationId,
       userId
     );
-    if (!requestingMember || requestingMember.active) {
+    if (!requestingMember || !requestingMember.active) {
       throw new Error("You are not an active member of this conversation");
     }
     if (conversation.leaderId.toString() !== requestingMember._id.toString()) {

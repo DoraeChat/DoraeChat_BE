@@ -6,6 +6,7 @@ function setupSocket(server) {
     cors: {
       origin: "*",
       methods: ["GET", "POST", "PUT", "DELETE"],
+      // credentials: true,
     },
     transports: ["websocket", "polling"]
   });

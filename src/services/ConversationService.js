@@ -1004,8 +1004,14 @@ const ConversationService = {
     if (!member) {
       throw new Error("You are not a member of this group");
     }
-
-    if (conversation.leaderId.toString() === member._id.toString()) {
+    const activeMembers = await Member.countDocuments({
+      conversationId,
+      active: true,
+    });
+    if (
+      conversation.leaderId.toString() === member._id.toString() &&
+      activeMembers > 1
+    ) {
       throw new Error(
         "Leader cannot leave the group. Please disband or transfer admin role."
       );
@@ -1015,12 +1021,10 @@ const ConversationService = {
     member.leftAt = new Date();
     await member.save();
 
-    const activeMembers = await Member.countDocuments({
-      conversationId,
-      active: true,
-    });
-
-    if (activeMembers === 0) {
+    if (
+      activeMembers === 0 ||
+      member._id.toString() === conversation.leaderId.toString()
+    ) {
       // Nếu không còn thành viên nào active → disband group luôn
       await Promise.all([
         Conversation.deleteOne({ _id: conversationId }),

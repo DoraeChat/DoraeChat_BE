@@ -568,7 +568,7 @@ class ConversationController {
       const { id } = req.params;
       const userId = req._id;
       console.log("success", id, userId);
-      const { member, notifyMessage } =
+      const { member, notifyMessage, disbanded } =
         await ConversationService.leaveConversation(id, userId);
       if (this.socketHandler) {
         this.socketHandler.emitToConversation(
@@ -577,6 +577,7 @@ class ConversationController {
           {
             member,
             notifyMessage,
+            disbanded,
           }
         );
       }

@@ -992,7 +992,6 @@ const ConversationService = {
     return true;
   },
   async leaveConversation(conversationId, userId) {
-    // Tìm conversation
     const conversation = await Conversation.findById(conversationId);
     if (!conversation) {
       throw new Error("Conversation not found");
@@ -1001,22 +1000,39 @@ const ConversationService = {
       throw new Error("Only group conversations can be left");
     }
 
-    // Tìm member
     const member = await Member.findOne({ conversationId, userId });
     if (!member) {
       throw new Error("You are not a member of this group");
     }
 
-    // Không cho admin rời (tùy chọn, có thể bỏ)
     if (conversation.leaderId.toString() === member._id.toString()) {
       throw new Error(
         "Leader cannot leave the group. Please disband or transfer admin role."
       );
     }
 
-    // Lấy danh sách userId trước khi xóa
-    const members = await Member.find({ conversationId }).lean();
-    const userIds = members.map((m) => m.userId.toString());
+    member.active = false;
+    member.leftAt = new Date();
+    await member.save();
+
+    const activeMembers = await Member.countDocuments({
+      conversationId,
+      active: true,
+    });
+
+    if (activeMembers === 0) {
+      // Nếu không còn thành viên nào active → disband group luôn
+      await Promise.all([
+        Conversation.deleteOne({ _id: conversationId }),
+        Member.deleteMany({ conversationId }),
+        Message.deleteMany({ conversationId }),
+        Channel.deleteMany({ conversationId }),
+        // redisClient.del(`conversation:${conversationId}:*`),
+      ]);
+      return { disbanded: true };
+    }
+
+    // Nếu vẫn còn người → gửi thông báo rời nhóm
     const channelId = await this.getDefaultChannelId(conversationId);
     const notifyMessage = await Message.create({
       memberId: member._id,
@@ -1026,21 +1042,11 @@ const ConversationService = {
       conversationId,
       channelId,
     });
+
     conversation.lastMessageId = notifyMessage._id;
     await conversation.save();
-    member.active = false;
-    member.leftAt = new Date();
-    await member.save();
-    // // cập nhật member false
 
-    // Cập nhật conversation.members
-    // conversation.members = conversation.members.filter(
-    //   (m) => m.toString() !== member._id.toString()
-    // );
-    // // Thông báo member rời
-    // SocketHandler.notifyMemberLeft(conversationId, userId, userIds);
-
-    return { member, notifyMessage };
+    return { member, notifyMessage, disbanded: false };
   },
   async transferAdmin(conversationId, userId, newAdminId) {
     // Tìm conversation

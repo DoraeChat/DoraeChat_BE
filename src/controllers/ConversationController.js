@@ -1,7 +1,9 @@
 const ConversationService = require("../services/ConversationService");
 const MessageService = require("../services/MessageService");
 const MemberService = require("../services/MemberService");
+const UserService = require("../services/UserService");
 const SOCKET_EVENTS = require("../constants/socketEvents");
+
 class ConversationController {
   constructor(socketHandler) {
     this.socketHandler = socketHandler; // Nhận io từ Socket.IO
@@ -21,7 +23,9 @@ class ConversationController {
     this.createInviteLink = this.createInviteLink.bind(this);
     this.acceptInvite = this.acceptInvite.bind(this);
     this.createGroupConversation = this.createGroupConversation.bind(this);
+    this.disbandConversation = this.disbandConversation.bind(this);
   }
+
   // [GET] /api/conversations - Lấy danh sách hội thoại của người dùng
   async getListByUserId(req, res) {
     try {
@@ -542,16 +546,25 @@ class ConversationController {
       res.status(400).json({ message: error.message });
     }
   }
+
   async disbandConversation(req, res) {
     try {
       const { id } = req.params;
       const userId = req._id;
+      const conversation = await ConversationService.getConversationById(id);
       await ConversationService.disbandConversation(id, userId);
       res.status(200).json({ message: "Conversation disbanded successfully" });
+
+      this.socketHandler.emitToConversation(
+        id,
+        SOCKET_EVENTS.CONVERSATION_DISBANDED,
+        { conversationId: id, userId }
+      );
     } catch (error) {
       res.status(400).json({ message: error.message });
     }
   }
+
   async leaveConversation(req, res) {
     try {
       const { id } = req.params;

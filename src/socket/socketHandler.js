@@ -337,6 +337,15 @@ class SocketHandler {
           console.error("❌ Error while emitting reject directly:", err);
         }
       });
+
+      socket.on(SOCKET_EVENTS.HIDE_CONVERSATION, async ({ conversationId }) => {
+        const socketsInRoom = await this.io.in(conversationId).fetchSockets();
+
+        socketsInRoom.forEach((socket) => {
+          socket.leave(conversationId);
+          console.log(`Socket ${socket.id} left room ${conversationId}`);
+        });
+      });
     });
   }
 

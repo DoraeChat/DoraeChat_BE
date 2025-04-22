@@ -4,5 +4,6 @@ const MemberController = require('../controllers/MemberController');
 
 router.get('/is-member', MemberController.isMember);
 router.get('/:conversationId', MemberController.getByConversationId);
+router.get('/:conversationId/:userId', MemberController.getByConversationIdAndUserId);
 
 module.exports = router;

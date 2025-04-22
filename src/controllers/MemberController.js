@@ -36,6 +36,27 @@ const MemberController = {
       });
     }
   },
+
+  async getByConversationIdAndUserId(req, res, next) {
+    try {
+      const { conversationId, userId } = req.params;
+
+      const member = await MemberService.getByConversationIdAndUserId(
+        conversationId,
+        userId
+      );
+
+      return res.status(200).json({
+        message: "Get member successfully",
+        data: member,
+      });
+    } catch (error) {
+      next(error);
+      return res.status(500).json({
+        message: error.message,
+      });
+    }
+  },
 };
 
 module.exports = MemberController;

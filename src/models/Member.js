@@ -127,6 +127,7 @@ memberSchema.statics.isMember = async (conversationId, userId) => {
     conversationId,
     userId,
   }).lean();
+  if (!member?.active) return false;
 
   return !!member;
 };
@@ -152,6 +153,26 @@ memberSchema.statics.getByConversationId = async (conversationId) => {
   );
 
   return membersWithAvatars;
+};
+
+memberSchema.statics.getByConversationIdAndUserId = async (
+  conversationId,
+  userId
+) => {
+  if (!ObjectId.isValid(conversationId) || !ObjectId.isValid(userId)) {
+    throw new NotFoundError("Invalid conversationId or userId");
+  }
+
+  const member = await Member.findOne({
+    conversationId,
+    userId,
+  }).lean();
+  if (!member) throw new NotFoundError("Member not found");
+
+  const user = await User.findById(userId).lean();
+  member.avatar = user.avatar;
+
+  return member;
 };
 
 const Member = mongoose.model("Member", memberSchema);

@@ -28,6 +28,14 @@ const MemberService = {
     await member.save();
     return member;
   },
+
+  async getByConversationIdAndUserId(conversationId, userId) {
+    const member = await Member.getByConversationIdAndUserId(
+      conversationId,
+      userId
+    );
+    return member;
+  },
 };
 
 module.exports = MemberService;

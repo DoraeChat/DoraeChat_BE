@@ -24,6 +24,10 @@ class ConversationController {
     this.acceptInvite = this.acceptInvite.bind(this);
     this.createGroupConversation = this.createGroupConversation.bind(this);
     this.disbandConversation = this.disbandConversation.bind(this);
+    this.hideConversationBeforeTime =
+      this.hideConversationBeforeTime.bind(this);
+    this.transferAdmin = this.transferAdmin.bind(this);
+    this.leaveConversation = this.leaveConversation.bind(this);
   }
 
   // [GET] /api/conversations - Lấy danh sách hội thoại của người dùng
@@ -158,6 +162,13 @@ class ConversationController {
         conversationId,
         userId
       );
+      if (this.socketHandler) {
+        this.socketHandler.emitToUser(
+          userId,
+          SOCKET_EVENTS.DELETE_CONVERSATION,
+          result
+        );
+      }
       res.status(200).json(result);
     } catch (error) {
       res.status(400).json({ message: error.message });
@@ -572,6 +583,16 @@ class ConversationController {
       console.log("success", id, userId);
       const { member, notifyMessage } =
         await ConversationService.leaveConversation(id, userId);
+      if (this.socketHandler) {
+        this.socketHandler.emitToConversation(
+          id,
+          SOCKET_EVENTS.LEAVE_CONVERSATION,
+          {
+            member,
+            notifyMessage,
+          }
+        );
+      }
       res.status(200).json({ member, notifyMessage });
     } catch (error) {
       res.status(400).json({ message: error.message });
@@ -584,6 +605,17 @@ class ConversationController {
       const userId = req._id;
       const { newAdmin, notifyMessage } =
         await ConversationService.transferAdmin(id, userId, newAdminId);
+      if (this.socketHandler) {
+        this.socketHandler.emitToConversation(
+          id,
+          SOCKET_EVENTS.TRANSFER_ADMIN,
+          {
+            newAdmin,
+            notifyMessage,
+          }
+        );
+      }
+
       res.status(200).json({ newAdmin, notifyMessage });
     } catch (error) {
       res.status(400).json({ message: error.message });

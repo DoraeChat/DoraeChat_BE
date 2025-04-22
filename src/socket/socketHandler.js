@@ -189,16 +189,6 @@ class SocketHandler {
         );
       });
 
-      // Rời khỏi cuộc trò chuyện
-      socket.on(SOCKET_EVENTS.LEAVE_CONVERSATION, (conversationId) => {
-        if (!conversationId) return;
-
-        socket.leave(conversationId);
-        console.log(
-          `User ${socket.userId} left conversation: ${conversationId}`
-        );
-      });
-
       // Đang nhập
       socket.on(SOCKET_EVENTS.TYPING, ({ conversationId, userId }) => {
         if (!conversationId) return;
@@ -283,12 +273,11 @@ class SocketHandler {
         socket.to(data.userId).emit(SOCKET_EVENTS.DELETED_FRIEND, data);
       });
 
-
       // --- Call subscription (audio & video) ---
-      socket.on(SOCKET_EVENTS.SUBSCRIBE_CALL_AUDIO, payload =>
+      socket.on(SOCKET_EVENTS.SUBSCRIBE_CALL_AUDIO, (payload) =>
         this.handleSubscribeCall(payload, "audio", socket)
       );
-      socket.on(SOCKET_EVENTS.SUBSCRIBE_CALL_VIDEO, payload =>
+      socket.on(SOCKET_EVENTS.SUBSCRIBE_CALL_VIDEO, (payload) =>
         this.handleSubscribeCall(payload, "video", socket)
       );
 
@@ -314,29 +303,39 @@ class SocketHandler {
         socket.leave(`call:${conversationId}`)
       );
 
-      socket.on(SOCKET_EVENTS.REJECT_CALL, ({ conversationId, userId, reason }) => {
-        const room = `call:${conversationId}`;
-        console.log(`User ${userId} từ chối cuộc gọi (reason: ${reason || "manual"})`);
-        socket.broadcast.to(room).emit(SOCKET_EVENTS.CALL_REJECTED, {
-          userId,
-          reason,
-          conversationId
-        });
+      socket.on(
+        SOCKET_EVENTS.REJECT_CALL,
+        ({ conversationId, userId, reason }) => {
+          const room = `call:${conversationId}`;
+          console.log(
+            `User ${userId} từ chối cuộc gọi (reason: ${reason || "manual"})`
+          );
+          socket.broadcast.to(room).emit(SOCKET_EVENTS.CALL_REJECTED, {
+            userId,
+            reason,
+            conversationId,
+          });
 
-        try {
-          const conv = Conversation.findById(conversationId).populate("members");
-          const caller = conv.members.find(m => m.userId.toString() !== userId);
-          if (caller) {
-            this.io.to(caller.userId.toString()).emit(SOCKET_EVENTS.CALL_REJECTED, {
-              userId,
-              reason,
-              conversationId,
-            });
+          try {
+            const conv =
+              Conversation.findById(conversationId).populate("members");
+            const caller = conv.members.find(
+              (m) => m.userId.toString() !== userId
+            );
+            if (caller) {
+              this.io
+                .to(caller.userId.toString())
+                .emit(SOCKET_EVENTS.CALL_REJECTED, {
+                  userId,
+                  reason,
+                  conversationId,
+                });
+            }
+          } catch (err) {
+            console.error("❌ Error while emitting reject directly:", err);
           }
-        } catch (err) {
-          console.error("❌ Error while emitting reject directly:", err);
         }
-      });
+      );
 
       socket.on(SOCKET_EVENTS.HIDE_CONVERSATION, async ({ conversationId }) => {
         const socketsInRoom = await this.io.in(conversationId).fetchSockets();
@@ -371,15 +370,24 @@ class SocketHandler {
     this.io.emit(event, data);
   }
 
-
   // --- Subscription for both audio/video ---
   async handleSubscribeCall({ conversationId, peerId }, type, socket) {
     const userId = socket.userId;
-    console.log(`User ${userId} is subscribing to call in conversation ${conversationId}`);
-    const hasPermission = await validateCallPermission(conversationId, userId, null);
-    console.log(`Permission check passed for user ${userId} in conversation ${conversationId}: ${hasPermission}`);
+    console.log(
+      `User ${userId} is subscribing to call in conversation ${conversationId}`
+    );
+    const hasPermission = await validateCallPermission(
+      conversationId,
+      userId,
+      null
+    );
+    console.log(
+      `Permission check passed for user ${userId} in conversation ${conversationId}: ${hasPermission}`
+    );
     if (!hasPermission) {
-      console.warn(`❌ User ${userId} không có quyền gọi trong cuộc trò chuyện ${conversationId}`);
+      console.warn(
+        `❌ User ${userId} không có quyền gọi trong cuộc trò chuyện ${conversationId}`
+      );
 
       socket.emit(SOCKET_EVENTS.CALL_REJECTED, {
         conversationId,
@@ -395,19 +403,29 @@ class SocketHandler {
 
     // 1) NEW_USER_CALL broadcast
     socket.emit(SOCKET_EVENTS.NEW_USER_CALL, {
-      conversationId, peerId, userId, type, initiator: true
+      conversationId,
+      peerId,
+      userId,
+      type,
+      initiator: true,
     });
     socket.broadcast.to(room).emit(SOCKET_EVENTS.NEW_USER_CALL, {
-      conversationId, peerId, userId, type, initiator: false
+      conversationId,
+      peerId,
+      userId,
+      type,
+      initiator: false,
     });
 
     // 2) CALL_USER direct to all other members
     try {
-      const conv = await Conversation.findById(conversationId).populate("members");
+      const conv = await Conversation.findById(conversationId).populate(
+        "members"
+      );
       if (!conv) return;
       const receivers = conv.members
-        .map(m => m.userId.toString())
-        .filter(id => id !== userId);
+        .map((m) => m.userId.toString())
+        .filter((id) => id !== userId);
       const fromName = (await User.findById(userId))?.name || "";
       for (const rid of receivers) {
         this.io.to(rid).emit(SOCKET_EVENTS.CALL_USER, {
@@ -427,7 +445,8 @@ class SocketHandler {
   handleSignal(socket, signal, conversationId) {
     const from = socket.userId;
     const room = `call:${conversationId}`;
-    socket.broadcast.to(room)
+    socket.broadcast
+      .to(room)
       .emit(SOCKET_EVENTS.RECEIVE_SIGNAL, { from, signal, conversationId });
   }
 

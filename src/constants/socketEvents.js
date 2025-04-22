@@ -19,6 +19,8 @@ const SOCKET_EVENTS = {
   NEW_GROUP_CONVERSATION: "new-group-conversation",
   CONVERSATION_DISBANDED: "conversation-disbanded",
   HIDE_CONVERSATION: "hide-conversation",
+  DELETE_CONVERSATION: "delete-conversation",
+  TRANSFER_ADMIN: "transfer-admin",
 
   //Messages
   RECEIVE_MESSAGE: "receive-message",
@@ -44,7 +46,6 @@ const SOCKET_EVENTS = {
   ANSWER_CALL: "answer-call",
   RECEIVE_SIGNAL: "receive-signal",
   LEAVE_CALL: "leave-call",
-
 
   // Last view tracking
   CONVERSATION_LAST_VIEW: "conversation-last-view",

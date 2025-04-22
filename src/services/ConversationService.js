@@ -185,10 +185,10 @@ const ConversationService = {
       throw new Error("Conversation not found");
     }
     // Tìm memberId từ userId
-    const member = await Member.getByConversationIdAndUserId(
+    const member = await Member.findOne({
       conversationId,
-      userId
-    );
+      userId,
+    });
     if (!member) {
       throw new Error("You are not a member of this conversation");
     }
@@ -196,6 +196,7 @@ const ConversationService = {
     member.hideBeforeTime = new Date();
     await member.save();
     return {
+      conversationId,
       message:
         "Conversation messages before this time have been hidden for you",
     };

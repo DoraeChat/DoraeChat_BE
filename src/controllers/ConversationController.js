@@ -518,26 +518,26 @@ class ConversationController {
       const { token } = req.params;
       const userId = req._id;
 
-      const { newMember, notifyMessage } =
+      const { newMember, notifyMessage, status, conversationId } =
         await ConversationService.acceptInvite(token, userId);
 
       if (newMember) {
         // Nếu tự động tham gia
         this.socketHandler.emitToConversation(
-          newMember.conversationId,
+          conversationId,
           SOCKET_EVENTS.MEMBER_JOINED,
           { newMember, notifyMessage }
         );
       } else {
         // Nếu tạo yêu cầu tham gia
         this.socketHandler.emitToConversation(
-          newMember.conversationId,
+          conversationId,
           SOCKET_EVENTS.JOIN_REQUEST_ADDED,
           { userId }
         );
       }
 
-      res.status(200).json({ newMember, notifyMessage });
+      res.status(200).json({ newMember, notifyMessage, status });
     } catch (error) {
       res.status(400).json({ message: error.message });
     }

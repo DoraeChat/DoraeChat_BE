@@ -176,6 +176,7 @@ const messageSchema = new Schema(
         "JOIN_GROUP",
         "LEAVE_GROUP",
         "INVITE",
+        "ACCEPT_JOIN",
         "KICK",
         "FRIEND",
       ],
@@ -487,11 +488,11 @@ messageSchema.statics.getListByChannelIdAndUserId = async function (
         // Điều kiện lọc tin nhắn dựa trên hideBeforeTime và leftAt
         ...(member.hideBeforeTime || (!member.active && member.leftAt)
           ? {
-            createdAt: {
-              ...(member.hideBeforeTime && { $gt: member.hideBeforeTime }), // Tin nhắn sau hideBeforeTime
-              ...(!member.active && member.leftAt && { $lte: member.leftAt }), // Tin nhắn trước khi rời nhóm
-            },
-          }
+              createdAt: {
+                ...(member.hideBeforeTime && { $gt: member.hideBeforeTime }), // Tin nhắn sau hideBeforeTime
+                ...(!member.active && member.leftAt && { $lte: member.leftAt }), // Tin nhắn trước khi rời nhóm
+              },
+            }
           : {}),
       },
     },

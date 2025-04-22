@@ -587,17 +587,27 @@ const ConversationService = {
     ) {
       throw new Error("No join request found for this user");
     }
-
-    // Tạo member mới
-    const newMember = await Member.create({
+    const requestingMember = await Member.findOne({
       conversationId,
       userId: requestingUserId,
-      name: (await User.findById(requestingUserId).lean()).name,
-      active: true,
     });
-
+    const newMember = requestingMember;
+    if (!newMember) {
+      // Tạo member mới
+      newMember = await Member.create({
+        conversationId,
+        userId: requestingUserId,
+        name: (await User.findById(requestingUserId).lean()).name,
+        active: true,
+      });
+      conversation.members.push(newMember._id);
+    } else {
+      // Nếu đã là thành viên, chỉ cần kích hoạt lại
+      requestingMember.active = true;
+      requestingMember.leftAt = null; // Đặt lại thời gian rời nhóm
+      await requestingMember.save();
+    }
     // Cập nhật conversation
-    conversation.members.push(newMember._id);
     conversation.joinRequests = conversation.joinRequests.filter(
       (id) => id.toString() !== requestingUserId.toString()
     );
@@ -889,7 +899,7 @@ const ConversationService = {
 
     let newMember;
     let notifyMessage;
-    invite.status = "accepted";
+    // invite.status = "accepted";
     await invite.save();
 
     // Nếu không cần phê duyệt (isJoinFromLink = true), thêm vào nhóm
@@ -934,7 +944,12 @@ const ConversationService = {
     }
 
     await conversation.save();
-    return { newMember, notifyMessage };
+    return {
+      newMember,
+      notifyMessage,
+      status: conversation.isJoinFromLink ? "joined" : "pending_approval",
+      conversationId: invite.conversationId,
+    };
   },
   async disbandConversation(conversationId, userId) {
     // Tìm conversation

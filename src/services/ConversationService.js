@@ -1050,8 +1050,7 @@ const ConversationService = {
 
     // Kiểm tra new admin
     const newAdmin = await Member.findOne({
-      conversationId,
-      userId: newAdminId,
+      _id: newAdminId,
     });
     if (!newAdmin) {
       throw new Error("New admin is not a valid member of this group");

@@ -243,7 +243,11 @@ class MessageService {
     return messages;
   }
   // Lấy danh sách tin nhắn theo channelId
-  async getMessagesByChannelId(channelId, userId, skip, limit) {
+  async getMessagesByChannelId(
+    channelId,
+    userId,
+    { skip = 0, limit = 100, beforeTimestamp = null } = {}
+  ) {
     try {
       // Kiểm tra xem channelId có hợp lệ không
       const channel = await Channel.getById(channelId);
@@ -261,7 +265,8 @@ class MessageService {
         channelId,
         userId,
         skip,
-        limit
+        limit,
+        beforeTimestamp // Lấy tin nhắn trước thời điểm này
       );
       return messages;
     } catch (error) {

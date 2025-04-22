@@ -461,7 +461,9 @@ messageSchema.statics.getListByChannelIdAndUserId = async function (
   channelId,
   userId,
   skip,
-  limit
+  limit,
+  beforeTimestamp = null,
+  hideBeforeTime = null
 ) {
   // Tìm conversationId từ channelId
   const channel = await Channel.findById(channelId).lean();
@@ -479,28 +481,75 @@ messageSchema.statics.getListByChannelIdAndUserId = async function (
     throw new Error("User is not a member of this conversation");
   }
 
-  // Thiết lập pipeline với memberId
+  // Thiết lập điều kiện lọc
+  const matchStage = {
+    channelId: new ObjectId(channelId),
+    deletedMemberIds: { $nin: [member._id] },
+  };
+
+  // Thêm điều kiện hideBeforeTime (nếu có)
+  if (hideBeforeTime || member.hideBeforeTime) {
+    matchStage.createdAt = {
+      $gt: hideBeforeTime || member.hideBeforeTime,
+    };
+  }
+
+  // Thêm điều kiện leftAt (nếu thành viên không active và đã rời nhóm)
+  if (!member.active && member.leftAt) {
+    matchStage.createdAt = matchStage.createdAt || {};
+    matchStage.createdAt.$lte = member.leftAt;
+  }
+
+  // Thêm điều kiện beforeTimestamp (nếu có)
+  if (beforeTimestamp) {
+    matchStage.createdAt = matchStage.createdAt || {};
+    matchStage.createdAt.$lt = new Date(beforeTimestamp);
+  }
+  // Thiết lập pipeline
   const pipeline = [
+    { $match: matchStage },
+    { $sort: { createdAt: 1 } }, // Sắp xếp theo createdAt tăng dần
+    { $skip: skip },
+    { $limit: limit },
     {
-      $match: {
-        channelId: new ObjectId(channelId),
-        deletedMemberIds: { $nin: [member._id] },
-        // Điều kiện lọc tin nhắn dựa trên hideBeforeTime và leftAt
-        ...(member.hideBeforeTime || (!member.active && member.leftAt)
-          ? {
-              createdAt: {
-                ...(member.hideBeforeTime && { $gt: member.hideBeforeTime }), // Tin nhắn sau hideBeforeTime
-                ...(!member.active && member.leftAt && { $lte: member.leftAt }), // Tin nhắn trước khi rời nhóm
-              },
-            }
-          : {}),
+      $lookup: {
+        from: "members", // Collection chứa member
+        localField: "memberId",
+        foreignField: "_id",
+        as: "memberId",
       },
     },
-    ...getBaseGroupMessagePipeline(),
-    ...getPaginationStages(skip, limit),
+    { $unwind: "$memberId" }, // Giải nén mảng memberId
+    {
+      $lookup: {
+        from: "users", // Collection chứa user
+        localField: "memberId.userId",
+        foreignField: "_id",
+        as: "memberId.user",
+      },
+    },
+    { $unwind: "$memberId.user" }, // Giải nén mảng user
+    {
+      $project: {
+        _id: 1,
+        conversationId: 1,
+        channelId: 1,
+        content: 1,
+        type: 1,
+        createdAt: 1,
+        updatedAt: 1,
+        isDeleted: 1,
+        deletedMemberIds: 1,
+        memberId: {
+          userId: "$memberId.user._id",
+          name: "$memberId.user.name",
+        },
+      },
+    },
   ];
 
-  return await Message.aggregate(pipeline);
+  const messages = await this.aggregate(pipeline);
+  return messages;
 };
 
 messageSchema.statics.getListForIndividualConversation = async function (

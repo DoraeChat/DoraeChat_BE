@@ -273,7 +273,7 @@ class ConversationController {
       res.status(400).json({ message: error.message });
     }
   }
-  //[POST] /api/conversations/:id/manages - thêm  phó nhóm
+  //[POST] /api/conversations/:id/managers - thêm  phó nhóm
   async addManagersToConversation(req, res) {
     try {
       const conversationId = req.params.id;

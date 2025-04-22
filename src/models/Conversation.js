@@ -89,17 +89,33 @@ conversationSchema.statics.getListByUserId = async (userId) => {
 
   // Map lại conversation: nếu type === false thì bổ sung name + avatar cho members
   const result = conversations.map((conversation) => {
-    if (conversation.type === false) {
+    const userMember = members.find(
+      (m) => m.conversationId.toString() === conversation._id.toString()
+    );
+
+    // Nếu user thuộc conversation này nhưng bị inactive
+    if (userMember && userMember.active === false) {
+      if (conversation.lastMessageId) {
+        conversation.lastMessageId.content = "Bạn không còn trong nhóm này";
+      } else {
+        // Nếu không có lastMessageId thì tạo tạm
+        conversation.lastMessageId = {
+          content: "Bạn không còn trong nhóm này",
+        };
+      }
+    } else if (conversation.type === false) {
+      // Nếu vẫn active và là nhóm thường => map member
       conversation.members = conversation.members.map((memberId) => {
         const info = memberMap[memberId.toString()] || {};
         return {
           _id: memberId,
-          userId: info.userId._id,
+          userId: info.userId?._id,
           name: info.name || null,
           avatar: info.avatar || null,
         };
       });
     }
+
     return conversation;
   });
 

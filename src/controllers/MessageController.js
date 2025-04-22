@@ -124,7 +124,7 @@ class MessageController {
 
       if (!conversationId || !req.files || req.files.length === 0)
         return res.status(400).json({ message: "Invalid image message" });
-
+      console.log(channelId);
       const messages = await MessageService.sendImageMessage(
         userId,
         conversationId,

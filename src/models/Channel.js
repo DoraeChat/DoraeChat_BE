@@ -36,7 +36,7 @@ channelSchema.statics.getAllChannelByConversationId = async (
 ) => {
   // sort by createdAt desc
   const channels = await Channel.find({ conversationId })
-    .sort({ createdAt: 1 })
+    .sort({ createdAt: -1 })
     .lean();
   if (!channels) throw new NotFoundError("Channel");
   return channels;

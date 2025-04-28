@@ -203,7 +203,14 @@ const messageSchema = new Schema(
       required: true,
       index: true,
     },
-    fileName: String,
+    fileName: {
+      type: String,
+      default: "",
+    },
+    fileSize: {
+      type: Number,
+      default: 0,
+    }, // unit: byte
     reacts: {
       type: [
         {
@@ -465,18 +472,21 @@ messageSchema.statics.getListByChannelIdAndUserId = async function (
   beforeTimestamp = null,
   hideBeforeTime = null
 ) {
+
   // Tìm conversationId từ channelId
   const channel = await Channel.findById(channelId).lean();
   if (!channel) {
     throw new Error("Channel not found");
   }
+
   const conversationId = channel.conversationId;
 
   // Tìm member từ userId và conversationId
   const member = await Member.getByConversationIdAndUserId(
     conversationId,
     userId
-  );
+  )
+
   if (!member) {
     throw new Error("User is not a member of this conversation");
   }
@@ -505,6 +515,7 @@ messageSchema.statics.getListByChannelIdAndUserId = async function (
     matchStage.createdAt = matchStage.createdAt || {};
     matchStage.createdAt.$lt = new Date(beforeTimestamp);
   }
+
   // Thiết lập pipeline
   const pipeline = [
     { $match: matchStage },
@@ -540,6 +551,8 @@ messageSchema.statics.getListByChannelIdAndUserId = async function (
         updatedAt: 1,
         isDeleted: 1,
         deletedMemberIds: 1,
+        fileName: 1,
+        fileSize: 1,
         memberId: {
           userId: "$memberId.user._id",
           name: "$memberId.user.name",
@@ -583,6 +596,12 @@ messageSchema.statics.getListForIndividualConversation = async function (
       select: "userId name",
     })
     .lean();
+
+  console.log('test');
+    messages.forEach((message) => {
+    console.log("Message:", message.fileName);
+    console.log("Message:", message.fileSize);
+  });
 
   return messages;
 };

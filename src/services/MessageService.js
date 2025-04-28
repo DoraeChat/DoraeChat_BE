@@ -534,6 +534,8 @@ class MessageService {
       content: uploaded.url,
       type: "FILE",
       conversationId,
+      fileName: file.originalname,
+      fileSize: file.size,
       ...(validChannelId && { channelId: validChannelId }),
     });
 

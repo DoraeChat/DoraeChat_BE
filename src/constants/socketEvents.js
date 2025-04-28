@@ -21,6 +21,7 @@ const SOCKET_EVENTS = {
   HIDE_CONVERSATION: "hide-conversation",
   DELETE_CONVERSATION: "delete-conversation",
   TRANSFER_ADMIN: "transfer-admin",
+  UPDATE_NAME_CONVERSATION: "update-name-conversation",
 
   //Messages
   RECEIVE_MESSAGE: "receive-message",

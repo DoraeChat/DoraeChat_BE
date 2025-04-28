@@ -28,6 +28,7 @@ class ConversationController {
       this.hideConversationBeforeTime.bind(this);
     this.transferAdmin = this.transferAdmin.bind(this);
     this.leaveConversation = this.leaveConversation.bind(this);
+    this.updateGroupName = this.updateGroupName.bind(this);
   }
 
   // [GET] /api/conversations - Lấy danh sách hội thoại của người dùng
@@ -105,6 +106,16 @@ class ConversationController {
         name,
         userId
       );
+
+      // phát sự kiện change name
+      if (this.socketHandler) {
+        this.socketHandler.emitToConversation(
+          conversationId,
+          SOCKET_EVENTS.UPDATE_NAME_CONVERSATION,
+          name
+        );
+      }
+
       res.status(200).json(conversation);
     } catch (error) {
       res.status(400).json({ message: error.message });

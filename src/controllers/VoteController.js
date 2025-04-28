@@ -64,8 +64,8 @@ const VoteController = {
     async selectVoteOption(req, res, next) {
         try {
             const { voteId, optionId } = req.params;
-            const userId = req.body.userId;
-            const vote = await VoteService.selectVoteOption(voteId, userId, optionId);
+            const memberId = req.body.memberId;
+            const vote = await VoteService.selectVoteOption(voteId, memberId, optionId);
             res.json(vote);
         } catch (error) {
             next(error);
@@ -76,8 +76,8 @@ const VoteController = {
     async deselectVoteOption(req, res, next) {
         try {
             const { voteId, optionId } = req.params;
-            const userId = req.body.userId;
-            const vote = await VoteService.deselectVoteOption(voteId, userId, optionId);
+            const memberId = req.body.memberId;
+            const vote = await VoteService.deselectVoteOption(voteId, memberId, optionId);
             res.json(vote);
         } catch (error) {
             next(error);

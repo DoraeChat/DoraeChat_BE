@@ -3,7 +3,7 @@ const ClassifyService = require("../services/ClassifyService");
 const ClassifyController = {
   // [GET] /api/classifies
   async getAllByUserId(req, res) {
-    const userId = req.body.userId;
+    const userId = req._id;
     const classifies = await ClassifyService.getAllByUserId(userId);
     res.json(classifies);
   },
@@ -38,7 +38,7 @@ const ClassifyController = {
   async deleteClassify(req, res, next) {
     try {
       const classifyId = req.params.classifyId;
-      const userId = req.body.userId;
+      const userId = req._id;
       const classifyRemoved = await ClassifyService.deleteClassify(
         classifyId,
         userId

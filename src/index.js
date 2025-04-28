@@ -51,10 +51,10 @@ const conversationRoutes = require("./routes/ConversationRoutes")(
     app.use("/api/friends", auth, friendRouter);
     app.use("/api/qr", qrRoutes);
     app.use("/api/channels", channelRoutes);
-    app.use("/api/pin-messages", pinMessageRoutes);
-    app.use("/api/votes", voteRoutes);
+    app.use("/api/pin-messages", auth, pinMessageRoutes);
+    app.use("/api/votes", auth, voteRoutes);
     app.use("/api/colors", colorRoutes);
-    app.use("/api/classifies", classifyRoutes);
+    app.use("/api/classifies", auth, classifyRoutes);
     app.use("/api/uploads", cloudinaryRoutes);
     app.use("/api/members", memberRoutes);
     app.use(handleError);

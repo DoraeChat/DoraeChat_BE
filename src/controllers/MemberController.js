@@ -13,9 +13,6 @@ const MemberController = {
       });
     } catch (error) {
       next(error);
-      return res.status(500).json({
-        message: error.message,
-      });
     }
   },
 
@@ -31,9 +28,6 @@ const MemberController = {
       });
     } catch (error) {
       next(error);
-      return res.status(500).json({
-        message: error.message,
-      });
     }
   },
 
@@ -52,9 +46,21 @@ const MemberController = {
       });
     } catch (error) {
       next(error);
-      return res.status(500).json({
-        message: error.message,
+    }
+  },
+
+  async getByMemberId(req, res, next) {
+    try {
+      const { memberId } = req.params;
+
+      const member = await MemberService.getByMemberId(memberId);
+
+      return res.status(200).json({
+        message: "Get member successfully",
+        data: member,
       });
+    } catch (error) {
+      next(error);
     }
   },
 };

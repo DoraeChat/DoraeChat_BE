@@ -36,6 +36,12 @@ const MemberService = {
     );
     return member;
   },
+
+  async getByMemberId(memberId) {
+    const member = await Member.findById(memberId);
+    if (!member) throw new NotFoundError("Member");
+    return member;
+  },
 };
 
 module.exports = MemberService;

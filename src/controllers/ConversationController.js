@@ -261,7 +261,7 @@ class ConversationController {
         );
 
       if (this.socketHandler) {
-        const contentForSelf = `Bạn đã bị ${notifyMessage.memberId.name} xóa khỏi nhóm`;
+        const contentForSelf = `You have been removed from the group by ${notifyMessage.memberId.name}`;
         this.socketHandler.emitToConversation(
           conversationId,
           SOCKET_EVENTS.RECEIVE_MESSAGE,

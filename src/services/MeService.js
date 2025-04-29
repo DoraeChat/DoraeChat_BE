@@ -11,7 +11,7 @@ const MeService = {
     async getById(id) {
         const user = await User.getById(id);
         if (!user) {
-            throw new NotFoundError('User not found');
+            throw new NotFoundError('User');
         }
         return user;
     },
@@ -65,21 +65,21 @@ const MeService = {
     async updatePassword(id, oldPassword, newPassword) {
         const user = await User.findOne({ _id: id });
         if (!user) {
-            throw new CustomError('Không tìm thấy người dùng', 404);
+            throw new NotFoundError('User');
         }
 
         if (!userValidate.validatePassword(newPassword)) {
-            throw new CustomError('Mật khẩu không hợp lệ', 400);
+            throw new CustomError('Invalid password', 400);
         }
 
         const isOldPasswordMatch = await bcrypt.compare(oldPassword, user.password);
         if (!isOldPasswordMatch) {
-            throw new CustomError('Mật khẩu cũ không đúng', 400);
+            throw new CustomError('Old password is incorrect', 400);
         }
 
         const isPasswordMatch = await bcrypt.compare(newPassword, user.password);
         if (isPasswordMatch) {
-            throw new CustomError('Mật khẩu mới không được giống mật khẩu cũ', 400);
+            throw new CustomError('The new password cannot be the same as the old password', 400);
         }
 
         user.password = newPassword;

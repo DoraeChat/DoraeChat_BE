@@ -19,10 +19,10 @@ class AuthController {
             const submitInformation = req.body;
             const { contact } = submitInformation;
             const result = await AuthService.saveUserInfo(submitInformation);
-            if (result.message === 'Đã lưu thông tin người dùng') {
+            if (result.message === 'User information saved successfully') {
                 res.status(200).json(result);
             } else {
-                res.status(200).json('Lưu thông tin người dùng không thành công');
+                res.status(200).json('Save user information failed');
             }
         } catch (err) {
             next(err);
@@ -60,7 +60,7 @@ class AuthController {
 
         try {
             if (!username || !password) {
-                throw new CustomError('Thiếu username hoặc password', 400);
+                throw new CustomError('Missing username or password', 400);
             }
 
             source = source.substring(0, 5050);

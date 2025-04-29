@@ -82,7 +82,7 @@ const VoteService = {
 
   async selectVoteOption(voteId, memberId, optionId) {
     const vote = await Message.getById(voteId);
-    if (!vote) throw new NotFoundError("Vote not found");
+    if (!vote) throw new NotFoundError("Vote");
 
     if (vote.type !== "VOTE") throw new CustomError("Message is not a vote", 400);
     if (vote.lockedVote.lockedStatus) throw new CustomError("Vote is already locked", 400);

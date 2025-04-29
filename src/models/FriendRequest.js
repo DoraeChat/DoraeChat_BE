@@ -22,7 +22,7 @@ friendRequestSchema.statics.findFriendRequest = async (
 
 friendRequestSchema.statics.existsByIds = async (senderId, receiverId) => {
   if (!ObjectId.isValid(senderId) || !ObjectId.isValid(receiverId))
-    throw new NotFoundError("Invalid User ID");
+    throw new NotFoundError("User");
   const isExists = await FriendRequest.findFriendRequest(senderId, receiverId);
   return !!isExists;
 };
@@ -33,7 +33,7 @@ friendRequestSchema.statics.checkByIds = async (
   message = "Invite"
 ) => {
   if (!ObjectId.isValid(senderId) || !ObjectId.isValid(receiverId))
-    throw new NotFoundError("Invalid User ID");
+    throw new NotFoundError("User");
   const isExists = await FriendRequest.findFriendRequest(senderId, receiverId);
   if (!isExists) throw new NotFoundError(message);
 };
@@ -44,7 +44,7 @@ friendRequestSchema.statics.deleteByIds = async (
   message = "Invite"
 ) => {
   if (!ObjectId.isValid(senderId) || !ObjectId.isValid(receiverId))
-    throw new NotFoundError("Invalid User ID");
+    throw new NotFoundError("User");
   const { deletedCount } = await FriendRequest.deleteOne({
     senderId,
     receiverId,

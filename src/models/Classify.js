@@ -27,11 +27,11 @@ classifySchema.index({ conversationIds: 1 });
 
 classifySchema.statics.getAllByUserId = async function (userId) {
   if (!userId) {
-    throw new NotFoundError("User not found");
+    throw new NotFoundError("User");
   }
   const classifies = await Classify.find({ userId: userId });
   if (!classifies) {
-    throw new NotFoundError("Classify not found");
+    throw new NotFoundError("Classify");
   }
   return classifies;
 };

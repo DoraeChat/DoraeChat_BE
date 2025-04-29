@@ -22,14 +22,14 @@ const ClassifyService = {
         if (!Array.isArray(conversationIds)) throw new CustomError('Conversation must be an array', 400);
 
         const user = await User.findById(userId).lean();
-        if (!user) throw new NotFoundError('User not found');
+        if (!user) throw new NotFoundError('User');
 
         const color = await Color.findById(colorId).lean();
-        if (!color) throw new NotFoundError('Color not found');
+        if (!color) throw new NotFoundError('Color');
 
         const conversations = await Conversation.find({ _id: { $in: conversationIds } }).lean();
         if (conversations.length !== conversationIds.length) {
-            throw new NotFoundError('Some conversations not found');
+            throw new NotFoundError('Some conversations');
         }
 
         return await Classify.addClassify(classify);
@@ -46,14 +46,14 @@ const ClassifyService = {
         if (!Array.isArray(conversationIds)) throw new CustomError('Conversation must be an array', 400);
 
         const user = await User.findById(userId).lean();
-        if (!user) throw new NotFoundError('User not found');
+        if (!user) throw new NotFoundError('User');
 
         const color = await Color.findById(colorId).lean();
-        if (!color) throw new NotFoundError('Color not found');
+        if (!color) throw new NotFoundError('Color');
 
         const conversations = await Conversation.find({ _id: { $in: conversationIds } }).lean();
         if (conversations.length !== conversationIds.length) {
-            throw new NotFoundError('Some conversations not found');
+            throw new NotFoundError('Some conversations');
         }
 
         return await Classify.updateClassify(classify, classifyId);
@@ -64,7 +64,7 @@ const ClassifyService = {
         if (!classifyId) throw new CustomError('Classify cannot empty', 400);
 
         const classify = await Classify.findById(classifyId).lean();
-        if (!classify) throw new NotFoundError('Classify not found');
+        if (!classify) throw new NotFoundError('Classify');
 
         if (classify.userId.toString() !== userId) {
             throw new CustomError('User not authorized to delete this classify', 403);
@@ -76,10 +76,10 @@ const ClassifyService = {
     async addConversationToClassify(classifyId, conversationId) {
         if (!conversationId) throw new CustomError('Conversation cannot empty', 400);
         const conversation = await Conversation.findById(conversationId).lean();
-        if (!conversation) throw new NotFoundError('Conversation not found');
+        if (!conversation) throw new NotFoundError('Conversation');
 
         const classify = await Classify.findById(classifyId).lean();
-        if (!classify) throw new NotFoundError('Classify not found');
+        if (!classify) throw new NotFoundError('Classify');
 
         if (classify.conversationIds.includes(conversationId)) {
             throw new CustomError('Conversation already in classify', 400);
@@ -91,10 +91,10 @@ const ClassifyService = {
     async removeConversationFromClassify(classifyId, conversationId) {
         if (!conversationId) throw new CustomError('Conversation cannot empty', 400);
         const conversation = await Conversation.findById(conversationId).lean();
-        if (!conversation) throw new NotFoundError('Conversation not found');
+        if (!conversation) throw new NotFoundError('Conversation');
 
         const classify = await Classify.findById(classifyId).lean();
-        if (!classify) throw new NotFoundError('Classify not found');
+        if (!classify) throw new NotFoundError('Classify');
 
         const conversationIds = classify.conversationIds.map((id) => id.toString());
         if (!conversationIds.includes(conversationId)) {

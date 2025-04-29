@@ -97,10 +97,10 @@ class SocketHandler {
     try {
       const updatePromise = channelId
         ? lastViewService.updateLastViewOfChannel(
-            conversationId,
-            channelId,
-            userId
-          )
+          conversationId,
+          channelId,
+          userId
+        )
         : lastViewService.updateLastViewOfConversation(conversationId, userId);
 
       await updatePromise;
@@ -345,7 +345,52 @@ class SocketHandler {
           console.log(`Socket ${socket.id} left room ${conversationId}`);
         });
       });
+
+      // Khi ai đó khởi động group call (host) => broadcast cho mọi thành viên còn lại
+      socket.on(SOCKET_EVENTS.GROUP_CALL_USER, async ({ conversationId, channelId, roomUrl }) => {
+        try {
+          // Lấy conversation, populate members để có danh sách userId
+          const conv = await Conversation.findById(conversationId).populate("members");
+          if (!conv) return;
+
+          // Từ members pull ra array các userId (chuỗi)
+          const receivers = conv.members
+            .map(m => m.userId.toString())
+            .filter(id => id !== socket.userId); // trừ chính host
+
+          // Gửi tới từng người
+          receivers.forEach(rid => {
+            this.io.to(rid).emit(SOCKET_EVENTS.GROUP_CALL_USER, {
+              conversationId,
+              channelId,
+              roomUrl
+            });
+          });
+          // this.io.to(conversationId).emit(SOCKET_EVENTS.GROUP_CALL_USER, {
+          //   conversationId
+          // });
+        } catch (err) {
+          console.error("Error handling GROUP_CALL_USER:", err);
+        }
+      });
+
+      // Khi host kết thúc group call
+      socket.on(SOCKET_EVENTS.GROUP_CALL_ENDED, async ({ conversationId }) => {
+        try {
+          // Bạn có thể tận dụng room conversationId nếu mọi client đã join vào đó
+          this.io.to(conversationId).emit(SOCKET_EVENTS.GROUP_CALL_ENDED, {
+            conversationId
+          });
+
+          // (tuỳ bạn có muốn xoá roomUrl khỏi db hay không)
+          await Conversation.findByIdAndUpdate(conversationId, { $unset: { roomUrl: "" } });
+        } catch (err) {
+          console.error("Error handling GROUP_CALL_ENDED:", err);
+        }
+      });
     });
+
+
   }
 
   // Helper methods for emitting events from controllers

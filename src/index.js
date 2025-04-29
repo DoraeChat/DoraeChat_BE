@@ -34,6 +34,7 @@ const { io, socketHandler } = setupSocket(server);
 app.set("io", io);
 app.set("socketHandler", socketHandler);
 
+const meteredRoutes = require('./routes/MeteredRoute');
 const friendRouter = require("./routes/FriendRoutes")(socketHandler);
 const messageRouter = require("./routes/MessageRoutes")(socketHandler);
 const conversationRoutes = require("./routes/ConversationRoutes")(
@@ -57,6 +58,7 @@ const conversationRoutes = require("./routes/ConversationRoutes")(
     app.use("/api/classifies", auth, classifyRoutes);
     app.use("/api/uploads", cloudinaryRoutes);
     app.use("/api/members", memberRoutes);
+    app.use('/api/metered', meteredRoutes);
     app.use(handleError);
     server.listen(port, () => {
       console.log(`Backend Nodejs App listening on port ${port}`);

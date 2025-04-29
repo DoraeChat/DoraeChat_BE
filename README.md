@@ -47,38 +47,91 @@ npm run start
 ```
 🔒 Quy trình xác thực
 1. Đăng ký
-  sequenceDiagram
-    User->>+Backend: POST /register
-    Backend->>+DB: Lưu user tạm
-    Backend->>+Email: Gửi OTP
-    User->>+Backend: POST /verify-otp
+```mermaid
+sequenceDiagram
+    participant User
+    participant Backend
+    participant DB
+    participant Email
+    
+    User->>+Backend: POST /api/auth/register
+    Backend->>+DB: Lưu thông tin tạm (chưa kích hoạt)
+    Backend->>+Email: Gửi OTP qua email
+    Email-->>-User: Nhận OTP
+    User->>+Backend: POST /api/auth/verify-otp
     Backend->>+DB: Kích hoạt tài khoản
+    Backend-->>-User: Trả về thông tin user + token
+```
 2. Đăng nhập
-  sequenceDiagram
-    User->>+Backend: POST /login
-    Backend->>+DB: Xác thực credentials
-    Backend->>User: Trả về access & refresh token
-    User->>+Backend: Gọi API với access token
-    Backend->>User: Trả về dữ liệu
+```mermaid
+sequenceDiagram
+    participant User
+    participant Backend
+    participant DB
+    participant Redis
+    
+    User->>+Backend: POST /api/auth/login (email + password)
+    Backend->>+DB: Xác thực thông tin đăng nhập
+    DB-->>-Backend: Trả về user data
+    Backend->>+Redis: Lưu session
+    Backend-->>-User: Trả về access_token và refresh_token
+    User->>+Backend: Gọi API kèm access_token
+    Backend->>+Redis: Kiểm tra session
+    Redis-->>-Backend: Xác nhận hợp lệ
+    Backend-->>-User: Trả về dữ liệu
+```
 3. Refresh token
-  sequenceDiagram
-    User->>+Backend: POST /refresh-token
-    Backend->>+DB: Xác thực refresh token
-    Backend->>User: Trả về access token mới
-   
+```mermaid
+sequenceDiagram
+    participant Client as Ứng dụng Client
+    participant Backend as Backend Server
+    participant Redis as Redis Cache
+    participant DB as Database
+
+    Client->>Backend: POST /api/auth/refresh-token
+    Note right of Client: Gửi kèm refresh_token trong header
+    
+    Backend->>Backend: Giải mã refresh_token
+    alt Token hợp lệ
+        Backend->>Redis: Kiểm tra token trong denylist
+        Redis-->>Backend: Token không trong denylist
+        Backend->>DB: Truy vấn user từ token payload
+        DB-->>Backend: Thông tin user
+        
+        Backend->>Backend: Tạo access_token mới (30 phút)
+        Backend->>Backend: Tạo refresh_token mới (7 ngày)
+        
+        Backend->>Redis: Lưu refresh_token cũ vào denylist
+        Backend->>Redis: Lưu session mới
+        
+        Backend-->>Client: HTTP 200 + {access_token, refresh_token}
+        Note left of Backend: Token mới có thời hạn ngắn hơn
+        
+    else Token không hợp lệ/hết hạn
+        Backend-->>Client: HTTP 401 Unauthorized
+        Note left of Backend: {"error": "Invalid/expired refresh token"}
+        
+    else Token trong denylist
+        Backend->>Redis: Kiểm tra denylist
+        Redis-->>Backend: Token bị thu hồi
+        Backend-->>Client: HTTP 403 Forbidden
+        Note left of Backend: {"error": "Token was revoked"}
+    end
+   ```
+
 ⚠️ Xử lý lỗi
 Hệ thống sử dụng HTTP status codes chuẩn:
 
-200 OK: Thành công
+- 200 OK: Thành công
 
-201 Created: Tạo mới thành công
+- 201 Created: Tạo mới thành công
 
-400 Bad Request: Dữ liệu không hợp lệ
+- 400 Bad Request: Dữ liệu không hợp lệ
 
-401 Unauthorized: Chưa xác thực
+- 401 Unauthorized: Chưa xác thực
 
-403 Forbidden: Không có quyền truy cập
+- 403 Forbidden: Không có quyền truy cập
 
-404 Not Found: Tài nguyên không tồn tại
+- 404 Not Found: Tài nguyên không tồn tại
 
-500 Internal Server Error: Lỗi server 
+- 500 Internal Server Error: Lỗi server 

@@ -3,6 +3,7 @@ const Schema = mongoose.Schema;
 const ObjectId = mongoose.Types.ObjectId;
 const NotFoundError = require("../exceptions/NotFoundError");
 const User = require("./User");
+const CustomError = require("../exceptions/CustomError");
 
 const memberSchema = new Schema(
   {
@@ -160,14 +161,14 @@ memberSchema.statics.getByConversationIdAndUserId = async (
   userId
 ) => {
   if (!ObjectId.isValid(conversationId) || !ObjectId.isValid(userId)) {
-    throw new NotFoundError("Invalid conversationId or userId");
+    throw new CustomError("Invalid conversationId or userId", 400);
   }
 
   const member = await Member.findOne({
     conversationId,
     userId,
   }).lean();
-  if (!member) throw new NotFoundError("Member not found");
+  if (!member) throw new NotFoundError("Member");
 
   const user = await User.findById(userId).lean();
   member.avatar = user.avatar;

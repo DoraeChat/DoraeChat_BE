@@ -56,7 +56,7 @@ const conversationRoutes = require("./routes/ConversationRoutes")(
     app.use("/api/colors", colorRoutes);
     app.use("/api/classifies", auth, classifyRoutes);
     app.use("/api/uploads", cloudinaryRoutes);
-    app.use("/api/members", memberRoutes);
+    app.use("/api/members", auth, memberRoutes);
     app.use(handleError);
     server.listen(port, () => {
       console.log(`Backend Nodejs App listening on port ${port}`);

@@ -268,5 +268,22 @@ userSchema.statics.updateCoverUser = async (_id, coverImage) => {
   return updatedUser;
 };
 
+userSchema.statics.getByMemberId = async (memberId) => {
+  const Member = require("./Member");
+  
+  const member = await Member.findById(memberId);
+  if (!member) throw new NotFoundError("Member");
+  const user = await User.findById(member.userId).lean();
+  if (!user) throw new NotFoundError("User");
+  return {
+    _id: user._id,
+    name: user.name,
+    username: user.username,
+    avatar: user.avatar,
+    avatarColor: user.avatarColor,
+    avatar: user.avatar,
+  }
+};
+
 const User = mongoose.model("User", userSchema);
 module.exports = User;

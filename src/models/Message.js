@@ -100,6 +100,7 @@ const commonProjections = {
       content: 1,
       type: 1,
       isDeleted: 1,
+      memberId: 1,
     },
     replyUser: {
       _id: 1,
@@ -122,6 +123,7 @@ const commonProjections = {
     createdAt: 1,
     conversationId: 1,
     channelId: 1,
+    replyMessageId: 1,
   },
   individualMessage: {
     userId: 1,
@@ -150,6 +152,7 @@ const commonProjections = {
     },
     isDeleted: 1,
     createdAt: 1,
+    replyMessageId: 1,
   },
 };
 
@@ -302,9 +305,21 @@ messageSchema.statics.createMessage = async function ({
   actionData,
   conversationId,
   channelId,
+  replyMessageId,
 }) {
   if (!memberId || !content || !conversationId) {
     throw new Error("memberId, content, and conversationId are required");
+  }
+  if (replyMessageId) {
+    const replyMessage = await this.findById(replyMessageId);
+    if (
+      !replyMessage ||
+      replyMessage.conversationId.toString() !== conversationId.toString()
+    ) {
+      throw new NotFoundError(
+        "Reply message not found or does not belong to this conversation"
+      );
+    }
   }
 
   const message = new this({
@@ -315,6 +330,7 @@ messageSchema.statics.createMessage = async function ({
     actionData,
     conversationId,
     channelId,
+    replyMessageId,
   });
 
   await message.save();
@@ -472,7 +488,6 @@ messageSchema.statics.getListByChannelIdAndUserId = async function (
   beforeTimestamp = null,
   hideBeforeTime = null
 ) {
-
   // Tìm conversationId từ channelId
   const channel = await Channel.findById(channelId).lean();
   if (!channel) {
@@ -485,7 +500,7 @@ messageSchema.statics.getListByChannelIdAndUserId = async function (
   const member = await Member.getByConversationIdAndUserId(
     conversationId,
     userId
-  )
+  );
 
   if (!member) {
     throw new Error("User is not a member of this conversation");
@@ -553,6 +568,7 @@ messageSchema.statics.getListByChannelIdAndUserId = async function (
         deletedMemberIds: 1,
         fileName: 1,
         fileSize: 1,
+        replyMessageId: 1,
         memberId: {
           userId: "$memberId.user._id",
           name: "$memberId.user.name",
@@ -595,13 +611,15 @@ messageSchema.statics.getListForIndividualConversation = async function (
       path: "memberId",
       select: "userId name",
     })
+    .populate({
+      path: "replyMessageId",
+      select: "content type isDeleted memberId",
+      populate: {
+        path: "memberId",
+        select: "userId name",
+      },
+    })
     .lean();
-
-  console.log('test');
-    messages.forEach((message) => {
-    console.log("Message:", message.fileName);
-    console.log("Message:", message.fileSize);
-  });
 
   return messages;
 };

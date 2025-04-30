@@ -7,7 +7,6 @@ const userRoutes = require("./routes/UserRoutes");
 const meRoutes = require("./routes/MeRoutes");
 const qrRoutes = require("./routes/QRRoutes");
 const channelRoutes = require("./routes/ChannelRoutes");
-const pinMessageRoutes = require("./routes/PinMessageRoutes");
 const voteRoutes = require("./routes/VoteRoutes");
 const colorRoutes = require("./routes/ColorRoutes");
 const classifyRoutes = require("./routes/ClassifyRoutes");
@@ -39,6 +38,8 @@ const messageRouter = require("./routes/MessageRoutes")(socketHandler);
 const conversationRoutes = require("./routes/ConversationRoutes")(
   socketHandler
 );
+const pinMessageRoutes = require("./routes/PinMessageRoutes")(socketHandler);
+
 (async () => {
   try {
     await connection();

@@ -1,9 +1,15 @@
-const express = require('express');
+const express = require("express");
 const router = express.Router();
-const PinMessageController = require('../controllers/PinMessageController');
+const PinMessageController = require("../controllers/PinMessageController");
 
-router.get('/:conversationId', PinMessageController.getAllByConversationId);
-router.post('/', PinMessageController.addPinMessage);
-router.delete('/:messageId', PinMessageController.deletePinMessage);
+const PinMessageRouter = (socketHandler) => {
+  const pinMessageController = new PinMessageController(socketHandler);
 
-module.exports = router;
+  router.get("/:conversationId", pinMessageController.getAllByConversationId);
+  router.post("/", pinMessageController.addPinMessage);
+  router.delete("/:messageId", pinMessageController.deletePinMessage);
+
+  return router;
+};
+
+module.exports = PinMessageRouter;

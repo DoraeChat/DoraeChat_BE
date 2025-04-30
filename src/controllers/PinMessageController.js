@@ -1,6 +1,12 @@
 const PinMessageService = require("../services/PinMessageService")
 
-const PinMessageController = {
+class PinMessageController {
+    constructor(socketHandler) {
+        this.socketHandler = socketHandler;
+        this.addPinMessage = this.addPinMessage.bind(this);
+        this.deletePinMessage = this.deletePinMessage.bind(this);
+    }
+
     // [GET] /api/pin-messages/:conversationId
     async getAllByConversationId(req, res, next) {
         try {
@@ -10,7 +16,7 @@ const PinMessageController = {
         } catch (error) {
             next(error);
         }
-    },
+    }
 
     // [POST] /api/pin-messages
     async addPinMessage(req, res, next) {
@@ -21,7 +27,7 @@ const PinMessageController = {
         } catch (error) {
             next(error);
         }
-    },
+    }
 
     // [DELETE] /api/pin-messages/:messageId
     async deletePinMessage(req, res, next) {

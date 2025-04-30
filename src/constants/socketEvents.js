@@ -28,6 +28,9 @@ const SOCKET_EVENTS = {
   MESSAGE_RECALLED: "message-recalled",
   MESSAGE_DELETED_FOR_ME: "message_deleted_for_me",
 
+  // Pin message
+  PIN_MESSAGE: "pin-message",
+
   // Typing indicators
   TYPING: "typing",
   NOT_TYPING: "not-typing",

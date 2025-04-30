@@ -4,6 +4,8 @@ const Conversation = require("../models/Conversation");
 const Member = require("../models/Member");
 const CustomError = require("../exceptions/CustomError");
 const NotFoundError = require("../exceptions/NotFoundError");
+const User = require("../models/User");
+const { content } = require("googleapis/build/src/apis/content");
 
 const PinMessageService = {
   async getAllByConversationId(conversationId) {
@@ -44,7 +46,21 @@ const PinMessageService = {
     if (existingPinMessage)
       throw new CustomError("Message already pinned in this conversation", 400);
 
-    return await PinMessage.addPinMessage(pinMessage);
+    const user = await User.findById(member.userId).lean();
+    const newPinMessage = await PinMessage.addPinMessage(pinMessage);
+    return {
+      _id: newPinMessage._id,
+      messageId: newPinMessage.messageId,
+      conversationId: newPinMessage.conversationId,
+      pinnedBy: newPinMessage.pinnedBy,
+      pinnedAt: newPinMessage.pinnedAt,
+      content: message.content,
+      type: message.type,
+      pinnedBy: {
+        name: user.name,
+        avatar: user.avatar,
+      },
+    };
   },
 
   async deletePinMessage(messageId, pinnedBy) {

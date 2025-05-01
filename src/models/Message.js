@@ -217,7 +217,10 @@ const messageSchema = new Schema(
     reacts: {
       type: [
         {
-          userId: ObjectId,
+          memberId: {
+            type: ObjectId,
+            ref: "Member",
+          },
           type: {
             type: Number,
             enum: [0, 1, 2, 3, 4, 5, 6],
@@ -333,6 +336,50 @@ messageSchema.statics.createMessage = async function ({
     replyMessageId,
   });
 
+  await message.save();
+  return message;
+};
+messageSchema.statics.addReact = async function (
+  messageId,
+  memberId,
+  reactType
+) {
+  if (!messageId || !memberId || reactType == null) {
+    throw new Error("messageId, memberId, and reactType are required");
+  }
+  if (![0, 1, 2, 3, 4, 5, 6].includes(reactType)) {
+    throw new Error("Invalid react type");
+  }
+  const message = await this.findById(messageId);
+  if (!message) {
+    throw new NotFoundError("Message");
+  }
+  // Xóa react cũ của user nếu có
+  message.reacts = message.reacts.filter(
+    (react) => react.memberId.toString() !== memberId.toString()
+  );
+  // Thêm react mới
+  message.reacts.push({ memberId, type: reactType });
+
+  await message.save();
+
+  return message;
+};
+
+messageSchema.statics.removeReact = async function (messageId, memberId) {
+  if (!messageId || !memberId) {
+    throw new Error("messageId and memberId are required");
+  }
+
+  const message = await this.findById(messageId);
+
+  if (!message) {
+    throw new NotFoundError("Message");
+  }
+  // Xóa react của user
+  message.reacts = message.reacts.filter(
+    (react) => react.memberId.toString() !== memberId.toString()
+  );
   await message.save();
   return message;
 };

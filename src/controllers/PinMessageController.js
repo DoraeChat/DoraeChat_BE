@@ -43,13 +43,22 @@ class PinMessageController {
   // [DELETE] /api/pin-messages/:messageId
   async deletePinMessage(req, res, next) {
     try {
-      const { messageId } = req.params;
-      const { pinnedBy } = req.body;
+      const { messageId, pinnedBy } = req.params;
       const pinMessage = await PinMessageService.deletePinMessage(
         messageId,
         pinnedBy
       );
       res.json(pinMessage);
+
+      if (this.socketHandler) {
+        console.log("pinMessage", pinMessage);
+        console.log(this.socketHandler);
+        this.socketHandler.emitToConversation(
+          pinMessage.conversationId,
+          SOCKET_EVENTS.UNPIN_MESSAGE,
+          pinMessage
+        );
+      }
     } catch (error) {
       next(error);
     }

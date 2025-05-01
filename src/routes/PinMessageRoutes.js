@@ -7,7 +7,7 @@ const PinMessageRouter = (socketHandler) => {
 
   router.get("/:conversationId", pinMessageController.getAllByConversationId);
   router.post("/", pinMessageController.addPinMessage);
-  router.delete("/:messageId", pinMessageController.deletePinMessage);
+  router.delete("/:messageId/:pinnedBy", pinMessageController.deletePinMessage);
 
   return router;
 };

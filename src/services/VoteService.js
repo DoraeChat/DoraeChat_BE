@@ -9,7 +9,6 @@ const VoteService = {
   },
 
   async addVote(vote) {
-    // vote is message
     const { conversationId, memberId } = vote;
     if (!conversationId)
       throw new CustomError("Conversation ID is required", 400);
@@ -17,7 +16,6 @@ const VoteService = {
 
     const conversation = await Conversation.getById(conversationId);
     if (!conversation) throw new NotFoundError("Conversation");
-    console.log(conversation.members, memberId);
 
     const memberIds = conversation.members.map((member) => member.toString());
     if (!memberIds.includes(memberId))

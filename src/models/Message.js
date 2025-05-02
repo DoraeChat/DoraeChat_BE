@@ -264,6 +264,10 @@ const messageSchema = new Schema(
       type: Boolean,
       default: false,
     },
+    isAnonymous: {
+      type: Boolean,
+      default: false,
+    },
     deletedMemberIds: {
       type: [ObjectId],
       default: [],
@@ -693,6 +697,7 @@ messageSchema.statics.createVote = async function (vote) {
     memberId: vote.memberId,
     conversationId: vote.conversationId,
     content: vote.content,
+    isAnonymous: vote.isAnonymous || false,
     isMultipleChoice: vote.isMultipleChoice || false,
     options: vote.options.map((option) => ({
       name: option.name,

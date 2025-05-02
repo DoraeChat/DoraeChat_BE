@@ -30,6 +30,7 @@ const SOCKET_EVENTS = {
 
   // Pin message
   PIN_MESSAGE: "pin-message",
+  UNPIN_MESSAGE: "unpin-message",
 
   // Typing indicators
   TYPING: "typing",

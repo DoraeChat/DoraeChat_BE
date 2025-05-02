@@ -11,8 +11,15 @@ const ClassifyController = {
   // [POST] /api/classifies
   async addClassify(req, res, next) {
     try {
-      const classify = req.body;
-      const newClassify = await ClassifyService.addClassify(classify);
+      const userId = req._id;
+      const { name, conversationIds, colorId } = req.body;
+      const classifyData = {
+        userId,
+        name,
+        conversationIds,
+        colorId
+      };
+      const newClassify = await ClassifyService.addClassify(classifyData);
       res.status(200).json(newClassify);
     } catch (error) {
       next(error);
@@ -23,9 +30,16 @@ const ClassifyController = {
   async updateClassify(req, res, next) {
     try {
       const classifyId = req.params.classifyId;
-      const classify = req.body;
+      const userId = req._id;
+      const { name, conversationIds, colorId } = req.body;
+      const classifyData = {
+        userId,
+        name,
+        conversationIds,
+        colorId
+      };
       const updatedClassify = await ClassifyService.updateClassify(
-        classify,
+        classifyData,
         classifyId
       );
       res.status(200).json(updatedClassify);

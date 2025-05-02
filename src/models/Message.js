@@ -813,29 +813,47 @@ messageSchema.statics.removeVoteOption = async function (voteId, optionId) {
 messageSchema.statics.selectVoteOption = async function (
   voteId,
   memberId,
-  memberInfo, 
+  memberInfo,
   optionId,
   isMultipleChoice = false
 ) {
+  const vote = await this.findById(voteId);
+  const memberObjectId = new Types.ObjectId(memberId);
+  const optionObjectId = new Types.ObjectId(optionId);
+
+  // Kiểm tra option có tồn tại không
+  const targetOption = vote.options.find(opt => opt._id.equals(optionObjectId));
+  if (!targetOption) {
+    throw new Error("Option không tồn tại");
+  }
+
+  // Kiểm tra member đã chọn option này chưa
+  const alreadySelected = targetOption.members.some(m => m.memberId.equals(memberObjectId));
+  if (alreadySelected) {
+    return vote; // Không làm gì nếu đã chọn rồi
+  }
+
   const newMember = {
-    memberId: new Types.ObjectId(memberId),
+    memberId: memberObjectId,
     name: memberInfo.name,
     avatar: memberInfo.avatar,
     avatarColor: memberInfo.avatarColor
   };
 
+  // Xóa member khỏi tất cả options khác (nếu không phải multiple choice)
   if (!isMultipleChoice) {
     await this.updateOne(
       { _id: voteId },
-      { $pull: { "options.$[].members": { memberId: new Types.ObjectId(memberId) } } }
+      { $pull: { "options.$[].members": { memberId: memberObjectId } } }
     );
   }
 
+  // Thêm member vào option được chọn
   return await this.findByIdAndUpdate(
     voteId,
     { $addToSet: { "options.$[option].members": newMember } },
     {
-      arrayFilters: [{ "option._id": new Types.ObjectId(optionId) }],
+      arrayFilters: [{ "option._id": optionObjectId }],
       new: true,
     }
   );

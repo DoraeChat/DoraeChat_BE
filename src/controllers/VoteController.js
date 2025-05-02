@@ -65,7 +65,8 @@ const VoteController = {
         try {
             const { voteId, optionId } = req.params;
             const memberId = req.body.memberId;
-            const vote = await VoteService.selectVoteOption(voteId, memberId, optionId);
+            const memberInfo = req.body.memberInfo; // { name, avatar, avatarColor }
+            const vote = await VoteService.selectVoteOption(voteId, memberId, memberInfo, optionId);
             res.json(vote);
         } catch (error) {
             next(error);

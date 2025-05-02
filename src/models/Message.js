@@ -4,7 +4,7 @@ const ObjectId = mongoose.Types.ObjectId;
 const NotFoundError = require("../exceptions/NotFoundError");
 const Channel = require("./Channel");
 const Member = require("./Member");
-const { Types } = require('mongoose');
+const { Types } = require("mongoose");
 
 const commonLookupStages = {
   userLookup: {
@@ -230,9 +230,16 @@ const messageSchema = new Schema(
     options: {
       type: [
         {
-          name: String,
-          memberIds: {
-            type: [ObjectId],
+          name: { type: String, required: true },
+          members: {
+            type: [
+              {
+                memberId: ObjectId,
+                name: String,
+                avatar: String,
+                avatarColor: String,
+              },
+            ],
             default: [],
           },
           memberCreated: {
@@ -682,13 +689,14 @@ messageSchema.statics.getVotesByChannelId = async function (
 
 messageSchema.statics.createVote = async function (vote) {
   const newVote = new Message({
+    channelId: vote.channelId,
     memberId: vote.memberId,
     conversationId: vote.conversationId,
     content: vote.content,
     isMultipleChoice: vote.isMultipleChoice || false,
     options: vote.options.map((option) => ({
       name: option.name,
-      memberIds: [],
+      members: [],
       memberCreated: vote.memberId,
     })),
     type: "VOTE",
@@ -733,7 +741,7 @@ messageSchema.statics.addVoteOption = async function (
         options: {
           _id: new ObjectId(),
           name: newOption.name,
-          memberIds: [],
+          members: [],
           memberCreated: memberId,
         },
       },
@@ -753,20 +761,27 @@ messageSchema.statics.removeVoteOption = async function (voteId, optionId) {
 messageSchema.statics.selectVoteOption = async function (
   voteId,
   memberId,
+  memberInfo, 
   optionId,
   isMultipleChoice = false
 ) {
-  // remove member from all options
+  const newMember = {
+    memberId: new Types.ObjectId(memberId),
+    name: memberInfo.name,
+    avatar: memberInfo.avatar,
+    avatarColor: memberInfo.avatarColor
+  };
+
   if (!isMultipleChoice) {
     await this.updateOne(
       { _id: voteId },
-      { $pull: { "options.$[].memberIds": memberId } }
+      { $pull: { "options.$[].members": { memberId: new Types.ObjectId(memberId) } } }
     );
   }
 
   return await this.findByIdAndUpdate(
     voteId,
-    { $addToSet: { "options.$[option].memberIds": memberId } },
+    { $addToSet: { "options.$[option].members": newMember } },
     {
       arrayFilters: [{ "option._id": new Types.ObjectId(optionId) }],
       new: true,
@@ -781,7 +796,7 @@ messageSchema.statics.deselectVoteOption = async function (
 ) {
   return await this.findByIdAndUpdate(
     voteId,
-    { $pull: { "options.$[option].memberIds": memberId } },
+    { $pull: { "options.$[option].members": { memberId: new Types.ObjectId(memberId) } } },
     {
       arrayFilters: [{ "option._id": new Types.ObjectId(optionId) }],
       new: true,

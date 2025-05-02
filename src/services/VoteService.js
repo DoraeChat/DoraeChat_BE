@@ -104,7 +104,7 @@ const VoteService = {
     return await Message.removeVoteOption(voteId, optionId);
   },
 
-  async selectVoteOption(voteId, memberId, optionId) {
+  async selectVoteOption(voteId, memberId, memberInfo, optionId) {
     const vote = await Message.getById(voteId);
     if (!vote) throw new NotFoundError("Vote");
 
@@ -126,7 +126,7 @@ const VoteService = {
     if (!memberIds.includes(memberId))
       throw new CustomError("Member not in conversation", 400);
 
-    return await Message.selectVoteOption(voteId, memberId, optionId);
+    return await Message.selectVoteOption(voteId, memberId, memberInfo, optionId, vote?.isMultipleChoice);
   },
 
   async deselectVoteOption(voteId, memberId, optionId) {

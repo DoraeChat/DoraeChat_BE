@@ -51,10 +51,8 @@ class PinMessageController {
       res.json(pinMessage);
 
       if (this.socketHandler) {
-        console.log("pinMessage", pinMessage);
-        console.log(this.socketHandler);
         this.socketHandler.emitToConversation(
-          pinMessage.conversationId,
+          pinMessage.conversationId.toString(),
           SOCKET_EVENTS.UNPIN_MESSAGE,
           pinMessage
         );

@@ -1,11 +1,11 @@
 const VoteService = require('../services/VoteService');
 
 const VoteController = {
-    // [GET] /api/votes/:conversationId
-    async getVotesByConversationId(req, res, next) {
+    // [GET] /api/votes/:channelId
+    async getVotesByChannelId(req, res, next) {
         try {
-            const { conversationId } = req.params;
-            const votes = await VoteService.getVotesByConversationId(conversationId);
+            const { channelId } = req.params;
+            const votes = await VoteService.getVotesByChannelId(channelId);
             res.json(votes);
         } catch (error) {
             next(error);

@@ -4,6 +4,7 @@ const ObjectId = mongoose.Types.ObjectId;
 const NotFoundError = require("../exceptions/NotFoundError");
 const Channel = require("./Channel");
 const Member = require("./Member");
+const { Types } = require('mongoose');
 
 const commonLookupStages = {
   userLookup: {
@@ -244,10 +245,17 @@ const messageSchema = new Schema(
     },
     lockedVote: {
       type: {
-        lockedStatus: Boolean, // true: locked
+        lockedStatus: {
+          type: Boolean, // true: locked
+          default: false,
+        },
         lockedBy: ObjectId,
         lockedAt: Date,
       },
+    },
+    isMultipleChoice: {
+      type: Boolean,
+      default: false,
     },
     deletedMemberIds: {
       type: [ObjectId],
@@ -569,6 +577,10 @@ messageSchema.statics.getListByChannelIdAndUserId = async function (
         fileName: 1,
         fileSize: 1,
         replyMessageId: 1,
+        options: 1,
+        isMultipleChoice: 1,
+        lockedVote: 1,
+        reacts: 1,
         memberId: {
           userId: "$memberId.user._id",
           name: "$memberId.user.name",
@@ -649,15 +661,15 @@ messageSchema.statics.getListFilesByTypeAndConversationId = async function (
     .limit(limit);
 };
 
-messageSchema.statics.getVotesByConversationId = async function (
-  conversationId,
+messageSchema.statics.getVotesByChannelId = async function (
+  channelId,
   skip = 0,
   limit = 20
 ) {
   const pipeline = [
     {
       $match: {
-        conversationId: new ObjectId(conversationId),
+        channelId: new ObjectId(channelId),
         type: "VOTE",
       },
     },
@@ -669,29 +681,27 @@ messageSchema.statics.getVotesByConversationId = async function (
 };
 
 messageSchema.statics.createVote = async function (vote) {
-  // Validate required fields
-  if (
-    !vote.memberId ||
-    !vote.conversationId ||
-    !vote.content ||
-    !vote.options
-  ) {
-    throw new Error("Missing required vote fields");
-  }
-
-  // Ensure options are valid
-  if (!Array.isArray(vote.options) || vote.options.length === 0) {
-    throw new Error("Vote must have at least one option");
-  }
-
   const newVote = new Message({
-    ...vote,
+    memberId: vote.memberId,
+    conversationId: vote.conversationId,
+    content: vote.content,
+    isMultipleChoice: vote.isMultipleChoice || false,
+    options: vote.options.map((option) => ({
+      name: option.name,
+      memberIds: [],
+      memberCreated: vote.memberId,
+    })),
     type: "VOTE",
     reacts: [],
     tags: vote.tags || [],
     manipulatedUserIds: [],
     deletedMemberIds: [],
     isDeleted: false,
+    lockedVote: {
+      lockedStatus: false,
+      lockedBy: null,
+      lockedAt: null,
+    },
   });
 
   return await newVote.save();
@@ -716,18 +726,6 @@ messageSchema.statics.addVoteOption = async function (
   memberId,
   newOption
 ) {
-  // newOption is object { name, memberIds, memberCreated }
-
-  const vote = await Message.getById(voteId);
-  if (!vote) {
-    throw new NotFoundError("Vote not found");
-  }
-
-  // Ensure the option has a name
-  if (!newOption.name) {
-    throw new Error("Option must have a name");
-  }
-
   return await Message.findByIdAndUpdate(
     voteId,
     {
@@ -745,23 +743,9 @@ messageSchema.statics.addVoteOption = async function (
 };
 
 messageSchema.statics.removeVoteOption = async function (voteId, optionId) {
-  const vote = await Message.getById(voteId);
-
-  // Ensure optionId is valid
-  const optionIndex = vote.options.findIndex(
-    (option) => option._id.toString() === optionId
-  );
-  if (optionIndex === -1) {
-    throw new Error("Invalid option ID");
-  }
-
-  return await Message.findByIdAndUpdate(
+  return await this.findByIdAndUpdate(
     voteId,
-    {
-      $pull: {
-        options: { _id: optionId },
-      },
-    },
+    { $pull: { options: { _id: new Types.ObjectId(optionId) } } },
     { new: true }
   );
 };
@@ -769,37 +753,24 @@ messageSchema.statics.removeVoteOption = async function (voteId, optionId) {
 messageSchema.statics.selectVoteOption = async function (
   voteId,
   memberId,
-  optionId
+  optionId,
+  isMultipleChoice = false
 ) {
-  const vote = await Message.getById(voteId);
-
-  // Ensure optionId is valid
-  const optionIndex = vote.options.findIndex(
-    (option) => option._id.toString() === optionId
-  );
-  if (optionIndex === -1) {
-    throw new Error("Invalid option ID");
+  // remove member from all options
+  if (!isMultipleChoice) {
+    await this.updateOne(
+      { _id: voteId },
+      { $pull: { "options.$[].memberIds": memberId } }
+    );
   }
 
-  // Check if user has already selected this option
-  const currentOption = vote.options[optionIndex];
-  if (currentOption.memberIds.includes(memberId)) {
-    return vote;
-  }
-
-  // Remove user from other options first
-  const updatedOptions = vote.options.map((option) => ({
-    name: option.name,
-    memberIds: option.memberIds.filter((id) => id.toString() !== memberId),
-  }));
-
-  // Add user to the selected option
-  updatedOptions[optionIndex].memberIds.push(memberId);
-
-  return await Message.findByIdAndUpdate(
+  return await this.findByIdAndUpdate(
     voteId,
-    { $set: { options: updatedOptions } },
-    { new: true }
+    { $addToSet: { "options.$[option].memberIds": memberId } },
+    {
+      arrayFilters: [{ "option._id": new Types.ObjectId(optionId) }],
+      new: true,
+    }
   );
 };
 
@@ -808,28 +779,13 @@ messageSchema.statics.deselectVoteOption = async function (
   memberId,
   optionId
 ) {
-  const vote = await Message.getById(voteId);
-
-  // Ensure optionId is valid
-  const optionIndex = vote.options.findIndex(
-    (option) => option._id.toString() === optionId
-  );
-  if (optionIndex === -1) {
-    throw new Error("Invalid option ID");
-  }
-
-  const updatedOptions = vote.options.map((option, index) => ({
-    name: option.name,
-    memberIds:
-      index === optionIndex
-        ? option.memberIds.filter((id) => id.toString() !== memberId)
-        : option.memberIds,
-  }));
-
-  return await Message.findByIdAndUpdate(
+  return await this.findByIdAndUpdate(
     voteId,
-    { $set: { options: updatedOptions } },
-    { new: true }
+    { $pull: { "options.$[option].memberIds": memberId } },
+    {
+      arrayFilters: [{ "option._id": new Types.ObjectId(optionId) }],
+      new: true,
+    }
   );
 };
 

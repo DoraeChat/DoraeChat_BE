@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 const VoteController = require('../controllers/VoteController');
 
-router.get('/:conversationId', VoteController.getVotesByConversationId);
+router.get('/:channelId', VoteController.getVotesByChannelId);
 router.post('/', VoteController.addVote);
 router.put('/:voteId', VoteController.lockVote);
 router.post('/option/:voteId', VoteController.addVoteOption);

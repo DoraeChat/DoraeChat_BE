@@ -120,6 +120,14 @@ class VoteController {
         optionId
       );
       res.json(vote);
+
+      if (this.socketHandler) {
+        this.socketHandler.emitToConversation(
+          vote.conversationId.toString(),
+          SOCKET_EVENTS.VOTE_OPTION_DESELECTED,
+          vote
+        );
+      }
     } catch (error) {
       next(error);
     }

@@ -28,13 +28,14 @@ class VoteController {
     try {
       const vote = req.body;
       const newVote = await VoteService.addVote(vote);
-      res.json(newVote);
+      const updatedVote = { ...newVote.toObject(), userId: req._id };
+      console.log("newVote ne", updatedVote);
 
       if (this.socketHandler) {
         this.socketHandler.emitToConversation(
-          newVote.conversationId.toString(),
+          updatedVote.conversationId.toString(),
           SOCKET_EVENTS.CREATE_VOTE,
-          newVote
+          updatedVote
         );
       }
     } catch (error) {

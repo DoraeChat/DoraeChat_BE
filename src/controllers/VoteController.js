@@ -62,6 +62,14 @@ class VoteController {
       const newOption = req.body.option;
       const vote = await VoteService.addVoteOption(voteId, memberId, newOption);
       res.json(vote);
+
+      if (this.socketHandler) {
+        this.socketHandler.emitToConversation(
+          vote.conversationId.toString(),
+          SOCKET_EVENTS.ADD_VOTE_OPTION,
+          vote
+        );
+      }
     } catch (error) {
       next(error);
     }

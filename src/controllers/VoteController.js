@@ -49,6 +49,14 @@ class VoteController {
       const memberId = req.body.memberId;
       const vote = await VoteService.lockVote(voteId, memberId);
       res.json(vote);
+
+      if (this.socketHandler) {
+        this.socketHandler.emitToConversation(
+          vote.conversationId.toString(),
+          SOCKET_EVENTS.VOTE_LOCKED,
+          vote
+        );
+      }
     } catch (error) {
       next(error);
     }

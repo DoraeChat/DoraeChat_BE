@@ -34,6 +34,7 @@ const SOCKET_EVENTS = {
   VOTE_OPTION_DESELECTED: "vote-option-deselected",
   ADD_VOTE_OPTION: "add-vote-option",
   DELETE_VOTE_OPTION: "delete-vote-option",
+  VOTE_LOCKED: "vote-locked",
 
   // Pin message
   PIN_MESSAGE: "pin-message",

@@ -30,6 +30,7 @@ const SOCKET_EVENTS = {
 
   // Vote
   CREATE_VOTE: "create-vote",
+  VOTE_OPTION_SELECTED: "vote-option-selected",
 
   // Pin message
   PIN_MESSAGE: "pin-message",

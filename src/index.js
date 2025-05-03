@@ -1,4 +1,5 @@
 require("dotenv").config();
+
 const express = require("express");
 const http = require("http");
 const connection = require("./config/database");
@@ -7,7 +8,6 @@ const userRoutes = require("./routes/UserRoutes");
 const meRoutes = require("./routes/MeRoutes");
 const qrRoutes = require("./routes/QRRoutes");
 const channelRoutes = require("./routes/ChannelRoutes");
-const voteRoutes = require("./routes/VoteRoutes");
 const colorRoutes = require("./routes/ColorRoutes");
 const classifyRoutes = require("./routes/ClassifyRoutes");
 const cloudinaryRoutes = require("./routes/CloudinaryRoutes");
@@ -39,6 +39,7 @@ const conversationRoutes = require("./routes/ConversationRoutes")(
   socketHandler
 );
 const pinMessageRoutes = require("./routes/PinMessageRoutes")(socketHandler);
+const voteRoutes = require("./routes/VoteRoutes")(socketHandler);
 
 (async () => {
   try {

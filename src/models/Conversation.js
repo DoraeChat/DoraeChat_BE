@@ -31,10 +31,10 @@ const conversationSchema = new Schema(
       default: true,
     },
     type: Boolean,
-    roomUrl: {
-      type: String,
-      default: null,
-    },
+    // roomUrl: {
+    //   type: String,
+    //   default: null,
+    // },
 
   },
   { timestamps: true }

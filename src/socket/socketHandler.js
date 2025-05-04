@@ -304,8 +304,7 @@ class SocketHandler {
       );
 
       socket.on(
-        SOCKET_EVENTS.REJECT_CALL,
-        ({ conversationId, userId, reason }) => {
+        SOCKET_EVENTS.REJECT_CALL, async ({ conversationId, userId, reason }) => {
           const room = `call:${conversationId}`;
           console.log(
             `User ${userId} từ chối cuộc gọi (reason: ${reason || "manual"})`
@@ -317,8 +316,7 @@ class SocketHandler {
           });
 
           try {
-            const conv =
-              Conversation.findById(conversationId).populate("members");
+            const conv = await Conversation.findById(conversationId).populate("members");
             const caller = conv.members.find(
               (m) => m.userId.toString() !== userId
             );
@@ -346,19 +344,15 @@ class SocketHandler {
         });
       });
 
-      // Khi ai đó khởi động group call (host) => broadcast cho mọi thành viên còn lại
       socket.on(SOCKET_EVENTS.GROUP_CALL_USER, async ({ conversationId, channelId, roomUrl }) => {
         try {
-          // Lấy conversation, populate members để có danh sách userId
           const conv = await Conversation.findById(conversationId).populate("members");
           if (!conv) return;
 
-          // Từ members pull ra array các userId (chuỗi)
           const receivers = conv.members
             .map(m => m.userId.toString())
-            .filter(id => id !== socket.userId); // trừ chính host
+            .filter(id => id !== socket.userId);
 
-          // Gửi tới từng người
           receivers.forEach(rid => {
             this.io.to(rid).emit(SOCKET_EVENTS.GROUP_CALL_USER, {
               conversationId,
@@ -366,24 +360,20 @@ class SocketHandler {
               roomUrl
             });
           });
-          // this.io.to(conversationId).emit(SOCKET_EVENTS.GROUP_CALL_USER, {
-          //   conversationId
-          // });
+
+
         } catch (err) {
           console.error("Error handling GROUP_CALL_USER:", err);
         }
       });
 
-      // Khi host kết thúc group call
       socket.on(SOCKET_EVENTS.GROUP_CALL_ENDED, async ({ conversationId }) => {
         try {
-          // Bạn có thể tận dụng room conversationId nếu mọi client đã join vào đó
           this.io.to(conversationId).emit(SOCKET_EVENTS.GROUP_CALL_ENDED, {
             conversationId
           });
 
-          // (tuỳ bạn có muốn xoá roomUrl khỏi db hay không)
-          await Conversation.findByIdAndUpdate(conversationId, { $unset: { roomUrl: "" } });
+          // await Conversation.findByIdAndUpdate(conversationId, { $unset: { roomUrl: "" } });
         } catch (err) {
           console.error("Error handling GROUP_CALL_ENDED:", err);
         }

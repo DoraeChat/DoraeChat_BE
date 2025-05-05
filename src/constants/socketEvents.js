@@ -63,6 +63,9 @@ const SOCKET_EVENTS = {
   // Last view tracking
   CONVERSATION_LAST_VIEW: "conversation-last-view",
   USER_LAST_VIEW: "user-last-view",
+
+  // Member
+  UPDATE_MEMBER_NAME: "update-member-name",
 };
 
 module.exports = SOCKET_EVENTS;

@@ -11,7 +11,6 @@ const channelRoutes = require("./routes/ChannelRoutes");
 const colorRoutes = require("./routes/ColorRoutes");
 const classifyRoutes = require("./routes/ClassifyRoutes");
 const cloudinaryRoutes = require("./routes/CloudinaryRoutes");
-const memberRoutes = require("./routes/MemberRoutes");
 
 const handleError = require("./middleware/handleError");
 const cors = require("cors");
@@ -40,6 +39,7 @@ const conversationRoutes = require("./routes/ConversationRoutes")(
 );
 const pinMessageRoutes = require("./routes/PinMessageRoutes")(socketHandler);
 const voteRoutes = require("./routes/VoteRoutes")(socketHandler);
+const memberRoutes = require("./routes/MemberRoutes")(socketHandler);
 
 (async () => {
   try {

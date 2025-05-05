@@ -63,6 +63,25 @@ const MemberController = {
       next(error);
     }
   },
+
+  async updateMemberName(req, res, next) {
+    try {
+      const { memberId } = req.params;
+      const { name } = req.body;
+
+      const member = await MemberService.updateMemberName(
+        memberId,
+        name
+      );
+
+      return res.status(200).json({
+        message: "Update member successfully",
+        data: member,
+      });
+    } catch (error) {
+      next(error);
+    }
+  },
 };
 
 module.exports = MemberController;

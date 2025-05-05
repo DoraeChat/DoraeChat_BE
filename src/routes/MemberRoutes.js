@@ -6,5 +6,6 @@ router.get('/is-member', MemberController.isMember);
 router.get('/member/:memberId', MemberController.getByMemberId);
 router.get('/:conversationId', MemberController.getByConversationId);
 router.get('/:conversationId/:userId', MemberController.getByConversationIdAndUserId);
+router.patch('/:memberId', MemberController.updateMemberName);
 
 module.exports = router;

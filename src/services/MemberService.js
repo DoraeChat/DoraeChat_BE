@@ -42,6 +42,14 @@ const MemberService = {
     if (!member) throw new NotFoundError("Member");
     return member;
   },
+
+  async updateMemberName(memberId, name) {
+    const member = await Member.findById(memberId);
+    if (!member) throw new NotFoundError("Member");
+    member.name = name;
+    await member.save();
+    return member;
+  },
 };
 
 module.exports = MemberService;

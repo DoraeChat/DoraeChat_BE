@@ -112,7 +112,7 @@ class ConversationController {
         this.socketHandler.emitToConversation(
           conversationId,
           SOCKET_EVENTS.UPDATE_NAME_CONVERSATION,
-          name
+          { conversationId, name }
         );
       }
 

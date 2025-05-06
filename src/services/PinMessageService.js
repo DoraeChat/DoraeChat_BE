@@ -54,6 +54,7 @@ const PinMessageService = {
     if (!conversation) throw new NotFoundError("Conversation");
 
     const member = await Member.findOne({ _id: pinnedBy }).lean();
+    const memberSend = await Member.findById({ _id: message.memberId}).lean();
     const members = conversation.members.map((member) => member._id.toString());
     if (!members.includes(member._id.toString()))
       throw new CustomError("Member is not in conversation", 400);
@@ -74,7 +75,7 @@ const PinMessageService = {
     if (existingPinMessage)
       throw new CustomError("Message already pinned in this conversation", 400);
 
-    const user = await User.findById(member.userId).lean();
+    const user = await User.findById(memberSend.userId).lean();
     const newPinMessage = await PinMessage.addPinMessage(pinMessage);
     return {
       _id: newPinMessage._id,
@@ -118,7 +119,7 @@ const PinMessageService = {
       throw new CustomError("Member is not allowed to unpin message", 400);
 
     const deleted = await PinMessage.deletePinMessage(messageId, pinnedBy);
-    
+
     return {
       _id: deleted._id,
       messageId: deleted.messageId,

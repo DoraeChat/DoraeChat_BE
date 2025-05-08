@@ -6,8 +6,18 @@ const NotFoundError = require("../exceptions/NotFoundError");
 
 const conversationSchema = new Schema(
   {
-    name: String,
-    avatar: String,
+    name: {
+      type: String,
+      required: true,
+      trim: true,
+    },
+    avatar: {
+      type: String,
+      default: function() {
+        const firstChar = this.name ? this.name.charAt(0).toUpperCase() : 'A';
+        return `https://placehold.co/200x200?text=${firstChar}`;
+      }
+    },
     leaderId: ObjectId,
     managerIds: {
       type: [ObjectId],

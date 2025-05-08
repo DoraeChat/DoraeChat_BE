@@ -15,10 +15,13 @@ const PinMessageService = {
         const message = await Message.findById(pinMessage.messageId).lean();
         if (!message) throw new NotFoundError("Message");
 
+        const memberSend = await Member.findById({ _id: message.memberId}).lean();
+        if (!memberSend) throw new NotFoundError("Member");
+
         const member = await Member.findById(pinMessage.pinnedBy).lean();
         if (!member) throw new NotFoundError("Member");
 
-        const user = await User.findById(member.userId).lean();
+        const user = await User.findById(memberSend.userId).lean();
         if (!user) throw new NotFoundError("User");
 
         return {
@@ -100,6 +103,7 @@ const PinMessageService = {
     if (!pinMessage) throw new NotFoundError("Pin message");
 
     const member = await Member.findOne({ _id: pinnedBy }).lean();
+    const memberSend = await Member.findById({ _id: message.memberId}).lean();
     if (!member) throw new NotFoundError("Member");
 
     const conversation = await Conversation.findById(
@@ -109,7 +113,7 @@ const PinMessageService = {
     const message = await Message.findById(messageId).lean();
     if (!message) throw new NotFoundError("Message");
 
-    const user = await User.findById(member.userId).lean();
+    const user = await User.findById(memberSend.userId).lean();
 
     if (
       !conversation.managerIds.includes(pinnedBy) && // manager

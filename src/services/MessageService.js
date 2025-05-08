@@ -7,6 +7,10 @@ const CustomError = require("../exceptions/CustomError");
 const NotFoundError = require("../exceptions/NotFoundError");
 const CloudinaryService = require("./CloudinaryService");
 const emoji = require("node-emoji");
+const axios = require("axios");
+const ZALO_TTS_API_URL = "https://api.zalo.ai/v1/tts/synthesize";
+const ZALO_TTS_API_KEY = process.env.ZALO_TTS_API_KEY;
+
 
 class MessageService {
   // 🔹 Gửi tin nhắn văn bản
@@ -742,6 +746,45 @@ class MessageService {
       deletedMessage: populatedMessage,
       newLastMessage,
     };
+  }
+
+
+  /**
+   * Convert a given text to speech using Zalo TTS API
+   * @param {String} text - The message content
+   * @param {Object} options - Optional TTS settings: speaker_id, speed
+   * @returns {String} - URL to the generated audio file
+   */
+  async convertTextToSpeech(text, options = {}) {
+    console.log("convertTextToSpeech");
+    if (!text || text.trim().length === 0) {
+      throw new Error("Text content is required for TTS");
+    }
+
+    try {
+      const form = new URLSearchParams();
+      form.append("input", text);
+      form.append("encode_type", 1);
+
+      if (options.speaker_id) form.append("speaker_id", options.speaker_id);
+      if (options.speed) form.append("speed", options.speed);
+
+      const response = await axios.post(ZALO_TTS_API_URL, form, {
+        headers: {
+          "Content-Type": "application/x-www-form-urlencoded",
+          apikey: ZALO_TTS_API_KEY,
+        },
+      });
+
+      if (response.data.error_code === 0) {
+        console.log(response.data.data.url);
+        return response.data.data.url;
+      } else {
+        throw new Error(response.data.error_message);
+      }
+    } catch (err) {
+      throw new Error("TTS API error: " + err.message);
+    }
   }
 }
 

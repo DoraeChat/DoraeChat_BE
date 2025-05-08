@@ -30,6 +30,7 @@ const MessageRouter = (socketHandler) => {
     messageController.sendFileMessage
   );
   router.delete("/:id/only", messageController.deleteMessageForMe);
+  router.post("/tts", messageController.convertTextToSpeech);
 
   return router;
 };

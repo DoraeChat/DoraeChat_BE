@@ -1,4 +1,5 @@
 require("dotenv").config();
+
 const express = require("express");
 const http = require("http");
 const connection = require("./config/database");
@@ -7,12 +8,9 @@ const userRoutes = require("./routes/UserRoutes");
 const meRoutes = require("./routes/MeRoutes");
 const qrRoutes = require("./routes/QRRoutes");
 const channelRoutes = require("./routes/ChannelRoutes");
-const pinMessageRoutes = require("./routes/PinMessageRoutes");
-const voteRoutes = require("./routes/VoteRoutes");
 const colorRoutes = require("./routes/ColorRoutes");
 const classifyRoutes = require("./routes/ClassifyRoutes");
 const cloudinaryRoutes = require("./routes/CloudinaryRoutes");
-const memberRoutes = require("./routes/MemberRoutes");
 
 const handleError = require("./middleware/handleError");
 const cors = require("cors");
@@ -40,6 +38,10 @@ const messageRouter = require("./routes/MessageRoutes")(socketHandler);
 const conversationRoutes = require("./routes/ConversationRoutes")(
   socketHandler
 );
+const pinMessageRoutes = require("./routes/PinMessageRoutes")(socketHandler);
+const voteRoutes = require("./routes/VoteRoutes")(socketHandler);
+const memberRoutes = require("./routes/MemberRoutes")(socketHandler);
+
 (async () => {
   try {
     await connection();
@@ -59,6 +61,7 @@ const conversationRoutes = require("./routes/ConversationRoutes")(
     app.use("/api/uploads", cloudinaryRoutes);
     app.use("/api/members", memberRoutes);
     app.use('/api/metered', meteredRoutes);
+    app.use("/api/members", auth, memberRoutes);
     app.use(handleError);
     server.listen(port, () => {
       console.log(`Backend Nodejs App listening on port ${port}`);

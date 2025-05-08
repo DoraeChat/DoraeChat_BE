@@ -10,6 +10,8 @@ class MessageController {
     this.sendFileMessage = this.sendFileMessage.bind(this);
     this.sendVideoMessage = this.sendVideoMessage.bind(this);
     this.deleteMessageForMe = this.deleteMessageForMe.bind(this);
+    this.sendReplyMessage = this.sendReplyMessage.bind(this);
+    this.reactToMessage = this.reactToMessage.bind(this);
   }
   // [POST] /api/message/text - Gửi tin nhắn văn bản
   async sendTextMessage(req, res) {
@@ -32,6 +34,39 @@ class MessageController {
       );
 
       // Phát sự kiện socket đến conversationId (và channelId nếu có)
+      this.socketHandler.emitToConversation(
+        conversationId,
+        SOCKET_EVENTS.RECEIVE_MESSAGE,
+        message
+      );
+
+      res.status(201).json(message);
+    } catch (error) {
+      res.status(400).json({ message: error.message });
+    }
+  }
+  // [POST] /api/message/reply - Gửi tin nhắn trả lời
+  async sendReplyMessage(req, res) {
+    try {
+      const { conversationId, content, replyMessageId, channelId, type } =
+        req.body;
+      const userId = req._id;
+
+      if (!conversationId || !content || !replyMessageId) {
+        return res.status(400).json({
+          message: "Conversation ID, content, and replyMessageId are required",
+        });
+      }
+
+      const message = await MessageService.sendReplyMessage(
+        userId,
+        conversationId,
+        content,
+        replyMessageId,
+        channelId,
+        type
+      );
+
       this.socketHandler.emitToConversation(
         conversationId,
         SOCKET_EVENTS.RECEIVE_MESSAGE,
@@ -238,6 +273,35 @@ class MessageController {
         deletedMessage,
         newLastMessage,
       });
+    } catch (error) {
+      res.status(400).json({ message: error.message });
+    }
+  }
+  async reactToMessage(req, res) {
+    try {
+      const { conversationId, messageId, reactType } = req.body;
+      const userId = req._id;
+
+      if (!conversationId || !messageId || reactType == null) {
+        return res.status(400).json({
+          message: "Conversation ID, messageId, and reactType are required",
+        });
+      }
+
+      const message = await MessageService.reactToMessage(
+        userId,
+        conversationId,
+        messageId,
+        reactType
+      );
+
+      // this.socketHandler.emitToConversation(
+      //   conversationId,
+      //   SOCKET_EVENTS.MESSAGE_REACTED,
+      //   message
+      // );
+
+      res.status(200).json(message);
     } catch (error) {
       res.status(400).json({ message: error.message });
     }

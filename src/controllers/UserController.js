@@ -110,6 +110,16 @@ const UserController = {
     } catch (error) {
       next(error);
     }
+  },
+
+  async getByMemberId(req, res, next) {
+    try {
+      const { memberId } = req.params;
+      const user = await UserService.getByMemberId(memberId);
+      res.json(user);
+    } catch (error) {
+      next(error);
+    }
   }
 };
 

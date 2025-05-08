@@ -22,7 +22,7 @@
     "express-fileupload": "^1.5.1",
     "express-session": "^1.18.1",
     "express-useragent": "^1.0.15",
-    "formidable": "^3.5.2",
+    "formidable": "^3.5.4",
     "fs": "^0.0.1-security",
     "googleapis": "^144.0.0",
     "ioredis": "^5.6.0",

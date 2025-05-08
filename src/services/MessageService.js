@@ -92,6 +92,131 @@ class MessageService {
 
     return populatedMessage;
   }
+  async reactToMessage(userId, conversationId, messageId, reactType) {
+    const member = await Member.getByConversationIdAndUserId(
+      conversationId,
+      userId
+    );
+    if (!member || !member.active) {
+      throw new CustomError("Invalid or inactive member", 400);
+    }
+
+    const conversation = await Conversation.findById(conversationId);
+    if (!conversation) {
+      throw new NotFoundError("Conversation");
+    }
+
+    const message = await Message.findById(messageId);
+    if (
+      !message ||
+      message.conversationId.toString() !== conversationId.toString()
+    ) {
+      throw new NotFoundError("Message not found in this conversation");
+    }
+
+    // Kiểm tra nếu user đã react với cùng type, thì xóa react
+    const existingReact = message.reacts.find(
+      (react) =>
+        react.memberId.toString() === member._id.toString() &&
+        react.type === reactType
+    );
+
+    let updatedMessage;
+    if (existingReact) {
+      updatedMessage = await Message.removeReact(messageId, member._id);
+    } else {
+      updatedMessage = await Message.addReact(messageId, member._id, reactType);
+    }
+
+    const populatedMessage = await Message.findById(messageId)
+      .populate({
+        path: "memberId",
+        select: "userId name",
+      })
+      .populate({
+        path: "reacts.memberId",
+        select: "name",
+      })
+      .lean();
+
+    return populatedMessage;
+  }
+
+  async sendReplyMessage(
+    userId,
+    conversationId,
+    content,
+    replyMessageId,
+    channelId = null,
+    type = "TEXT"
+  ) {
+    if (!content.trim()) {
+      throw new Error("Message content cannot be empty");
+    }
+    content = emoji.emojify(content);
+
+    const member = await Member.getByConversationIdAndUserId(
+      conversationId,
+      userId
+    );
+    if (!member || !member.active) {
+      throw new Error("Invalid or inactive member");
+    }
+
+    const conversation = await Conversation.findById(conversationId);
+    if (!conversation) {
+      throw new NotFoundError("Conversation");
+    }
+
+    let validChannelId = null;
+    if (conversation.type) {
+      if (!channelId) {
+        throw new CustomError("Channel ID required", 400);
+      }
+      const channel = await Channel.findById(channelId);
+      if (
+        !channel ||
+        channel.conversationId.toString() !== conversationId.toString()
+      ) {
+        throw new CustomError("Invalid channel", 400);
+      }
+      validChannelId = channel._id;
+    } else if (channelId) {
+      throw new CustomError(
+        "Channel ID not applicable for individual conversations",
+        400
+      );
+    }
+
+    const newMessage = await Message.createMessage({
+      memberId: member._id,
+      content,
+      type,
+      conversationId,
+      channelId: validChannelId,
+      replyMessageId,
+    });
+
+    const populatedMessage = await Message.findById(newMessage._id)
+      .populate({
+        path: "memberId",
+        select: "userId name",
+      })
+      .populate({
+        path: "replyMessageId",
+        select: "content type isDeleted memberId",
+        populate: {
+          path: "memberId",
+          select: "userId name",
+        },
+      })
+      .lean();
+
+    conversation.lastMessageId = newMessage._id;
+    await conversation.save();
+
+    return populatedMessage;
+  }
 
   async sendNotify(
     userId,
@@ -534,6 +659,8 @@ class MessageService {
       content: uploaded.url,
       type: "FILE",
       conversationId,
+      fileName: file.originalname,
+      fileSize: file.size,
       ...(validChannelId && { channelId: validChannelId }),
     });
 

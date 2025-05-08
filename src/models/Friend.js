@@ -20,7 +20,7 @@ friendSchema.statics.findFriendByUserIds = async (userId1, userId2) => {
 
 friendSchema.statics.existsByIds = async (userId1, userId2) => {
   if (!ObjectId.isValid(userId1) || !ObjectId.isValid(userId2))
-    throw new NotFoundError("Invalid User ID");
+    throw new NotFoundError("User");
   const isExists = await Friend.findFriendByUserIds(userId1, userId2);
   return !!isExists;
 };
@@ -31,7 +31,7 @@ friendSchema.statics.checkByIds = async (
   message = "Friend"
 ) => {
   if (!ObjectId.isValid(userId1) || !ObjectId.isValid(userId2))
-    throw new NotFoundError("Invalid User ID");
+    throw new NotFoundError("User");
   const isExists = await Friend.findFriendByUserIds(userId1, userId2);
   if (!isExists) throw new NotFoundError(message);
 };
@@ -42,7 +42,7 @@ friendSchema.statics.deleteByIds = async (
   message = "Friend"
 ) => {
   if (!ObjectId.isValid(userId1) || !ObjectId.isValid(userId2))
-    throw new NotFoundError("Invalid User ID");
+    throw new NotFoundError("User");
   const queryResult = await Friend.deleteOne({
     userIds: { $all: [userId1, userId2] },
   });

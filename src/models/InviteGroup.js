@@ -24,7 +24,7 @@ inviteGroupSchema.index({ token: 1 }, { unique: true });
 inviteGroupSchema.statics = {
   async findValidToken(token) {
     const invite = await this.findOne({ token });
-    if (!invite) throw new NotFoundError("Invitation not found");
+    if (!invite) throw new NotFoundError("Invitation");
     if (invite.expiresAt < new Date())
       throw new Error("Invitation link has expired");
     return invite;

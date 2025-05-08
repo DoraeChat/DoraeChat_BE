@@ -92,11 +92,11 @@ userSchema.statics.findByCredentials = async (username, password) => {
       isActived: true,
     }).select("+password");
 
-    if (!user) throw new CustomError("Thông tin đăng nhập không hợp lệ", 401);
+    if (!user) throw new CustomError("Invalid login information", 401);
 
     const isPasswordMatch = await bcrypt.compare(password, user.password);
     if (!isPasswordMatch)
-      throw new CustomError("Thông tin đăng nhập không hợp lệ", 401);
+      throw new CustomError("Invalid login information", 401);
 
     const userData = user.toObject();
     delete userData.password;
@@ -104,7 +104,7 @@ userSchema.statics.findByCredentials = async (username, password) => {
   } catch (error) {
     throw error instanceof CustomError
       ? error
-      : new CustomError("Thông tin đăng nhập không hợp lệ", 401);
+      : new CustomError("Invalid login information", 401);
   }
 };
 userSchema.statics.existsById = async (_id) =>
@@ -153,7 +153,7 @@ userSchema.statics.getById = async (_id, message = "User") => {
 
 userSchema.statics.existsByUsername = async (username) => {
   if (!username || typeof username !== "string") {
-    throw new Error("Username không hợp lệ");
+    throw new Error("Username is invalid");
   }
   const exists = await User.exists({ username: username.toLowerCase() });
   return exists;
@@ -266,6 +266,23 @@ userSchema.statics.updateCoverUser = async (_id, coverImage) => {
     { new: true }
   );
   return updatedUser;
+};
+
+userSchema.statics.getByMemberId = async (memberId) => {
+  const Member = require("./Member");
+  
+  const member = await Member.findById(memberId);
+  if (!member) throw new NotFoundError("Member");
+  const user = await User.findById(member.userId).lean();
+  if (!user) throw new NotFoundError("User");
+  return {
+    _id: user._id,
+    name: user.name,
+    username: user.username,
+    avatar: user.avatar,
+    avatarColor: user.avatarColor,
+    avatar: user.avatar,
+  }
 };
 
 const User = mongoose.model("User", userSchema);

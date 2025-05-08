@@ -21,11 +21,24 @@ const SOCKET_EVENTS = {
   HIDE_CONVERSATION: "hide-conversation",
   DELETE_CONVERSATION: "delete-conversation",
   TRANSFER_ADMIN: "transfer-admin",
+  UPDATE_NAME_CONVERSATION: "update-name-conversation",
 
   //Messages
   RECEIVE_MESSAGE: "receive-message",
   MESSAGE_RECALLED: "message-recalled",
   MESSAGE_DELETED_FOR_ME: "message_deleted_for_me",
+
+  // Vote
+  CREATE_VOTE: "create-vote",
+  VOTE_OPTION_SELECTED: "vote-option-selected",
+  VOTE_OPTION_DESELECTED: "vote-option-deselected",
+  ADD_VOTE_OPTION: "add-vote-option",
+  DELETE_VOTE_OPTION: "delete-vote-option",
+  VOTE_LOCKED: "vote-locked",
+
+  // Pin message
+  PIN_MESSAGE: "pin-message",
+  UNPIN_MESSAGE: "unpin-message",
 
   // Typing indicators
   TYPING: "typing",
@@ -54,6 +67,9 @@ const SOCKET_EVENTS = {
   // Last view tracking
   CONVERSATION_LAST_VIEW: "conversation-last-view",
   USER_LAST_VIEW: "user-last-view",
+
+  // Member
+  UPDATE_MEMBER_NAME: "update-member-name",
 };
 
 module.exports = SOCKET_EVENTS;

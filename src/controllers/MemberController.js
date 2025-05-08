@@ -1,6 +1,12 @@
 const MemberService = require("../services/MemberService");
+const SOCKET_EVENTS = require("../constants/socketEvents");
 
-const MemberController = {
+class MemberController {
+  constructor(socketHandler) {
+    this.socketHandler = socketHandler;
+    this.updateMemberName = this.updateMemberName.bind(this);
+  }
+
   async isMember(req, res, next) {
     try {
       const { conversationId, userId } = req.query;
@@ -13,11 +19,8 @@ const MemberController = {
       });
     } catch (error) {
       next(error);
-      return res.status(500).json({
-        message: error.message,
-      });
     }
-  },
+  }
 
   async getByConversationId(req, res, next) {
     try {
@@ -31,11 +34,8 @@ const MemberController = {
       });
     } catch (error) {
       next(error);
-      return res.status(500).json({
-        message: error.message,
-      });
     }
-  },
+  }
 
   async getByConversationIdAndUserId(req, res, next) {
     try {
@@ -52,11 +52,47 @@ const MemberController = {
       });
     } catch (error) {
       next(error);
-      return res.status(500).json({
-        message: error.message,
-      });
     }
-  },
-};
+  }
+
+  async getByMemberId(req, res, next) {
+    try {
+      const { memberId } = req.params;
+
+      const member = await MemberService.getByMemberId(memberId);
+
+      return res.status(200).json({
+        message: "Get member successfully",
+        data: member,
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  async updateMemberName(req, res, next) {
+    try {
+      const { conversationId, memberId } = req.params;
+      const { name } = req.body;
+
+      const member = await MemberService.updateMemberName(memberId, name);
+
+      if (this.socketHandler) {
+        this.socketHandler.emitToConversation(
+          conversationId.toString(),
+          SOCKET_EVENTS.UPDATE_MEMBER_NAME,
+          member
+        );
+      }
+
+      return res.status(200).json({
+        message: "Update member successfully",
+        data: member,
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+}
 
 module.exports = MemberController;

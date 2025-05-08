@@ -4,6 +4,7 @@ const ObjectId = mongoose.Types.ObjectId;
 const NotFoundError = require("../exceptions/NotFoundError");
 const Channel = require("./Channel");
 const Member = require("./Member");
+const { Types } = require("mongoose");
 
 const commonLookupStages = {
   userLookup: {
@@ -100,6 +101,7 @@ const commonProjections = {
       content: 1,
       type: 1,
       isDeleted: 1,
+      memberId: 1,
     },
     replyUser: {
       _id: 1,
@@ -122,6 +124,7 @@ const commonProjections = {
     createdAt: 1,
     conversationId: 1,
     channelId: 1,
+    replyMessageId: 1,
   },
   individualMessage: {
     userId: 1,
@@ -150,6 +153,7 @@ const commonProjections = {
     },
     isDeleted: 1,
     createdAt: 1,
+    replyMessageId: 1,
   },
 };
 
@@ -203,11 +207,21 @@ const messageSchema = new Schema(
       required: true,
       index: true,
     },
-    fileName: String,
+    fileName: {
+      type: String,
+      default: "",
+    },
+    fileSize: {
+      type: Number,
+      default: 0,
+    }, // unit: byte
     reacts: {
       type: [
         {
-          userId: ObjectId,
+          memberId: {
+            type: ObjectId,
+            ref: "Member",
+          },
           type: {
             type: Number,
             enum: [0, 1, 2, 3, 4, 5, 6],
@@ -219,9 +233,16 @@ const messageSchema = new Schema(
     options: {
       type: [
         {
-          name: String,
-          memberIds: {
-            type: [ObjectId],
+          name: { type: String, required: true },
+          members: {
+            type: [
+              {
+                memberId: ObjectId,
+                name: String,
+                avatar: String,
+                avatarColor: String,
+              },
+            ],
             default: [],
           },
           memberCreated: {
@@ -234,10 +255,21 @@ const messageSchema = new Schema(
     },
     lockedVote: {
       type: {
-        lockedStatus: Boolean, // true: locked
+        lockedStatus: {
+          type: Boolean, // true: locked
+          default: false,
+        },
         lockedBy: ObjectId,
         lockedAt: Date,
       },
+    },
+    isMultipleChoice: {
+      type: Boolean,
+      default: false,
+    },
+    isAnonymous: {
+      type: Boolean,
+      default: false,
     },
     deletedMemberIds: {
       type: [ObjectId],
@@ -295,9 +327,21 @@ messageSchema.statics.createMessage = async function ({
   actionData,
   conversationId,
   channelId,
+  replyMessageId,
 }) {
   if (!memberId || !content || !conversationId) {
     throw new Error("memberId, content, and conversationId are required");
+  }
+  if (replyMessageId) {
+    const replyMessage = await this.findById(replyMessageId);
+    if (
+      !replyMessage ||
+      replyMessage.conversationId.toString() !== conversationId.toString()
+    ) {
+      throw new NotFoundError(
+        "Reply message not found or does not belong to this conversation"
+      );
+    }
   }
 
   const message = new this({
@@ -308,8 +352,53 @@ messageSchema.statics.createMessage = async function ({
     actionData,
     conversationId,
     channelId,
+    replyMessageId,
   });
 
+  await message.save();
+  return message;
+};
+messageSchema.statics.addReact = async function (
+  messageId,
+  memberId,
+  reactType
+) {
+  if (!messageId || !memberId || reactType == null) {
+    throw new Error("messageId, memberId, and reactType are required");
+  }
+  if (![0, 1, 2, 3, 4, 5, 6].includes(reactType)) {
+    throw new Error("Invalid react type");
+  }
+  const message = await this.findById(messageId);
+  if (!message) {
+    throw new NotFoundError("Message");
+  }
+  // Xóa react cũ của user nếu có
+  message.reacts = message.reacts.filter(
+    (react) => react.memberId.toString() !== memberId.toString()
+  );
+  // Thêm react mới
+  message.reacts.push({ memberId, type: reactType });
+
+  await message.save();
+
+  return message;
+};
+
+messageSchema.statics.removeReact = async function (messageId, memberId) {
+  if (!messageId || !memberId) {
+    throw new Error("messageId and memberId are required");
+  }
+
+  const message = await this.findById(messageId);
+
+  if (!message) {
+    throw new NotFoundError("Message");
+  }
+  // Xóa react của user
+  message.reacts = message.reacts.filter(
+    (react) => react.memberId.toString() !== memberId.toString()
+  );
   await message.save();
   return message;
 };
@@ -470,6 +559,7 @@ messageSchema.statics.getListByChannelIdAndUserId = async function (
   if (!channel) {
     throw new Error("Channel not found");
   }
+
   const conversationId = channel.conversationId;
 
   // Tìm member từ userId và conversationId
@@ -477,6 +567,7 @@ messageSchema.statics.getListByChannelIdAndUserId = async function (
     conversationId,
     userId
   );
+
   if (!member) {
     throw new Error("User is not a member of this conversation");
   }
@@ -505,6 +596,7 @@ messageSchema.statics.getListByChannelIdAndUserId = async function (
     matchStage.createdAt = matchStage.createdAt || {};
     matchStage.createdAt.$lt = new Date(beforeTimestamp);
   }
+
   // Thiết lập pipeline
   const pipeline = [
     { $match: matchStage },
@@ -540,6 +632,14 @@ messageSchema.statics.getListByChannelIdAndUserId = async function (
         updatedAt: 1,
         isDeleted: 1,
         deletedMemberIds: 1,
+        fileName: 1,
+        fileSize: 1,
+        replyMessageId: 1,
+        options: 1,
+        isMultipleChoice: 1,
+        isAnonymous: 1,
+        lockedVote: 1,
+        reacts: 1,
         memberId: {
           userId: "$memberId.user._id",
           name: "$memberId.user.name",
@@ -582,6 +682,14 @@ messageSchema.statics.getListForIndividualConversation = async function (
       path: "memberId",
       select: "userId name",
     })
+    .populate({
+      path: "replyMessageId",
+      select: "content type isDeleted memberId",
+      populate: {
+        path: "memberId",
+        select: "userId name",
+      },
+    })
     .lean();
 
   return messages;
@@ -612,15 +720,15 @@ messageSchema.statics.getListFilesByTypeAndConversationId = async function (
     .limit(limit);
 };
 
-messageSchema.statics.getVotesByConversationId = async function (
-  conversationId,
+messageSchema.statics.getVotesByChannelId = async function (
+  channelId,
   skip = 0,
   limit = 20
 ) {
   const pipeline = [
     {
       $match: {
-        conversationId: new ObjectId(conversationId),
+        channelId: new ObjectId(channelId),
         type: "VOTE",
       },
     },
@@ -632,29 +740,29 @@ messageSchema.statics.getVotesByConversationId = async function (
 };
 
 messageSchema.statics.createVote = async function (vote) {
-  // Validate required fields
-  if (
-    !vote.memberId ||
-    !vote.conversationId ||
-    !vote.content ||
-    !vote.options
-  ) {
-    throw new Error("Missing required vote fields");
-  }
-
-  // Ensure options are valid
-  if (!Array.isArray(vote.options) || vote.options.length === 0) {
-    throw new Error("Vote must have at least one option");
-  }
-
   const newVote = new Message({
-    ...vote,
+    channelId: vote.channelId,
+    memberId: vote.memberId,
+    conversationId: vote.conversationId,
+    content: vote.content,
+    isAnonymous: vote.isAnonymous || false,
+    isMultipleChoice: vote.isMultipleChoice || false,
+    options: vote.options.map((option) => ({
+      name: option.name,
+      members: [],
+      memberCreated: vote.memberId,
+    })),
     type: "VOTE",
     reacts: [],
     tags: vote.tags || [],
     manipulatedUserIds: [],
     deletedMemberIds: [],
     isDeleted: false,
+    lockedVote: {
+      lockedStatus: false,
+      lockedBy: null,
+      lockedAt: null,
+    },
   });
 
   return await newVote.save();
@@ -679,18 +787,6 @@ messageSchema.statics.addVoteOption = async function (
   memberId,
   newOption
 ) {
-  // newOption is object { name, memberIds, memberCreated }
-
-  const vote = await Message.getById(voteId);
-  if (!vote) {
-    throw new NotFoundError("Vote not found");
-  }
-
-  // Ensure the option has a name
-  if (!newOption.name) {
-    throw new Error("Option must have a name");
-  }
-
   return await Message.findByIdAndUpdate(
     voteId,
     {
@@ -698,7 +794,7 @@ messageSchema.statics.addVoteOption = async function (
         options: {
           _id: new ObjectId(),
           name: newOption.name,
-          memberIds: [],
+          members: [],
           memberCreated: memberId,
         },
       },
@@ -708,23 +804,9 @@ messageSchema.statics.addVoteOption = async function (
 };
 
 messageSchema.statics.removeVoteOption = async function (voteId, optionId) {
-  const vote = await Message.getById(voteId);
-
-  // Ensure optionId is valid
-  const optionIndex = vote.options.findIndex(
-    (option) => option._id.toString() === optionId
-  );
-  if (optionIndex === -1) {
-    throw new Error("Invalid option ID");
-  }
-
-  return await Message.findByIdAndUpdate(
+  return await this.findByIdAndUpdate(
     voteId,
-    {
-      $pull: {
-        options: { _id: optionId },
-      },
-    },
+    { $pull: { options: { _id: new Types.ObjectId(optionId) } } },
     { new: true }
   );
 };
@@ -732,37 +814,49 @@ messageSchema.statics.removeVoteOption = async function (voteId, optionId) {
 messageSchema.statics.selectVoteOption = async function (
   voteId,
   memberId,
-  optionId
+  memberInfo,
+  optionId,
+  isMultipleChoice = false
 ) {
-  const vote = await Message.getById(voteId);
+  const vote = await this.findById(voteId);
+  const memberObjectId = new Types.ObjectId(memberId);
+  const optionObjectId = new Types.ObjectId(optionId);
 
-  // Ensure optionId is valid
-  const optionIndex = vote.options.findIndex(
-    (option) => option._id.toString() === optionId
-  );
-  if (optionIndex === -1) {
-    throw new Error("Invalid option ID");
+  // Kiểm tra option có tồn tại không
+  const targetOption = vote.options.find(opt => opt._id.equals(optionObjectId));
+  if (!targetOption) {
+    throw new Error("Option không tồn tại");
   }
 
-  // Check if user has already selected this option
-  const currentOption = vote.options[optionIndex];
-  if (currentOption.memberIds.includes(memberId)) {
-    return vote;
+  // Kiểm tra member đã chọn option này chưa
+  const alreadySelected = targetOption.members.some(m => m.memberId.equals(memberObjectId));
+  if (alreadySelected) {
+    return vote; // Không làm gì nếu đã chọn rồi
   }
 
-  // Remove user from other options first
-  const updatedOptions = vote.options.map((option) => ({
-    name: option.name,
-    memberIds: option.memberIds.filter((id) => id.toString() !== memberId),
-  }));
+  const newMember = {
+    memberId: memberObjectId,
+    name: memberInfo.name,
+    avatar: memberInfo.avatar,
+    avatarColor: memberInfo.avatarColor
+  };
 
-  // Add user to the selected option
-  updatedOptions[optionIndex].memberIds.push(memberId);
+  // Xóa member khỏi tất cả options khác (nếu không phải multiple choice)
+  if (!isMultipleChoice) {
+    await this.updateOne(
+      { _id: voteId },
+      { $pull: { "options.$[].members": { memberId: memberObjectId } } }
+    );
+  }
 
-  return await Message.findByIdAndUpdate(
+  // Thêm member vào option được chọn
+  return await this.findByIdAndUpdate(
     voteId,
-    { $set: { options: updatedOptions } },
-    { new: true }
+    { $addToSet: { "options.$[option].members": newMember } },
+    {
+      arrayFilters: [{ "option._id": optionObjectId }],
+      new: true,
+    }
   );
 };
 
@@ -771,28 +865,13 @@ messageSchema.statics.deselectVoteOption = async function (
   memberId,
   optionId
 ) {
-  const vote = await Message.getById(voteId);
-
-  // Ensure optionId is valid
-  const optionIndex = vote.options.findIndex(
-    (option) => option._id.toString() === optionId
-  );
-  if (optionIndex === -1) {
-    throw new Error("Invalid option ID");
-  }
-
-  const updatedOptions = vote.options.map((option, index) => ({
-    name: option.name,
-    memberIds:
-      index === optionIndex
-        ? option.memberIds.filter((id) => id.toString() !== memberId)
-        : option.memberIds,
-  }));
-
-  return await Message.findByIdAndUpdate(
+  return await this.findByIdAndUpdate(
     voteId,
-    { $set: { options: updatedOptions } },
-    { new: true }
+    { $pull: { "options.$[option].members": { memberId: new Types.ObjectId(memberId) } } },
+    {
+      arrayFilters: [{ "option._id": new Types.ObjectId(optionId) }],
+      new: true,
+    }
   );
 };
 

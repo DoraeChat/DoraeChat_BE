@@ -5,8 +5,9 @@ const { upload } = require("../config/cloudinary");
 
 const MessageRouter = (socketHandler) => {
   const messageController = new MessageController(socketHandler);
-
+  router.post("/react", messageController.reactToMessage);
   router.post("/text", messageController.sendTextMessage);
+  router.post("/reply", messageController.sendReplyMessage);
   router.get("/:conversationId", messageController.getMessagesByConversation);
   router.get("/channel/:channelId", messageController.getMessagesByChannelId);
   router.delete(

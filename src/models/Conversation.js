@@ -101,11 +101,11 @@ conversationSchema.statics.getListByUserId = async (userId) => {
     // Nếu user thuộc conversation này nhưng bị inactive
     if (userMember && userMember.active === false) {
       if (conversation.lastMessageId) {
-        conversation.lastMessageId.content = "Bạn không còn trong nhóm này";
+        conversation.lastMessageId.content = "You are no longer in this group";
       } else {
         // Nếu không có lastMessageId thì tạo tạm
         conversation.lastMessageId = {
-          content: "Bạn không còn trong nhóm này",
+          content: "You are no longer in this group",
         };
       }
     } else if (conversation.type === false) {

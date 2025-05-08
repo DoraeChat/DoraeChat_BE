@@ -421,7 +421,7 @@ class SocketHandler {
     );
     if (!hasPermission) {
       console.warn(
-        `❌ User ${userId} không có quyền gọi trong cuộc trò chuyện ${conversationId}`
+        `❌ User ${userId} has no permissions in the conversation ${conversationId}`
       );
 
       socket.emit(SOCKET_EVENTS.CALL_REJECTED, {

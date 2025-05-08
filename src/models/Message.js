@@ -643,6 +643,7 @@ messageSchema.statics.getListByChannelIdAndUserId = async function (
         memberId: {
           userId: "$memberId.user._id",
           name: "$memberId.user.name",
+          avatar: "$memberId.user.avatar",
         },
       },
     },

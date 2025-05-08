@@ -97,10 +97,10 @@ class SocketHandler {
     try {
       const updatePromise = channelId
         ? lastViewService.updateLastViewOfChannel(
-            conversationId,
-            channelId,
-            userId
-          )
+          conversationId,
+          channelId,
+          userId
+        )
         : lastViewService.updateLastViewOfConversation(conversationId, userId);
 
       await updatePromise;
@@ -304,8 +304,7 @@ class SocketHandler {
       );
 
       socket.on(
-        SOCKET_EVENTS.REJECT_CALL,
-        ({ conversationId, userId, reason }) => {
+        SOCKET_EVENTS.REJECT_CALL, async ({ conversationId, userId, reason }) => {
           const room = `call:${conversationId}`;
           console.log(
             `User ${userId} từ chối cuộc gọi (reason: ${reason || "manual"})`
@@ -317,8 +316,7 @@ class SocketHandler {
           });
 
           try {
-            const conv =
-              Conversation.findById(conversationId).populate("members");
+            const conv = await Conversation.findById(conversationId).populate("members");
             const caller = conv.members.find(
               (m) => m.userId.toString() !== userId
             );
@@ -345,7 +343,44 @@ class SocketHandler {
           console.log(`Socket ${socket.id} left room ${conversationId}`);
         });
       });
+
+      socket.on(SOCKET_EVENTS.GROUP_CALL_USER, async ({ conversationId, channelId, roomUrl }) => {
+        try {
+          const conv = await Conversation.findById(conversationId).populate("members");
+          if (!conv) return;
+
+          const receivers = conv.members
+            .map(m => m.userId.toString())
+            .filter(id => id !== socket.userId);
+
+          receivers.forEach(rid => {
+            this.io.to(rid).emit(SOCKET_EVENTS.GROUP_CALL_USER, {
+              conversationId,
+              channelId,
+              roomUrl
+            });
+          });
+
+
+        } catch (err) {
+          console.error("Error handling GROUP_CALL_USER:", err);
+        }
+      });
+
+      socket.on(SOCKET_EVENTS.GROUP_CALL_ENDED, async ({ conversationId }) => {
+        try {
+          this.io.to(conversationId).emit(SOCKET_EVENTS.GROUP_CALL_ENDED, {
+            conversationId
+          });
+
+          // await Conversation.findByIdAndUpdate(conversationId, { $unset: { roomUrl: "" } });
+        } catch (err) {
+          console.error("Error handling GROUP_CALL_ENDED:", err);
+        }
+      });
     });
+
+
   }
 
   // Helper methods for emitting events from controllers

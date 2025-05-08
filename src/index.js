@@ -32,6 +32,7 @@ const { io, socketHandler } = setupSocket(server);
 app.set("io", io);
 app.set("socketHandler", socketHandler);
 
+const meteredRoutes = require('./routes/MeteredRoute');
 const friendRouter = require("./routes/FriendRoutes")(socketHandler);
 const messageRouter = require("./routes/MessageRoutes")(socketHandler);
 const conversationRoutes = require("./routes/ConversationRoutes")(
@@ -58,6 +59,8 @@ const memberRoutes = require("./routes/MemberRoutes")(socketHandler);
     app.use("/api/colors", colorRoutes);
     app.use("/api/classifies", auth, classifyRoutes);
     app.use("/api/uploads", cloudinaryRoutes);
+    app.use("/api/members", memberRoutes);
+    app.use('/api/metered', meteredRoutes);
     app.use("/api/members", auth, memberRoutes);
     app.use(handleError);
     server.listen(port, () => {

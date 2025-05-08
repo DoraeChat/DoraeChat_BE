@@ -637,6 +637,7 @@ messageSchema.statics.getListByChannelIdAndUserId = async function (
         replyMessageId: 1,
         options: 1,
         isMultipleChoice: 1,
+        isAnonymous: 1,
         lockedVote: 1,
         reacts: 1,
         memberId: {

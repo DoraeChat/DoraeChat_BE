@@ -40,10 +40,12 @@ class PinMessageController {
     }
   }
 
-  // [DELETE] /api/pin-messages/:messageId
+  // [DELETE] /api/pin-messages/:messageId/:pinnedBy
   async deletePinMessage(req, res, next) {
     try {
       const { messageId, pinnedBy } = req.params;
+      console.log("messageId", messageId);
+      console.log("pinnedBy", pinnedBy);
       const pinMessage = await PinMessageService.deletePinMessage(
         messageId,
         pinnedBy

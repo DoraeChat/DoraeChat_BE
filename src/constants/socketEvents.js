@@ -60,6 +60,10 @@ const SOCKET_EVENTS = {
   RECEIVE_SIGNAL: "receive-signal",
   LEAVE_CALL: "leave-call",
 
+  // Call - for group call (Metered)
+  GROUP_CALL_USER: "group-call-user",
+  GROUP_CALL_ENDED: "group-call-ended",
+
   // Last view tracking
   CONVERSATION_LAST_VIEW: "conversation-last-view",
   USER_LAST_VIEW: "user-last-view",

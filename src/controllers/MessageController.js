@@ -306,6 +306,18 @@ class MessageController {
       res.status(400).json({ message: error.message });
     }
   }
+
+  async convertTextToSpeech(req, res) {
+    console.log("controller convertTextToSpeech");
+    try {
+      const { text, speaker_id, speed } = req.body;
+      const url = await MessageService.convertTextToSpeech(text, { speaker_id, speed });
+      return res.json({ success: true, url });
+    } catch (error) {
+      return res.status(400).json({ success: false, message: error.message });
+    }
+  }
+
 }
 
 module.exports = MessageController;

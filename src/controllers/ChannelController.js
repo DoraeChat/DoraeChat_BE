@@ -1,4 +1,5 @@
 const ChannelService = require("../services/ChannelService");
+const SOCKET_EVENTS = require("../constants/socketEvents");
 
 class ChannelController {
   constructor(socketHandler) {
@@ -23,6 +24,14 @@ class ChannelController {
       const channel = req.body;
       const newChannel = await ChannelService.addChannel(channel);
       res.status(200).json(newChannel);
+
+      if (this.socketHandler) {
+        this.socketHandler.emitToConversation(
+          channel.conversationId.toString(),
+          SOCKET_EVENTS.NEW_CHANNEL,
+          newChannel
+        );
+      }
     } catch (err) {
       next(err);
     }

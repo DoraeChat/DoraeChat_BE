@@ -70,6 +70,9 @@ const SOCKET_EVENTS = {
 
   // Member
   UPDATE_MEMBER_NAME: "update-member-name",
+
+  // Channel
+  NEW_CHANNEL: "new-channel",
 };
 
 module.exports = SOCKET_EVENTS;

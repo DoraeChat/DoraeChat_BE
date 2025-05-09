@@ -57,8 +57,9 @@ const ChannelService = {
       const conversation = await Conversation.getById(conversationId);
       if (!conversation) throw new NotFoundError("Conversation");
 
+      const managerIds = conversation.managerIds.map((id) => id.toString());
       if (
-        !conversation.managerIds.includes(memberId) &&
+        !managerIds.includes(memberId) &&
         conversation.leaderId.toString() !== memberId
       )
         throw new CustomError("Member is not access to update channel", 400);

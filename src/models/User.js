@@ -25,7 +25,10 @@ const userSchema = new Schema(
     },
     avatar: {
       type: String,
-      default: "",
+      default: function () {
+        const firstChar = this.name ? this.name.charAt(0).toUpperCase() : 'A';
+        return `https://placehold.co/200x200?text=${firstChar}`;
+      }
     },
     avatarColor: {
       type: String,
@@ -270,7 +273,7 @@ userSchema.statics.updateCoverUser = async (_id, coverImage) => {
 
 userSchema.statics.getByMemberId = async (memberId) => {
   const Member = require("./Member");
-  
+
   const member = await Member.findById(memberId);
   if (!member) throw new NotFoundError("Member");
   const user = await User.findById(member.userId).lean();

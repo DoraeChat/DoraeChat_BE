@@ -64,6 +64,14 @@ class ChannelController {
         conversationId
       );
       res.status(200).json(deletedChannel);
+
+      if (this.socketHandler) {
+        this.socketHandler.emitToConversation(
+          deletedChannel.conversationId.toString(),
+          SOCKET_EVENTS.DELETE_CHANNEL,
+          deletedChannel
+        );
+      }
     } catch (err) {
       next(err);
     }

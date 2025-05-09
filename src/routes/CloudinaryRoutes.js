@@ -14,5 +14,6 @@ router.post(
   CloudinaryController.uploadVideo
 );
 router.post("/files", upload.single("file"), CloudinaryController.uploadFile);
+router.post("/image", upload.single("image"), CloudinaryController.uploadImage);
 
 module.exports = router;

@@ -14,8 +14,9 @@ const ChannelService = {
 
       if (!conversation) throw new NotFoundError("Conversation");
 
+      const managerIds = conversation.managerIds.map((id) => id.toString());
       if (
-        !conversation.managerIds.includes(channel.memberId) &&
+        !managerIds.includes(channel.memberId) &&
         conversation.leaderId.toString() !== channel.memberId
       )
         throw new CustomError("Member is not access to add channel", 400);
@@ -35,8 +36,9 @@ const ChannelService = {
 
       if (!channelId) throw new CustomError("Channel ID is required", 400);
 
+      const managerIds = conversation.managerIds.map((id) => id.toString());
       if (
-        !conversation.managerIds.includes(channel.memberId) &&
+        !managerIds.includes(channel.memberId) &&
         conversation.leaderId.toString() !== channel.memberId
       )
         throw new CustomError("Member is not access to update channel", 400);

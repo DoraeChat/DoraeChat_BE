@@ -3,10 +3,10 @@ const Conversation = require("../models/Conversation");
 const NotFoundError = require("../exceptions/NotFoundError");
 const CustomError = require("../exceptions/CustomError");
 
-const ChannelService = {
+class ChannelService {
   async getAllChannelByConversationId(conversationId) {
     return await Channel.getAllChannelByConversationId(conversationId);
-  },
+  }
 
   async addChannel(channel) {
     try {
@@ -27,7 +27,7 @@ const ChannelService = {
     } catch (err) {
       if (err instanceof NotFoundError || err instanceof CustomError) throw err;
     }
-  },
+  }
 
   async updateChannel(channelId, channel) {
     try {
@@ -50,7 +50,7 @@ const ChannelService = {
     } catch (err) {
       if (err instanceof CustomError) throw err;
     }
-  },
+  }
 
   async deleteChannel(channelId, memberId, conversationId) {
     try {
@@ -73,11 +73,11 @@ const ChannelService = {
     } catch (err) {
       if (err instanceof NotFoundError || err instanceof CustomError) throw err;
     }
-  },
+  }
 
   async getById(channelId) {
     return await Channel.getById(channelId);
-  },
+  }
 };
 
-module.exports = ChannelService;
+module.exports = new ChannelService();

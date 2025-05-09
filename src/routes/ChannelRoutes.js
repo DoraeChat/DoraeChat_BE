@@ -2,9 +2,17 @@ const express = require("express");
 const router = express.Router();
 const ChannelController = require("../controllers/ChannelController");
 
-router.get("/:conversationId", ChannelController.getAllChannelByConversationId);
-router.post("/", ChannelController.addChannel);
-router.put("/:channelId", ChannelController.updateChannel);
-router.delete("/:channelId", ChannelController.deleteChannel);
+const MessageRouter = (socketHandler) => {
+  const channelController = new ChannelController(socketHandler);
+  router.get(
+    "/:conversationId",
+    channelController.getAllChannelByConversationId
+  );
+  router.post("/", channelController.addChannel);
+  router.put("/:channelId", channelController.updateChannel);
+  router.delete("/:channelId", channelController.deleteChannel);
 
-module.exports = router;
+  return router;
+};
+
+module.exports = MessageRouter;

@@ -1,6 +1,13 @@
 const ChannelService = require("../services/ChannelService");
 
-const ChannelController = {
+class ChannelController {
+  constructor(socketHandler) {
+    this.socketHandler = socketHandler;
+    this.addChannel = this.addChannel.bind(this);
+    this.updateChannel = this.updateChannel.bind(this);
+    this.deleteChannel = this.deleteChannel.bind(this);
+  }
+
   // [GET] /api/channels/:channelId
   async getAllChannelByConversationId(req, res) {
     const conversationId = req.params.conversationId;
@@ -8,7 +15,7 @@ const ChannelController = {
       conversationId
     );
     res.status(200).json(channels);
-  },
+  }
 
   // [POST] /api/channels
   async addChannel(req, res, next) {
@@ -19,7 +26,7 @@ const ChannelController = {
     } catch (err) {
       next(err);
     }
-  },
+  }
 
   // [PUT] /api/channels/:channelId
   async updateChannel(req, res, next) {
@@ -34,7 +41,7 @@ const ChannelController = {
     } catch (err) {
       next(err);
     }
-  },
+  }
 
   // [DELETE] /api/channels/:channelId
   async deleteChannel(req, res, next) {
@@ -51,6 +58,6 @@ const ChannelController = {
     } catch (err) {
       next(err);
     }
-  },
-};
+  }
+}
 module.exports = ChannelController;

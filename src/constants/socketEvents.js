@@ -22,6 +22,7 @@ const SOCKET_EVENTS = {
   DELETE_CONVERSATION: "delete-conversation",
   TRANSFER_ADMIN: "transfer-admin",
   UPDATE_NAME_CONVERSATION: "update-name-conversation",
+  UPDATE_AVATAR_GROUP_CONVERSATION: "update-avatar-group-conversation",
 
   //Messages
   RECEIVE_MESSAGE: "receive-message",

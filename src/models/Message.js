@@ -192,6 +192,17 @@ const messageSchema = new Schema(
       type: [ObjectId],
       default: [],
     },
+    tagPositions: {
+      type: [
+        {
+          memberId: ObjectId,
+          start: Number,
+          end: Number,
+          name: String
+        }
+      ],
+      default: []
+    },
     replyMessageId: ObjectId,
     type: {
       type: String,
@@ -358,6 +369,7 @@ messageSchema.statics.createMessage = async function ({
   await message.save();
   return message;
 };
+
 messageSchema.statics.addReact = async function (
   messageId,
   memberId,

@@ -411,7 +411,7 @@ class MessageService {
   async getMessagesByChannelId(
     channelId,
     userId,
-    { skip = 0, limit = 100, beforeTimestamp = null } = {}
+    { skip = 0, limit = 100, beforeTimestamp = null }
   ) {
     try {
       // Kiểm tra xem channelId có hợp lệ không

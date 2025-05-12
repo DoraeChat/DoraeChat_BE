@@ -106,7 +106,7 @@ class MessageController {
     try {
       const { channelId } = req.params;
       const userId = req._id; //userId được lấy từ middleware xác thực
-      const { skip = 0, limit = 20 } = req.query; // Phân trang mặc định
+      const { skip = 0, limit = 100, beforeTimestamp = null } = req.query; // Phân trang mặc định
 
       if (!channelId) {
         return res.status(400).json({ message: "Channel ID is required" });
@@ -116,8 +116,7 @@ class MessageController {
       const messages = await MessageService.getMessagesByChannelId(
         channelId,
         userId,
-        parseInt(skip),
-        parseInt(limit)
+        { skip: parseInt(skip), limit: parseInt(limit), beforeTimestamp }
       );
       res.status(200).json(messages);
     } catch (error) {

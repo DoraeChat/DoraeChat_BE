@@ -613,7 +613,7 @@ messageSchema.statics.getListByChannelIdAndUserId = async function (
   // Thiết lập pipeline
   const pipeline = [
     { $match: matchStage },
-    { $sort: { createdAt: 1 } }, // Sắp xếp theo createdAt tăng dần
+    { $sort: { createdAt: -1 } }, // Sắp xếp theo createdAt giảm dần
     { $skip: skip },
     { $limit: limit },
     {
@@ -634,6 +634,7 @@ messageSchema.statics.getListByChannelIdAndUserId = async function (
       },
     },
     { $unwind: "$memberId.user" }, // Giải nén mảng user
+    { $sort: { createdAt: 1 } },
     {
       $project: {
         _id: 1,

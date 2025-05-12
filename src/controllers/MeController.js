@@ -4,8 +4,8 @@ const UserController = {
   // [GET] /api/me/profile/:userId
   async getById(req, res, next) {
     try {
-      const { id } = req.params;
-      const user = await MeService.getById(id);
+      const { _id } = req;
+      const user = await MeService.getById(_id);
       res.json(user);
     } catch (error) {
       next(error);
@@ -15,8 +15,9 @@ const UserController = {
   // [PUT] /api/me/profile
   async updateUser(req, res, next) {
     try {
+      const { _id } = req;
       const user = req.body;
-      const updatedUser = await MeService.updateUser(user.id, user);
+      const updatedUser = await MeService.updateUser(_id, user);
       res.json(updatedUser);
     } catch (error) {
       next(error);
@@ -26,8 +27,8 @@ const UserController = {
   // [PUT] /api/me/avatar
   async updateAvatarUser(req, res, next) {
     try {
-      const { id } = req.body;
-      const updatedUser = await MeService.updateAvatarUser(id, req.file);
+      const { _id } = req;
+      const updatedUser = await MeService.updateAvatarUser(_id, req.file);
 
       res.json({
         message: "User avatar is updated successfully!",
@@ -41,8 +42,8 @@ const UserController = {
   // [PUT] /api/me/cover
   async updateCoverUser(req, res, next) {
     try {
-      const { id } = req.body;
-      const updatedUser = await MeService.updateCoverUser(id, req.file);
+      const { _id } = req;
+      const updatedUser = await MeService.updateCoverUser(_id, req.file);
 
       res.json({
         message: "User cover is updated successfully!",
@@ -56,8 +57,9 @@ const UserController = {
   // [PUT] /api/me/password
   async updatePassword(req, res, next) {
     try {
-      const { id, oldPassword, newPassword } = req.body;
-      await MeService.updatePassword(id, oldPassword, newPassword);
+      const { _id } = req;
+      const { oldPassword, newPassword } = req.body;
+      await MeService.updatePassword(_id, oldPassword, newPassword);
       res.json({ message: "Password is updated" });
     } catch (error) {
       next(error);

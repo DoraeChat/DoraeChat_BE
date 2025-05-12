@@ -48,7 +48,7 @@ const channelRoutes = require("./routes/ChannelRoutes")(socketHandler);
 
     app.use("/api/auth", authRoutes);
     app.use("/api/users", userRoutes);
-    app.use("/api/me", meRoutes);
+    app.use("/api/me", auth, meRoutes);
     app.use("/api/conversations", auth, conversationRoutes);
     app.use("/api/messages", auth, messageRouter);
     app.use("/api/friends", auth, friendRouter);

@@ -189,19 +189,20 @@ const messageSchema = new Schema(
       targetId: { type: ObjectId }, // Người được thêm
     },
     tags: {
-      type: [ObjectId],
+      type: [Schema.Types.ObjectId],
       default: [],
+      ref: "Member",
     },
     tagPositions: {
       type: [
         {
-          memberId: ObjectId,
+          memberId: { type: Schema.Types.ObjectId, ref: "Member" },
           start: Number,
           end: Number,
-          name: String
-        }
+          name: String,
+        },
       ],
-      default: []
+      default: [],
     },
     replyMessageId: ObjectId,
     type: {
@@ -657,6 +658,8 @@ messageSchema.statics.getListByChannelIdAndUserId = async function (
           name: "$memberId.user.name",
           avatar: "$memberId.user.avatar",
         },
+        tags: 1,
+        tagPositions: 1,
       },
     },
   ];
@@ -836,13 +839,17 @@ messageSchema.statics.selectVoteOption = async function (
   const optionObjectId = new Types.ObjectId(optionId);
 
   // Kiểm tra option có tồn tại không
-  const targetOption = vote.options.find(opt => opt._id.equals(optionObjectId));
+  const targetOption = vote.options.find((opt) =>
+    opt._id.equals(optionObjectId)
+  );
   if (!targetOption) {
     throw new Error("Option không tồn tại");
   }
 
   // Kiểm tra member đã chọn option này chưa
-  const alreadySelected = targetOption.members.some(m => m.memberId.equals(memberObjectId));
+  const alreadySelected = targetOption.members.some((m) =>
+    m.memberId.equals(memberObjectId)
+  );
   if (alreadySelected) {
     return vote; // Không làm gì nếu đã chọn rồi
   }
@@ -851,7 +858,7 @@ messageSchema.statics.selectVoteOption = async function (
     memberId: memberObjectId,
     name: memberInfo.name,
     avatar: memberInfo.avatar,
-    avatarColor: memberInfo.avatarColor
+    avatarColor: memberInfo.avatarColor,
   };
 
   // Xóa member khỏi tất cả options khác (nếu không phải multiple choice)
@@ -880,7 +887,11 @@ messageSchema.statics.deselectVoteOption = async function (
 ) {
   return await this.findByIdAndUpdate(
     voteId,
-    { $pull: { "options.$[option].members": { memberId: new Types.ObjectId(memberId) } } },
+    {
+      $pull: {
+        "options.$[option].members": { memberId: new Types.ObjectId(memberId) },
+      },
+    },
     {
       arrayFilters: [{ "option._id": new Types.ObjectId(optionId) }],
       new: true,

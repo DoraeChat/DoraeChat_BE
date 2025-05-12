@@ -11,7 +11,6 @@ const axios = require("axios");
 const ZALO_TTS_API_URL = "https://api.zalo.ai/v1/tts/synthesize";
 const ZALO_TTS_API_KEY = process.env.ZALO_TTS_API_KEY;
 
-
 class MessageService {
   // 🔹 Gửi tin nhắn văn bản
   async sendTextMessage(
@@ -19,7 +18,9 @@ class MessageService {
     conversationId,
     content,
     channelId = null,
-    type
+    type,
+    tags = null,
+    tagPositions = null
   ) {
     if (!content.trim()) {
       throw new Error("Message content cannot be empty");
@@ -71,12 +72,46 @@ class MessageService {
       validChannelId = channel._id;
     }
 
+    // Validate tags và tagPositions
+    if (tags.length > 0 || tagPositions.length > 0) {
+      // Kiểm tra số lượng tags và tagPositions phải bằng nhau
+      if (tags.length !== tagPositions.length) {
+        throw new Error("Tags and tagPositions must have the same length");
+      }
+
+      // Kiểm tra các member được tag có trong conversation không
+      const taggedMembers = await Member.find({
+        _id: { $in: tags },
+        conversationId: conversationId,
+      });
+
+      if (taggedMembers.length !== tags.length) {
+        throw new Error("Some tagged members are not in this conversation");
+      }
+
+      // Kiểm tra tagPositions có hợp lệ không
+      tagPositions.forEach((pos) => {
+        if (
+          !pos.memberId ||
+          !pos.start ||
+          !pos.end ||
+          pos.start >= pos.end ||
+          pos.start < 0 ||
+          pos.end > content.length
+        ) {
+          throw new Error("Invalid tag positions");
+        }
+      });
+    }
+
     // Tạo tin nhắn mới
     const newMessage = await Message.create({
       memberId: member._id,
       content,
       type: type || "TEXT",
       conversationId,
+      tags: tags || [],
+      tagPositions: tagPositions || [],
       ...(validChannelId && { channelId: validChannelId }), // Chỉ thêm channelId nếu có
     });
 
@@ -96,6 +131,7 @@ class MessageService {
 
     return populatedMessage;
   }
+
   async reactToMessage(userId, conversationId, messageId, reactType) {
     const member = await Member.getByConversationIdAndUserId(
       conversationId,
@@ -747,7 +783,6 @@ class MessageService {
       newLastMessage,
     };
   }
-
 
   /**
    * Convert a given text to speech using Zalo TTS API

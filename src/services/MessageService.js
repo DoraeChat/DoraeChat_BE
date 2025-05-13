@@ -93,8 +93,8 @@ class MessageService {
       tagPositions.forEach((pos) => {
         if (
           !pos.memberId ||
-          !pos.start ||
-          !pos.end ||
+          pos.start === undefined ||
+          pos.end === undefined ||
           pos.start >= pos.end ||
           pos.start < 0 ||
           pos.end > content.length

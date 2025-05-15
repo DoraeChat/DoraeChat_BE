@@ -1,6 +1,7 @@
 const SOCKET_EVENTS = require("../constants/socketEvents");
 const MessageService = require("../services/MessageService");
-
+const UserService = require("../services/UserService");
+const Conversation = require("../models/Conversation");
 class MessageController {
   constructor(socketHandler) {
     this.socketHandler = socketHandler;
@@ -16,7 +17,8 @@ class MessageController {
   // [POST] /api/message/text - Gửi tin nhắn văn bản
   async sendTextMessage(req, res) {
     try {
-      const { conversationId, content, channelId, type, tags, tagPositions } = req.body;
+      const { conversationId, content, channelId, type, tags, tagPositions } =
+        req.body;
       const userId = req._id;
 
       if (!conversationId || !content) {
@@ -35,12 +37,30 @@ class MessageController {
         tagPositions
       );
 
+      const conversation = await Conversation.findById(conversationId);
       // Phát sự kiện socket đến conversationId (và channelId nếu có)
       this.socketHandler.emitToConversation(
         conversationId,
         SOCKET_EVENTS.RECEIVE_MESSAGE,
         message
       );
+
+      if (tags && tags.length > 0) {
+        const userIds = await Promise.all(
+          tags.map(async (memberId) => {
+            const user = await UserService.getByMemberId(memberId);
+            return user._id;
+          })
+        );
+        // // Emit tagged event to each userId
+        userIds.forEach((userId) => {
+          this.socketHandler.emitToUser(
+            userId.toString(),
+            SOCKET_EVENTS.TAGGED,
+            { content: message.content, conversationName: conversation.name }
+          );
+        });
+      }
 
       res.status(201).json(message);
     } catch (error) {
@@ -312,13 +332,15 @@ class MessageController {
     console.log("controller convertTextToSpeech");
     try {
       const { text, speaker_id, speed } = req.body;
-      const url = await MessageService.convertTextToSpeech(text, { speaker_id, speed });
+      const url = await MessageService.convertTextToSpeech(text, {
+        speaker_id,
+        speed,
+      });
       return res.json({ success: true, url });
     } catch (error) {
       return res.status(400).json({ success: false, message: error.message });
     }
   }
-
 }
 
 module.exports = MessageController;

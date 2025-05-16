@@ -189,7 +189,19 @@ const messageSchema = new Schema(
       targetId: { type: ObjectId }, // Người được thêm
     },
     tags: {
-      type: [ObjectId],
+      type: [Schema.Types.ObjectId],
+      default: [],
+      ref: "Member",
+    },
+    tagPositions: {
+      type: [
+        {
+          memberId: { type: Schema.Types.ObjectId, ref: "Member" },
+          start: Number,
+          end: Number,
+          name: String,
+        },
+      ],
       default: [],
     },
     replyMessageId: ObjectId,
@@ -358,6 +370,7 @@ messageSchema.statics.createMessage = async function ({
   await message.save();
   return message;
 };
+
 messageSchema.statics.addReact = async function (
   messageId,
   memberId,
@@ -600,7 +613,7 @@ messageSchema.statics.getListByChannelIdAndUserId = async function (
   // Thiết lập pipeline
   const pipeline = [
     { $match: matchStage },
-    { $sort: { createdAt: 1 } }, // Sắp xếp theo createdAt tăng dần
+    { $sort: { createdAt: -1 } }, // Sắp xếp theo createdAt giảm dần
     { $skip: skip },
     { $limit: limit },
     {
@@ -621,6 +634,7 @@ messageSchema.statics.getListByChannelIdAndUserId = async function (
       },
     },
     { $unwind: "$memberId.user" }, // Giải nén mảng user
+    { $sort: { createdAt: 1 } },
     {
       $project: {
         _id: 1,
@@ -645,6 +659,8 @@ messageSchema.statics.getListByChannelIdAndUserId = async function (
           name: "$memberId.user.name",
           avatar: "$memberId.user.avatar",
         },
+        tags: 1,
+        tagPositions: 1,
       },
     },
   ];

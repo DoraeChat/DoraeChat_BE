@@ -39,20 +39,20 @@ const getFileTypeCategory = (mimetype) => {
   if (
     [
       // ZIP
-      "application/zip",              // Chuẩn chính thức (IANA)
+      "application/zip", // Chuẩn chính thức (IANA)
       "application/x-zip-compressed", // Dự phòng cho ZIP
       "application/x-compressed",
       // RAR
-      "application/vnd.rar",          // Chuẩn hiện đại (từ 2015)
+      "application/vnd.rar", // Chuẩn hiện đại (từ 2015)
       "application/x-rar-compressed", // Phổ biến trước đây
       "application/x-compressed",
 
       // 7Z
-      "application/x-7z-compressed",  // Dành cho file .7z
+      "application/x-7z-compressed", // Dành cho file .7z
 
       // TAR
-      "application/x-tar",            // Dành cho file .tar
-      "application/gzip",             // Dành cho .tar.gz (nếu cần)
+      "application/x-tar", // Dành cho file .tar
+      "application/gzip", // Dành cho .tar.gz (nếu cần)
     ].includes(mimetype)
   )
     return "archive";
@@ -108,20 +108,20 @@ const fileTypeConfigs = {
     maxSize: 10 * 1024 * 1024, // 10MB
     allowedMimeTypes: [
       // ZIP
-      "application/zip",              // Chuẩn chính thức (IANA)
+      "application/zip", // Chuẩn chính thức (IANA)
       "application/x-zip-compressed", // Dự phòng cho ZIP
       "application/x-compressed",
       // RAR
-      "application/vnd.rar",          // Chuẩn hiện đại (từ 2015)
+      "application/vnd.rar", // Chuẩn hiện đại (từ 2015)
       "application/x-rar-compressed", // Phổ biến trước đây
       "application/x-compressed",
 
       // 7Z
-      "application/x-7z-compressed",  // Dành cho file .7z
+      "application/x-7z-compressed", // Dành cho file .7z
 
       // TAR
-      "application/x-tar",            // Dành cho file .tar
-      "application/gzip",             // Dành cho .tar.gz (nếu cần)
+      "application/x-tar", // Dành cho file .tar
+      "application/gzip", // Dành cho .tar.gz (nếu cần)
     ],
   },
   text: {
@@ -153,11 +153,11 @@ const upload = multer({
       cb(
         null,
         fileCategory +
-        "-" +
-        file.fieldname +
-        "-" +
-        uniqueSuffix +
-        path.extname(file.originalname)
+          "-" +
+          file.fieldname +
+          "-" +
+          uniqueSuffix +
+          path.extname(file.originalname)
       );
     },
   }),
@@ -183,7 +183,8 @@ const upload = multer({
     if (file.size && file.size > config.maxSize) {
       return cb(
         new Error(
-          `File size exceeds the limit for ${fileCategory} files (${config.maxSize / (1024 * 1024)
+          `File size exceeds the limit for ${fileCategory} files (${
+            config.maxSize / (1024 * 1024)
           }MB)`
         ),
         false
@@ -212,8 +213,10 @@ const checkFileSize = (req, res, next) => {
       fs.unlinkSync(file.path);
       return next(
         new Error(
-          `File '${file.originalname
-          }' exceeds the maximum size limit for ${fileCategory} files (${maxSize / (1024 * 1024)
+          `File '${
+            file.originalname
+          }' exceeds the maximum size limit for ${fileCategory} files (${
+            maxSize / (1024 * 1024)
           }MB)`
         )
       );
@@ -261,8 +264,9 @@ const uploadImages = async (files, userId, type) => {
 
     const uploadPromises = fileArray.map(async (file) => {
       const uniqueSuffix = userId + "-" + formatDateToYYYYMMDD(Date.now());
-      const filename =
-        "image" + "-" + uniqueSuffix + "-" + file.path.slice(-36);
+
+      const basename = file.path.slice(-36).replace(/\.[^/.]+$/, "");
+      const filename = "image-" + uniqueSuffix + "-" + basename;
 
       const uploadOptions = {
         folder: type || "images",
@@ -275,14 +279,23 @@ const uploadImages = async (files, userId, type) => {
         public_id: filename,
       };
 
-      const result = await cloudinary.uploader.upload(file.path, uploadOptions);
+      try {
+        const result = await cloudinary.uploader.upload(
+          file.path,
+          uploadOptions
+        );
+        
+        fs.unlinkSync(file.path);
+  
+        return {
+          url: result.secure_url,
+          publicId: result.public_id,
+        };
 
-      fs.unlinkSync(file.path);
-
-      return {
-        url: result.secure_url,
-        publicId: result.public_id,
-      };
+      } catch (error) {
+        console.error("Upload failed:", error);
+        throw error;
+      }
     });
 
     return Promise.all(uploadPromises);
@@ -373,11 +386,16 @@ const uploadFile = async (file, userId, originalFilename) => {
     let downloadUrl;
     if (fileCategory === "pdf" || fileCategory === "archive") {
       // Thêm flags=attachment để báo hiệu tải xuống
-      downloadUrl = `https://res.cloudinary.com/${cloudinary.config().cloud_name}/raw/upload/files/${fileCategory}/${result.display_name}`;
+      downloadUrl = `https://res.cloudinary.com/${
+        cloudinary.config().cloud_name
+      }/raw/upload/files/${fileCategory}/${result.display_name}`;
     }
 
     return {
-      url: (fileCategory === "pdf" || fileCategory === "archive") ? downloadUrl : result.secure_url,
+      url:
+        fileCategory === "pdf" || fileCategory === "archive"
+          ? downloadUrl
+          : result.secure_url,
       publicId: result.public_id,
       fileType: fileType,
       format: fileExtension,

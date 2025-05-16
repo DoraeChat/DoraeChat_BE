@@ -1,6 +1,7 @@
 const SOCKET_EVENTS = require("../constants/socketEvents");
 const MessageService = require("../services/MessageService");
-
+const UserService = require("../services/UserService");
+const Conversation = require("../models/Conversation");
 class MessageController {
   constructor(socketHandler) {
     this.socketHandler = socketHandler;
@@ -16,7 +17,8 @@ class MessageController {
   // [POST] /api/message/text - Gửi tin nhắn văn bản
   async sendTextMessage(req, res) {
     try {
-      const { conversationId, content, channelId, type } = req.body;
+      const { conversationId, content, channelId, type, tags, tagPositions } =
+        req.body;
       const userId = req._id;
 
       if (!conversationId || !content) {
@@ -30,15 +32,35 @@ class MessageController {
         conversationId,
         content,
         channelId, // Truyền channelId (có thể là null)
-        type
+        type,
+        tags,
+        tagPositions
       );
 
+      const conversation = await Conversation.findById(conversationId);
       // Phát sự kiện socket đến conversationId (và channelId nếu có)
       this.socketHandler.emitToConversation(
         conversationId,
         SOCKET_EVENTS.RECEIVE_MESSAGE,
         message
       );
+
+      if (tags && tags.length > 0) {
+        const userIds = await Promise.all(
+          tags.map(async (memberId) => {
+            const user = await UserService.getByMemberId(memberId);
+            return user._id;
+          })
+        );
+        // // Emit tagged event to each userId
+        userIds.forEach((userId) => {
+          this.socketHandler.emitToUser(
+            userId.toString(),
+            SOCKET_EVENTS.TAGGED,
+            { content: message.content, conversationName: conversation.name }
+          );
+        });
+      }
 
       res.status(201).json(message);
     } catch (error) {
@@ -107,7 +129,7 @@ class MessageController {
     try {
       const { channelId } = req.params;
       const userId = req._id; //userId được lấy từ middleware xác thực
-      const { skip = 0, limit = 20 } = req.query; // Phân trang mặc định
+      const { skip = 0, limit = 100, beforeTimestamp = null } = req.query; // Phân trang mặc định
 
       if (!channelId) {
         return res.status(400).json({ message: "Channel ID is required" });
@@ -117,8 +139,7 @@ class MessageController {
       const messages = await MessageService.getMessagesByChannelId(
         channelId,
         userId,
-        parseInt(skip),
-        parseInt(limit)
+        { skip: parseInt(skip), limit: parseInt(limit), beforeTimestamp }
       );
       res.status(200).json(messages);
     } catch (error) {

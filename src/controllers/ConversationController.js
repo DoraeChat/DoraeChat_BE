@@ -157,6 +157,11 @@ class ConversationController {
           SOCKET_EVENTS.RECEIVE_MESSAGE,
           notifyMessage
         );
+        this.socketHandler.emitToConversation(
+          conversationId,
+          SOCKET_EVENTS.UPDATE_AVATAR_GROUP_CONVERSATION,
+          { conversationId, avatar }
+        );
       }
       res.status(200).json(updatedConversation);
     } catch (error) {

@@ -26,8 +26,7 @@ channelSchema.statics.checkExistence = async (query, message) => {
 };
 
 channelSchema.statics.getById = async (_id, message = "Channel") => {
-  if (!ObjectId.isValid(_id))
-    throw new NotFoundError(`${message}`);
+  if (!ObjectId.isValid(_id)) throw new NotFoundError(`${message}`);
   return await Channel.checkExistence({ _id }, message);
 };
 

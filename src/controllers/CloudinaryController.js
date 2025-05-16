@@ -1,4 +1,3 @@
-const { uploadImages } = require("../config/cloudinary");
 const CloudinaryService = require("../services/CloudinaryService");
 
 const CloudinaryController = {
@@ -47,6 +46,24 @@ const CloudinaryController = {
       res.json({
         message: "File is uploaded successfully!",
         file: uploadFile,
+      });
+    } catch (error) {
+      next(error);
+    }
+  },
+
+  async uploadImage(req, res, next) {
+    try {
+      const { id } = req.body;
+      const uploadImage = await CloudinaryService.uploadImage(
+        req.file,
+        id,
+        "avatar"
+      );
+
+      res.json({
+        message: "Image is uploaded successfully!",
+        image: uploadImage,
       });
     } catch (error) {
       next(error);

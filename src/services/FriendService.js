@@ -40,6 +40,7 @@ class FriendService {
           username: 1,
           avatar: 1,
           avatarColor: 1,
+          coverImage: 1,
         },
       },
     ]);

@@ -47,6 +47,14 @@ class ChannelController {
         channel
       );
       res.status(200).json(updatedChannel);
+
+      if (this.socketHandler) {
+        this.socketHandler.emitToConversation(
+          updatedChannel.conversationId.toString(),
+          SOCKET_EVENTS.UPDATE_CHANNEL,
+          updatedChannel
+        );
+      }
     } catch (err) {
       next(err);
     }
@@ -64,6 +72,14 @@ class ChannelController {
         conversationId
       );
       res.status(200).json(deletedChannel);
+
+      if (this.socketHandler) {
+        this.socketHandler.emitToConversation(
+          deletedChannel.conversationId.toString(),
+          SOCKET_EVENTS.DELETE_CHANNEL,
+          deletedChannel
+        );
+      }
     } catch (err) {
       next(err);
     }

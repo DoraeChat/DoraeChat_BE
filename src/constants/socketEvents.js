@@ -22,11 +22,13 @@ const SOCKET_EVENTS = {
   DELETE_CONVERSATION: "delete-conversation",
   TRANSFER_ADMIN: "transfer-admin",
   UPDATE_NAME_CONVERSATION: "update-name-conversation",
+  UPDATE_AVATAR_GROUP_CONVERSATION: "update-avatar-group-conversation",
 
   //Messages
   RECEIVE_MESSAGE: "receive-message",
   MESSAGE_RECALLED: "message-recalled",
   MESSAGE_DELETED_FOR_ME: "message_deleted_for_me",
+  TAGGED: "tagged",
 
   // Vote
   CREATE_VOTE: "create-vote",
@@ -73,6 +75,8 @@ const SOCKET_EVENTS = {
 
   // Channel
   NEW_CHANNEL: "new-channel",
+  DELETE_CHANNEL: "delete-channel",
+  UPDATE_CHANNEL: "update-channel",
 };
 
 module.exports = SOCKET_EVENTS;

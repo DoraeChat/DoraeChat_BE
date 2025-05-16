@@ -28,6 +28,7 @@ const SOCKET_EVENTS = {
   RECEIVE_MESSAGE: "receive-message",
   MESSAGE_RECALLED: "message-recalled",
   MESSAGE_DELETED_FOR_ME: "message_deleted_for_me",
+  REACT_TO_MESSAGE: "react-to-message",
   TAGGED: "tagged",
 
   // Vote

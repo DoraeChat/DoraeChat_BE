@@ -692,7 +692,7 @@ messageSchema.statics.getListForIndividualConversation = async function (
   }
 
   const messages = await this.find(query)
-    .sort({ createdAt: -1 })
+    .sort({ createdAt: 1 })
     .skip(skip)
     .limit(limit)
     .populate({
@@ -706,6 +706,10 @@ messageSchema.statics.getListForIndividualConversation = async function (
         path: "memberId",
         select: "userId name",
       },
+    })
+    .populate({
+      path: "reacts.memberId",
+      select: "name",
     })
     .lean();
 

@@ -104,9 +104,9 @@ class MessageController {
   // [GET] /api/messages/:conversationId - Lấy danh sách tin nhắn theo conversationId 1-1
   async getMessagesByConversation(req, res) {
     try {
-      const { conversationId, skip } = req.params;
+      const { conversationId } = req.params;
       const userId = req._id; //userId được lấy từ middleware xác thực
-
+      const { skip = 0, limit = 100, beforeTimestamp = null } = req.query; // Phân trang mặc định
       if (!conversationId) {
         return res.status(400).json({ message: "Conversation ID is required" });
       }
@@ -116,7 +116,7 @@ class MessageController {
         conversationId,
         userId,
         {
-          skip: parseInt(skip) || 0,
+          skip: parseInt(skip),
         }
       );
       res.status(200).json(messages);
@@ -319,12 +319,11 @@ class MessageController {
         reactType
       );
 
-      // this.socketHandler.emitToConversation(
-      //   conversationId,
-      //   SOCKET_EVENTS.MESSAGE_REACTED,
-      //   message
-      // );
-
+      this.socketHandler.emitToConversation(
+        conversationId,
+        SOCKET_EVENTS.REACT_TO_MESSAGE,
+        message
+      );
       res.status(200).json(message);
     } catch (error) {
       res.status(400).json({ message: error.message });

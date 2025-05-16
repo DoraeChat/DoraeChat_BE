@@ -82,7 +82,7 @@ class MessageController {
   // [GET] /api/messages/:conversationId - Lấy danh sách tin nhắn theo conversationId 1-1
   async getMessagesByConversation(req, res) {
     try {
-      const { conversationId } = req.params;
+      const { conversationId, skip } = req.params;
       const userId = req._id; //userId được lấy từ middleware xác thực
 
       if (!conversationId) {
@@ -92,7 +92,10 @@ class MessageController {
       // Gọi phương thức từ MessageService để lấy danh sách tin nhắn
       const messages = await MessageService.getMessagesByConversationId(
         conversationId,
-        userId
+        userId,
+        {
+          skip: parseInt(skip) || 0,
+        }
       );
       res.status(200).json(messages);
     } catch (error) {
@@ -308,16 +311,19 @@ class MessageController {
   }
 
   async convertTextToSpeech(req, res) {
+    ``;
     console.log("controller convertTextToSpeech");
     try {
       const { text, speaker_id, speed } = req.body;
-      const url = await MessageService.convertTextToSpeech(text, { speaker_id, speed });
+      const url = await MessageService.convertTextToSpeech(text, {
+        speaker_id,
+        speed,
+      });
       return res.json({ success: true, url });
     } catch (error) {
       return res.status(400).json({ success: false, message: error.message });
     }
   }
-
 }
 
 module.exports = MessageController;

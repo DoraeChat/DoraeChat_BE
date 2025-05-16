@@ -11,7 +11,6 @@ const axios = require("axios");
 const ZALO_TTS_API_URL = "https://api.zalo.ai/v1/tts/synthesize";
 const ZALO_TTS_API_KEY = process.env.ZALO_TTS_API_KEY;
 
-
 class MessageService {
   // 🔹 Gửi tin nhắn văn bản
   async sendTextMessage(
@@ -328,7 +327,7 @@ class MessageService {
   async getMessagesByConversationId(
     conversationId,
     userId,
-    { skip = 0, limit = 100, beforeTimestamp = null } = {}
+    { skip = 0, limit = 7, beforeTimestamp = null } = {}
   ) {
     // 1. Validate conversation
     const conversation = await Conversation.findById(conversationId);
@@ -747,7 +746,6 @@ class MessageService {
       newLastMessage,
     };
   }
-
 
   /**
    * Convert a given text to speech using Zalo TTS API

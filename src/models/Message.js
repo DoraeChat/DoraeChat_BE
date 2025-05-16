@@ -676,7 +676,7 @@ messageSchema.statics.getListForIndividualConversation = async function (
   }
 
   const messages = await this.find(query)
-    .sort({ createdAt: 1 })
+    .sort({ createdAt: -1 })
     .skip(skip)
     .limit(limit)
     .populate({
@@ -824,13 +824,17 @@ messageSchema.statics.selectVoteOption = async function (
   const optionObjectId = new Types.ObjectId(optionId);
 
   // Kiểm tra option có tồn tại không
-  const targetOption = vote.options.find(opt => opt._id.equals(optionObjectId));
+  const targetOption = vote.options.find((opt) =>
+    opt._id.equals(optionObjectId)
+  );
   if (!targetOption) {
     throw new Error("Option không tồn tại");
   }
 
   // Kiểm tra member đã chọn option này chưa
-  const alreadySelected = targetOption.members.some(m => m.memberId.equals(memberObjectId));
+  const alreadySelected = targetOption.members.some((m) =>
+    m.memberId.equals(memberObjectId)
+  );
   if (alreadySelected) {
     return vote; // Không làm gì nếu đã chọn rồi
   }
@@ -839,7 +843,7 @@ messageSchema.statics.selectVoteOption = async function (
     memberId: memberObjectId,
     name: memberInfo.name,
     avatar: memberInfo.avatar,
-    avatarColor: memberInfo.avatarColor
+    avatarColor: memberInfo.avatarColor,
   };
 
   // Xóa member khỏi tất cả options khác (nếu không phải multiple choice)
@@ -868,7 +872,11 @@ messageSchema.statics.deselectVoteOption = async function (
 ) {
   return await this.findByIdAndUpdate(
     voteId,
-    { $pull: { "options.$[option].members": { memberId: new Types.ObjectId(memberId) } } },
+    {
+      $pull: {
+        "options.$[option].members": { memberId: new Types.ObjectId(memberId) },
+      },
+    },
     {
       arrayFilters: [{ "option._id": new Types.ObjectId(optionId) }],
       new: true,

@@ -8,7 +8,10 @@ const MessageRouter = (socketHandler) => {
   router.post("/react", messageController.reactToMessage);
   router.post("/text", messageController.sendTextMessage);
   router.post("/reply", messageController.sendReplyMessage);
-  router.get("/:conversationId", messageController.getMessagesByConversation);
+  router.get(
+    "/:conversationId/:skip",
+    messageController.getMessagesByConversation
+  );
   router.get("/channel/:channelId", messageController.getMessagesByChannelId);
   router.delete(
     "/:id/conversation/:conversationId",

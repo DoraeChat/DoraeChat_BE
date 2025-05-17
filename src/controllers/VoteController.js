@@ -29,7 +29,7 @@ class VoteController {
       const vote = req.body;
       const newVote = await VoteService.addVote(vote);
       const updatedVote = { ...newVote.toObject(), userId: req._id };
-      console.log("newVote ne", updatedVote);
+      res.json(updatedVote);
 
       if (this.socketHandler) {
         this.socketHandler.emitToConversation(

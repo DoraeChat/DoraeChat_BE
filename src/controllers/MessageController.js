@@ -11,14 +11,20 @@ class MessageController {
     this.sendFileMessage = this.sendFileMessage.bind(this);
     this.sendVideoMessage = this.sendVideoMessage.bind(this);
     this.deleteMessageForMe = this.deleteMessageForMe.bind(this);
-    this.sendReplyMessage = this.sendReplyMessage.bind(this);
     this.reactToMessage = this.reactToMessage.bind(this);
   }
   // [POST] /api/message/text - Gửi tin nhắn văn bản
   async sendTextMessage(req, res) {
     try {
-      const { conversationId, content, channelId, type, tags, tagPositions } =
-        req.body;
+      const {
+        conversationId,
+        content,
+        channelId,
+        type,
+        tags,
+        tagPositions,
+        replyMessageId,
+      } = req.body;
       const userId = req._id;
 
       if (!conversationId || !content) {
@@ -34,7 +40,8 @@ class MessageController {
         channelId, // Truyền channelId (có thể là null)
         type,
         tags,
-        tagPositions
+        tagPositions,
+        replyMessageId
       );
 
       const conversation = await Conversation.findById(conversationId);
@@ -61,39 +68,6 @@ class MessageController {
           );
         });
       }
-
-      res.status(201).json(message);
-    } catch (error) {
-      res.status(400).json({ message: error.message });
-    }
-  }
-  // [POST] /api/message/reply - Gửi tin nhắn trả lời
-  async sendReplyMessage(req, res) {
-    try {
-      const { conversationId, content, replyMessageId, channelId, type } =
-        req.body;
-      const userId = req._id;
-
-      if (!conversationId || !content || !replyMessageId) {
-        return res.status(400).json({
-          message: "Conversation ID, content, and replyMessageId are required",
-        });
-      }
-
-      const message = await MessageService.sendReplyMessage(
-        userId,
-        conversationId,
-        content,
-        replyMessageId,
-        channelId,
-        type
-      );
-
-      this.socketHandler.emitToConversation(
-        conversationId,
-        SOCKET_EVENTS.RECEIVE_MESSAGE,
-        message
-      );
 
       res.status(201).json(message);
     } catch (error) {

@@ -698,6 +698,10 @@ messageSchema.statics.getListForIndividualConversation = async function (
     .populate({
       path: "memberId",
       select: "userId name",
+      populate: {
+        path: "userId",
+        select: "avatar",
+      },
     })
     .populate({
       path: "replyMessageId",
@@ -711,7 +715,18 @@ messageSchema.statics.getListForIndividualConversation = async function (
       path: "reacts.memberId",
       select: "name",
     })
-    .lean();
+    .lean()
+    .then(messages => 
+    messages.map(message => {
+      // Đưa avatar vào thẳng memberId
+      if (message.memberId?.userId?.avatar) {
+        message.memberId.avatar = message.memberId.userId.avatar;
+        message.memberId.userId = message.memberId.userId._id;  // Xóa userId nếu không cần
+      }
+
+      return message;
+    })
+  );
 
   return messages;
 };

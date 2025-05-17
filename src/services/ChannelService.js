@@ -78,6 +78,6 @@ class ChannelService {
   async getById(channelId) {
     return await Channel.getById(channelId);
   }
-};
+}
 
 module.exports = new ChannelService();

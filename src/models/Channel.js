@@ -2,6 +2,7 @@ const mongoose = require("mongoose");
 const Schema = mongoose.Schema;
 const ObjectId = mongoose.Types.ObjectId;
 const NotFoundError = require("../exceptions/NotFoundError");
+const CustomError = require("../exceptions/CustomError");
 
 const channelSchema = new Schema(
   {
@@ -42,10 +43,24 @@ channelSchema.statics.getAllChannelByConversationId = async (
 };
 
 channelSchema.statics.addChannel = async (channel) => {
+  const existingChannel = await Channel.findOne({
+    name: channel.name.trim(),
+  });
+  if (existingChannel) {
+    throw new CustomError("Channel name already exists", 400);
+  }
+
   return await Channel.create(channel);
 };
 
 channelSchema.statics.updateChannel = async (channelId, channel) => {
+  const existingChannel = await Channel.findOne({
+    name: channel.name.trim(),
+  });
+  if (existingChannel) {
+    throw new CustomError("Channel name already exists", 400);
+  }
+
   const channelUpdated = await Channel.findOneAndUpdate(
     { _id: channelId },
     { $set: channel },

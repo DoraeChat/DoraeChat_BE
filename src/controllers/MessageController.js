@@ -152,7 +152,7 @@ class MessageController {
 
   async sendImageMessage(req, res) {
     try {
-      const { conversationId, channelId } = req.body;
+      const { conversationId, channelId, replyMessageId } = req.body;
       const userId = req._id;
 
       if (!conversationId || !req.files || req.files.length === 0)
@@ -162,7 +162,8 @@ class MessageController {
         userId,
         conversationId,
         req.files,
-        channelId
+        channelId,
+        replyMessageId
       );
 
       // Emit từng ảnh
@@ -184,7 +185,7 @@ class MessageController {
 
   async sendVideoMessage(req, res) {
     try {
-      const { conversationId, channelId } = req.body;
+      const { conversationId, channelId, replyMessageId } = req.body;
       const userId = req._id;
 
       if (!conversationId || !req.file)
@@ -194,7 +195,8 @@ class MessageController {
         userId,
         conversationId,
         req.file,
-        channelId
+        channelId,
+        replyMessageId
       );
 
       this.socketHandler.emitToConversation(
@@ -211,7 +213,7 @@ class MessageController {
 
   async sendFileMessage(req, res) {
     try {
-      const { conversationId, channelId } = req.body;
+      const { conversationId, channelId, replyMessageId } = req.body;
       const userId = req._id;
 
       if (!conversationId || !req.file)
@@ -221,7 +223,8 @@ class MessageController {
         userId,
         conversationId,
         req.file,
-        channelId
+        channelId,
+        replyMessageId
       );
 
       this.socketHandler.emitToConversation(

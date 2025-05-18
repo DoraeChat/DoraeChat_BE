@@ -634,6 +634,14 @@ messageSchema.statics.getListByChannelIdAndUserId = async function (
       },
     },
     { $unwind: "$memberId.user" }, // Giải nén mảng user
+    {
+      $lookup: {
+        from: "members",
+        localField: "reacts.memberId",
+        foreignField: "_id",
+        as: "reactMembers",
+      },
+    },
     { $sort: { createdAt: 1 } },
     {
       $project: {
@@ -653,7 +661,40 @@ messageSchema.statics.getListByChannelIdAndUserId = async function (
         isMultipleChoice: 1,
         isAnonymous: 1,
         lockedVote: 1,
-        reacts: 1,
+        reacts: {
+          $map: {
+            input: "$reacts",
+            as: "reactItem",
+            in: {
+              _id: "$$reactItem._id",
+              type: "$$reactItem.type",
+              memberId: {
+                _id: "$$reactItem.memberId",
+                name: {
+                  $let: {
+                    vars: {
+                      memberObj: {
+                        $arrayElemAt: [
+                          {
+                            $filter: {
+                              input: "$reactMembers",
+                              as: "m",
+                              cond: {
+                                $eq: ["$$m._id", "$$reactItem.memberId"],
+                              },
+                            },
+                          },
+                          0,
+                        ],
+                      },
+                    },
+                    in: "$$memberObj.name",
+                  },
+                },
+              },
+            },
+          },
+        },
         memberId: {
           userId: "$memberId.user._id",
           name: "$memberId.user.name",
@@ -716,17 +757,17 @@ messageSchema.statics.getListForIndividualConversation = async function (
       select: "name",
     })
     .lean()
-    .then(messages => 
-    messages.map(message => {
-      // Đưa avatar vào thẳng memberId
-      if (message.memberId?.userId?.avatar) {
-        message.memberId.avatar = message.memberId.userId.avatar;
-        message.memberId.userId = message.memberId.userId._id;  // Xóa userId nếu không cần
-      }
+    .then((messages) =>
+      messages.map((message) => {
+        // Đưa avatar vào thẳng memberId
+        if (message.memberId?.userId?.avatar) {
+          message.memberId.avatar = message.memberId.userId.avatar;
+          message.memberId.userId = message.memberId.userId._id; // Xóa userId nếu không cần
+        }
 
-      return message;
-    })
-  );
+        return message;
+      })
+    );
 
   return messages;
 };

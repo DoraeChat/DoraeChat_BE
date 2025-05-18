@@ -132,14 +132,6 @@ class MessageService {
         path: "memberId",
         select: "userId name",
       })
-      .populate({
-        path: "replyMessageId",
-        select: "content type isDeleted memberId",
-        populate: {
-          path: "memberId",
-          select: "userId name",
-        },
-      })
       .lean();
 
     // Cập nhật lastMessageId trong conversation
@@ -514,7 +506,13 @@ class MessageService {
     return await Message.countUnread(time, conversationId);
   }
 
-  async sendImageMessage(userId, conversationId, files, channelId = null) {
+  async sendImageMessage(
+    userId,
+    conversationId,
+    files,
+    channelId = null,
+    replyMessageId = null
+  ) {
     const member = await Member.getByConversationIdAndUserId(
       conversationId,
       userId
@@ -540,7 +538,16 @@ class MessageService {
       conversationId,
       files
     );
-
+    // Kiểm tra replyMessageId (nếu có)
+    if (replyMessageId) {
+      const replyMessage = await Message.findById(replyMessageId);
+      if (
+        !replyMessage ||
+        replyMessage.conversationId.toString() !== conversationId.toString()
+      ) {
+        throw new CustomError("Invalid or non-existent reply message", 400);
+      }
+    }
     const messages = await Promise.all(
       uploaded.map(async (img) => {
         const message = await Message.create({
@@ -549,6 +556,7 @@ class MessageService {
           type: "IMAGE",
           conversationId,
           ...(validChannelId && { channelId: validChannelId }),
+          ...(replyMessageId && { replyMessageId }),
         });
         return Message.findById(message._id)
           .populate("memberId", "userId")
@@ -566,7 +574,13 @@ class MessageService {
     return messages;
   }
 
-  async sendVideoMessage(userId, conversationId, file, channelId = null) {
+  async sendVideoMessage(
+    userId,
+    conversationId,
+    file,
+    channelId = null,
+    replyMessageId = null
+  ) {
     const member = await Member.getByConversationIdAndUserId(
       conversationId,
       userId
@@ -592,6 +606,16 @@ class MessageService {
       conversationId,
       file
     );
+    // Kiểm tra replyMessageId (nếu có)
+    if (replyMessageId) {
+      const replyMessage = await Message.findById(replyMessageId);
+      if (
+        !replyMessage ||
+        replyMessage.conversationId.toString() !== conversationId.toString()
+      ) {
+        throw new CustomError("Invalid or non-existent reply message", 400);
+      }
+    }
 
     const message = await Message.create({
       memberId: member._id,
@@ -599,6 +623,7 @@ class MessageService {
       type: "VIDEO",
       conversationId,
       ...(validChannelId && { channelId: validChannelId }),
+      ...(replyMessageId && { replyMessageId }),
     });
 
     // Cập nhật lastMessageId cho cuộc trò chuyện
@@ -608,7 +633,13 @@ class MessageService {
     return Message.findById(message._id).populate("memberId", "userId").lean();
   }
 
-  async sendFileMessage(userId, conversationId, file, channelId = null) {
+  async sendFileMessage(
+    userId,
+    conversationId,
+    file,
+    channelId = null,
+    replyMessageId = null
+  ) {
     const member = await Member.getByConversationIdAndUserId(
       conversationId,
       userId
@@ -634,7 +665,16 @@ class MessageService {
       conversationId,
       file
     );
-
+    // Kiểm tra replyMessageId (nếu có)
+    if (replyMessageId) {
+      const replyMessage = await Message.findById(replyMessageId);
+      if (
+        !replyMessage ||
+        replyMessage.conversationId.toString() !== conversationId.toString()
+      ) {
+        throw new CustomError("Invalid or non-existent reply message", 400);
+      }
+    }
     const message = await Message.create({
       memberId: member._id,
       content: uploaded.url,
@@ -643,6 +683,7 @@ class MessageService {
       fileName: file.originalname,
       fileSize: file.size,
       ...(validChannelId && { channelId: validChannelId }),
+      ...(replyMessageId && { replyMessageId }),
     });
 
     // Cập nhật lastMessageId cho cuộc trò chuyện

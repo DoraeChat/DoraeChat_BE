@@ -63,7 +63,7 @@ const getFileTypeCategory = (mimetype) => {
 const fileTypeConfigs = {
   image: {
     maxSize: 10 * 1024 * 1024, // 10MB
-    allowedMimeTypes: ["image/jpeg", "image/png", "image/webp", "image/gif"],
+    allowedMimeTypes: ["image/jpeg", "image/png", "image/webp", "image/gif", "audio/x-m4a"],
   },
   video: {
     maxSize: 100 * 1024 * 1024, // 100MB
@@ -385,7 +385,7 @@ const uploadFile = async (file, userId, originalFilename) => {
 
     let downloadUrl;
     if (fileCategory === "pdf" || fileCategory === "archive") {
-      // Thêm flags=attachment để báo hiệu tải xuống
+      // url tải xuống
       downloadUrl = `https://res.cloudinary.com/${
         cloudinary.config().cloud_name
       }/raw/upload/files/${fileCategory}/${result.display_name}`;

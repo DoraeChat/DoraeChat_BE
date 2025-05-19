@@ -638,5 +638,14 @@ class ConversationController {
       res.status(400).json({ message: error.message });
     }
   }
+  async getInfoInviteLink(req, res) {
+    try {
+      const { token } = req.params;
+      const info = await ConversationService.getGroupInfoFromToken(token);
+      res.status(200).json(info);
+    } catch (error) {
+      res.status(400).json({ message: error.message });
+    }
+  }
 }
 module.exports = ConversationController;

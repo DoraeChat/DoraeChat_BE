@@ -826,6 +826,44 @@ class MessageService {
       throw new Error("TTS API error: " + err.message);
     }
   }
+
+  async sendLocationMessage(userId, conversationId, location, channelId = null) {
+    const member = await Member.getByConversationIdAndUserId(
+      conversationId,
+      userId
+    );
+    if (!member || !member.active) throw new CustomError("Invalid member", 400);
+
+    const conversation = await Conversation.findById(conversationId);
+    if (!conversation) throw new NotFoundError("Conversation");
+    let validChannelId = null;
+    if (conversation.type) {
+      if (!channelId) throw new CustomError("Channel ID required", 400);
+      const channel = await Channel.findById(channelId);
+      if (
+        !channel ||
+        channel.conversationId.toString() !== conversationId.toString()
+      )
+        throw new CustomError("Invalid channel", 400);
+      validChannelId = channel._id;
+    }
+    const message = await Message.create({
+      memberId: member._id,
+      content: "location",
+      type: "LOCATION",
+      conversationId,
+      location: {
+        lat: location.lat,
+        lng: location.lng,
+      },
+      ...(validChannelId && { channelId: validChannelId }),
+    });
+
+    return Message.findById(message._id)
+      .populate("memberId", "userId")
+      .lean();
+
+  }
 }
 
 module.exports = new MessageService();

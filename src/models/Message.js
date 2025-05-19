@@ -215,6 +215,7 @@ const messageSchema = new Schema(
         "FILE", // docx, pdf, pptx, xlsx, zip, rar, txt, gif, mp3
         "NOTIFY", // Thông báo
         "VOTE",
+        "LOCATION",
       ],
       required: true,
       index: true,
@@ -298,6 +299,12 @@ const messageSchema = new Schema(
     channelId: {
       type: ObjectId,
       index: true,
+    },
+    location: {
+      type: {
+        lat: Number,
+        lng: Number,
+      },
     },
   },
   {
@@ -716,17 +723,17 @@ messageSchema.statics.getListForIndividualConversation = async function (
       select: "name",
     })
     .lean()
-    .then(messages => 
-    messages.map(message => {
-      // Đưa avatar vào thẳng memberId
-      if (message.memberId?.userId?.avatar) {
-        message.memberId.avatar = message.memberId.userId.avatar;
-        message.memberId.userId = message.memberId.userId._id;  // Xóa userId nếu không cần
-      }
+    .then((messages) =>
+      messages.map((message) => {
+        // Đưa avatar vào thẳng memberId
+        if (message.memberId?.userId?.avatar) {
+          message.memberId.avatar = message.memberId.userId.avatar;
+          message.memberId.userId = message.memberId.userId._id; // Xóa userId nếu không cần
+        }
 
-      return message;
-    })
-  );
+        return message;
+      })
+    );
 
   return messages;
 };

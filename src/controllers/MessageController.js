@@ -13,6 +13,7 @@ class MessageController {
     this.deleteMessageForMe = this.deleteMessageForMe.bind(this);
     this.sendReplyMessage = this.sendReplyMessage.bind(this);
     this.reactToMessage = this.reactToMessage.bind(this);
+    this.sendLocationMessage = this.sendLocationMessage.bind(this);
   }
   // [POST] /api/message/text - Gửi tin nhắn văn bản
   async sendTextMessage(req, res) {
@@ -100,6 +101,37 @@ class MessageController {
       res.status(400).json({ message: error.message });
     }
   }
+  // [POST] /api/message/location - Gửi tin nhắn vị trí
+  async sendLocationMessage(req, res) {
+    try {
+      const { conversationId, location, channelId } = req.body;
+      const userId = req._id;
+
+      if (!conversationId || !location) {
+        return res
+          .status(400)
+          .json({ message: "Conversation ID and location are required" });
+      }
+
+      const message = await MessageService.sendLocationMessage(
+        userId,
+        conversationId,
+        location,
+        channelId
+      );
+
+      this.socketHandler.emitToConversation(
+        conversationId,
+        SOCKET_EVENTS.RECEIVE_MESSAGE,
+        message
+      );
+
+      res.status(201).json(message);
+    } catch (error) {
+      res.status(400).json({ message: error.message });
+    }
+  }
+
 
   // [GET] /api/messages/:conversationId - Lấy danh sách tin nhắn theo conversationId 1-1
   async getMessagesByConversation(req, res) {

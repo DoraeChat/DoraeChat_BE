@@ -668,6 +668,7 @@ messageSchema.statics.getListByChannelIdAndUserId = async function (
         isMultipleChoice: 1,
         isAnonymous: 1,
         lockedVote: 1,
+        location: 1,
         reacts: {
           $map: {
             input: "$reacts",

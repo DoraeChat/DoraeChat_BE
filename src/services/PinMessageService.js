@@ -15,7 +15,9 @@ const PinMessageService = {
         const message = await Message.findById(pinMessage.messageId).lean();
         if (!message) throw new NotFoundError("Message");
 
-        const memberSend = await Member.findById({ _id: message.memberId}).lean();
+        const memberSend = await Member.findById({
+          _id: message.memberId,
+        }).lean();
         if (!memberSend) throw new NotFoundError("Member");
 
         const member = await Member.findById(pinMessage.pinnedBy).lean();
@@ -57,7 +59,7 @@ const PinMessageService = {
     if (!conversation) throw new NotFoundError("Conversation");
 
     const member = await Member.findOne({ _id: pinnedBy }).lean();
-    const memberSend = await Member.findById({ _id: message.memberId}).lean();
+    const memberSend = await Member.findById({ _id: message.memberId }).lean();
     const members = conversation.members.map((member) => member._id.toString());
     if (!members.includes(member._id.toString()))
       throw new CustomError("Member is not in conversation", 400);
@@ -114,12 +116,14 @@ const PinMessageService = {
 
     const user = await User.findById(member.userId).lean();
 
-    if (
-      !conversation.managerIds.includes(pinnedBy) && // manager
-      !conversation.leaderId.toString() === pinnedBy && // leader
-      pinMessage.pinnedBy === pinnedBy // member pinned
-    )
-      throw new CustomError("Member is not allowed to unpin message", 400);
+    if (conversation.type) {
+      if (
+        !conversation.managerIds.includes(pinnedBy) && // manager
+        !conversation.leaderId.toString() === pinnedBy && // leader
+        pinMessage.pinnedBy !== pinnedBy // member pinned
+      )
+        throw new CustomError("Member is not allowed to unpin message", 400);
+    }
 
     const deleted = await PinMessage.deletePinMessage(messageId, pinnedBy);
 

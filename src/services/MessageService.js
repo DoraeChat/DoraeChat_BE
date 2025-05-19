@@ -18,9 +18,10 @@ class MessageService {
     conversationId,
     content,
     channelId = null,
-    type,
+    type = "TEXT",
     tags = null,
-    tagPositions = null
+    tagPositions = null,
+    replyMessageId = null
   ) {
     tags = tags || [];
     tagPositions = tagPositions || [];
@@ -49,52 +50,45 @@ class MessageService {
     // Kiểm tra conversation
     const conversation = await Conversation.findById(conversationId);
     if (!conversation) {
-      throw new Error("Conversation not found");
+      throw new NotFoundError("Conversation");
     }
 
     // Kiểm tra loại conversation và channelId
-    if (conversation.type && !channelId) {
-      throw new Error("Channel ID is required for group conversations");
-    }
-    if (!conversation.type && channelId) {
-      throw new Error(
-        "Channel ID is not applicable for individual conversations"
-      );
-    }
-
-    // Nếu là group, kiểm tra channel
     let validChannelId = null;
     if (conversation.type) {
+      if (!channelId) {
+        throw new CustomError(
+          "Channel ID is required for group conversations",
+          400
+        );
+      }
       const channel = await Channel.findById(channelId);
       if (
         !channel ||
         channel.conversationId.toString() !== conversationId.toString()
       ) {
-        throw new Error(
-          "Invalid or non-existent channel for this conversation"
-        );
+        throw new CustomError("Invalid or non-existent channel", 400);
       }
       validChannelId = channel._id;
+    } else if (channelId) {
+      throw new CustomError(
+        "Channel ID is not applicable for individual conversations",
+        400
+      );
     }
 
     // Validate tags và tagPositions
     if (tags.length > 0 || tagPositions.length > 0) {
-      // Kiểm tra số lượng tags và tagPositions phải bằng nhau
       if (tags.length !== tagPositions.length) {
         throw new Error("Tags and tagPositions must have the same length");
       }
-
-      // Kiểm tra các member được tag có trong conversation không
       const taggedMembers = await Member.find({
         _id: { $in: tags },
         conversationId: conversationId,
       });
-
       if (taggedMembers.length !== tags.length) {
         throw new Error("Some tagged members are not in this conversation");
       }
-
-      // Kiểm tra tagPositions có hợp lệ không
       tagPositions.forEach((pos) => {
         if (
           !pos.memberId ||
@@ -109,28 +103,38 @@ class MessageService {
       });
     }
 
+    // Kiểm tra replyMessageId (nếu có)
+    if (replyMessageId) {
+      const replyMessage = await Message.findById(replyMessageId);
+      if (
+        !replyMessage ||
+        replyMessage.conversationId.toString() !== conversationId.toString()
+      ) {
+        throw new CustomError("Invalid or non-existent reply message", 400);
+      }
+    }
+
     // Tạo tin nhắn mới
     const newMessage = await Message.create({
       memberId: member._id,
       content,
-      type: type || "TEXT",
+      type,
       conversationId,
-      tags: tags || [],
-      tagPositions: tagPositions || [],
-      ...(validChannelId && { channelId: validChannelId }), // Chỉ thêm channelId nếu có
+      tags,
+      tagPositions,
+      ...(validChannelId && { channelId: validChannelId }),
+      ...(replyMessageId && { replyMessageId }),
     });
 
+    // Populate dữ liệu trả về
     const populatedMessage = await Message.findById(newMessage._id)
       .populate({
         path: "memberId",
-        select: "userId",
+        select: "userId name",
       })
       .lean();
 
-    // Cập nhật cache (nếu dùng)
-    // await this.syncMessageCache(conversationId, [newMessage]);
-
-    // Cập nhật tin nhắn cuối cùng trong cuộc trò chuyện
+    // Cập nhật lastMessageId trong conversation
     conversation.lastMessageId = newMessage._id;
     await conversation.save();
 
@@ -183,82 +187,6 @@ class MessageService {
         select: "name",
       })
       .lean();
-
-    return populatedMessage;
-  }
-
-  async sendReplyMessage(
-    userId,
-    conversationId,
-    content,
-    replyMessageId,
-    channelId = null,
-    type = "TEXT"
-  ) {
-    if (!content.trim()) {
-      throw new Error("Message content cannot be empty");
-    }
-    content = emoji.emojify(content);
-
-    const member = await Member.getByConversationIdAndUserId(
-      conversationId,
-      userId
-    );
-    if (!member || !member.active) {
-      throw new Error("Invalid or inactive member");
-    }
-
-    const conversation = await Conversation.findById(conversationId);
-    if (!conversation) {
-      throw new NotFoundError("Conversation");
-    }
-
-    let validChannelId = null;
-    if (conversation.type) {
-      if (!channelId) {
-        throw new CustomError("Channel ID required", 400);
-      }
-      const channel = await Channel.findById(channelId);
-      if (
-        !channel ||
-        channel.conversationId.toString() !== conversationId.toString()
-      ) {
-        throw new CustomError("Invalid channel", 400);
-      }
-      validChannelId = channel._id;
-    } else if (channelId) {
-      throw new CustomError(
-        "Channel ID not applicable for individual conversations",
-        400
-      );
-    }
-
-    const newMessage = await Message.createMessage({
-      memberId: member._id,
-      content,
-      type,
-      conversationId,
-      channelId: validChannelId,
-      replyMessageId,
-    });
-
-    const populatedMessage = await Message.findById(newMessage._id)
-      .populate({
-        path: "memberId",
-        select: "userId name",
-      })
-      .populate({
-        path: "replyMessageId",
-        select: "content type isDeleted memberId",
-        populate: {
-          path: "memberId",
-          select: "userId name",
-        },
-      })
-      .lean();
-
-    conversation.lastMessageId = newMessage._id;
-    await conversation.save();
 
     return populatedMessage;
   }
@@ -578,7 +506,13 @@ class MessageService {
     return await Message.countUnread(time, conversationId);
   }
 
-  async sendImageMessage(userId, conversationId, files, channelId = null) {
+  async sendImageMessage(
+    userId,
+    conversationId,
+    files,
+    channelId = null,
+    replyMessageId = null
+  ) {
     const member = await Member.getByConversationIdAndUserId(
       conversationId,
       userId
@@ -604,7 +538,16 @@ class MessageService {
       conversationId,
       files
     );
-
+    // Kiểm tra replyMessageId (nếu có)
+    if (replyMessageId) {
+      const replyMessage = await Message.findById(replyMessageId);
+      if (
+        !replyMessage ||
+        replyMessage.conversationId.toString() !== conversationId.toString()
+      ) {
+        throw new CustomError("Invalid or non-existent reply message", 400);
+      }
+    }
     const messages = await Promise.all(
       uploaded.map(async (img) => {
         const message = await Message.create({
@@ -613,6 +556,7 @@ class MessageService {
           type: "IMAGE",
           conversationId,
           ...(validChannelId && { channelId: validChannelId }),
+          ...(replyMessageId && { replyMessageId }),
         });
         return Message.findById(message._id)
           .populate("memberId", "userId")
@@ -630,7 +574,13 @@ class MessageService {
     return messages;
   }
 
-  async sendVideoMessage(userId, conversationId, file, channelId = null) {
+  async sendVideoMessage(
+    userId,
+    conversationId,
+    file,
+    channelId = null,
+    replyMessageId = null
+  ) {
     const member = await Member.getByConversationIdAndUserId(
       conversationId,
       userId
@@ -656,6 +606,16 @@ class MessageService {
       conversationId,
       file
     );
+    // Kiểm tra replyMessageId (nếu có)
+    if (replyMessageId) {
+      const replyMessage = await Message.findById(replyMessageId);
+      if (
+        !replyMessage ||
+        replyMessage.conversationId.toString() !== conversationId.toString()
+      ) {
+        throw new CustomError("Invalid or non-existent reply message", 400);
+      }
+    }
 
     const message = await Message.create({
       memberId: member._id,
@@ -663,6 +623,7 @@ class MessageService {
       type: "VIDEO",
       conversationId,
       ...(validChannelId && { channelId: validChannelId }),
+      ...(replyMessageId && { replyMessageId }),
     });
 
     // Cập nhật lastMessageId cho cuộc trò chuyện
@@ -672,7 +633,13 @@ class MessageService {
     return Message.findById(message._id).populate("memberId", "userId").lean();
   }
 
-  async sendFileMessage(userId, conversationId, file, channelId = null) {
+  async sendFileMessage(
+    userId,
+    conversationId,
+    file,
+    channelId = null,
+    replyMessageId = null
+  ) {
     const member = await Member.getByConversationIdAndUserId(
       conversationId,
       userId
@@ -698,7 +665,16 @@ class MessageService {
       conversationId,
       file
     );
-
+    // Kiểm tra replyMessageId (nếu có)
+    if (replyMessageId) {
+      const replyMessage = await Message.findById(replyMessageId);
+      if (
+        !replyMessage ||
+        replyMessage.conversationId.toString() !== conversationId.toString()
+      ) {
+        throw new CustomError("Invalid or non-existent reply message", 400);
+      }
+    }
     const message = await Message.create({
       memberId: member._id,
       content: uploaded.url,
@@ -707,6 +683,7 @@ class MessageService {
       fileName: file.originalname,
       fileSize: file.size,
       ...(validChannelId && { channelId: validChannelId }),
+      ...(replyMessageId && { replyMessageId }),
     });
 
     // Cập nhật lastMessageId cho cuộc trò chuyện

@@ -11,15 +11,21 @@ class MessageController {
     this.sendFileMessage = this.sendFileMessage.bind(this);
     this.sendVideoMessage = this.sendVideoMessage.bind(this);
     this.deleteMessageForMe = this.deleteMessageForMe.bind(this);
-    this.sendReplyMessage = this.sendReplyMessage.bind(this);
     this.reactToMessage = this.reactToMessage.bind(this);
     this.sendLocationMessage = this.sendLocationMessage.bind(this);
   }
   // [POST] /api/message/text - Gửi tin nhắn văn bản
   async sendTextMessage(req, res) {
     try {
-      const { conversationId, content, channelId, type, tags, tagPositions } =
-        req.body;
+      const {
+        conversationId,
+        content,
+        channelId,
+        type,
+        tags,
+        tagPositions,
+        replyMessageId,
+      } = req.body;
       const userId = req._id;
 
       if (!conversationId || !content) {
@@ -35,7 +41,8 @@ class MessageController {
         channelId, // Truyền channelId (có thể là null)
         type,
         tags,
-        tagPositions
+        tagPositions,
+        replyMessageId
       );
 
       const conversation = await Conversation.findById(conversationId);
@@ -210,7 +217,7 @@ class MessageController {
 
   async sendImageMessage(req, res) {
     try {
-      const { conversationId, channelId } = req.body;
+      const { conversationId, channelId, replyMessageId } = req.body;
       const userId = req._id;
 
       if (!conversationId || !req.files || req.files.length === 0)
@@ -220,7 +227,8 @@ class MessageController {
         userId,
         conversationId,
         req.files,
-        channelId
+        channelId,
+        replyMessageId
       );
 
       // Emit từng ảnh
@@ -242,7 +250,7 @@ class MessageController {
 
   async sendVideoMessage(req, res) {
     try {
-      const { conversationId, channelId } = req.body;
+      const { conversationId, channelId, replyMessageId } = req.body;
       const userId = req._id;
 
       if (!conversationId || !req.file)
@@ -252,7 +260,8 @@ class MessageController {
         userId,
         conversationId,
         req.file,
-        channelId
+        channelId,
+        replyMessageId
       );
 
       this.socketHandler.emitToConversation(
@@ -269,7 +278,7 @@ class MessageController {
 
   async sendFileMessage(req, res) {
     try {
-      const { conversationId, channelId } = req.body;
+      const { conversationId, channelId, replyMessageId } = req.body;
       const userId = req._id;
 
       if (!conversationId || !req.file)
@@ -279,7 +288,8 @@ class MessageController {
         userId,
         conversationId,
         req.file,
-        channelId
+        channelId,
+        replyMessageId
       );
 
       this.socketHandler.emitToConversation(

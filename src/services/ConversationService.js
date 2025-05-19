@@ -874,6 +874,21 @@ const ConversationService = {
     const inviteLink = `${process.env.APP_URL}/join/${token}`;
     return { inviteLink, invite };
   },
+  // Lấy thông tin nhóm từ token
+  async getGroupInfoFromToken(token) {
+    const invite = await InviteGroup.findOne({
+      token: token,
+      status: "pending",
+    });
+    if (!invite || invite.expiresAt < new Date()) {
+      throw new Error("Invalid or expired invite");
+    }
+    const conversation = await Conversation.findById(invite.conversationId);
+    if (!conversation || !conversation.type) {
+      throw new Error("Group conversation not found");
+    }
+    return conversation;
+  },
   // Chấp nhận lời mời hoặc link tham gia nhóm
   async acceptInvite(token, userId) {
     const invite = await InviteGroup.findOne({ token, status: "pending" });

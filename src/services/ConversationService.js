@@ -545,7 +545,7 @@ const ConversationService = {
     return { removedManager: managerMember, notifyMessage };
   },
   // Thay đổi chế độ phê duyệt thành viên
-  async toggleJoinApproval(conversationId, userId, isStatus) {
+  async toggleJoinApproval(conversationId, userId, isStatusBool) {
     const conversation = await Conversation.findById(conversationId);
     if (!conversation || !conversation.type) {
       throw new Error("Group conversation not found");
@@ -561,7 +561,7 @@ const ConversationService = {
       );
     }
 
-    conversation.isJoinFromLink = isStatus;
+    conversation.isJoinFromLink = isStatusBool;
     const channelId = await this.getDefaultChannelId(conversationId);
     const notifyMessage = await Message.create({
       memberId: member._id,

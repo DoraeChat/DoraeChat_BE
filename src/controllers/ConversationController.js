@@ -3,6 +3,7 @@ const MessageService = require("../services/MessageService");
 const MemberService = require("../services/MemberService");
 const UserService = require("../services/UserService");
 const SOCKET_EVENTS = require("../constants/socketEvents");
+const { books } = require("googleapis/build/src/apis/books");
 
 class ConversationController {
   constructor(socketHandler) {
@@ -372,12 +373,12 @@ class ConversationController {
     try {
       const { id: conversationId, isStatus } = req.params;
       const userId = req._id;
-
+      const isStatusBool = isStatus === "true";
       const { conversation, notifyMessage } =
         await ConversationService.toggleJoinApproval(
           conversationId,
           userId,
-          isStatus
+          isStatusBool
         );
       // Phát sự kiện socket real-time createGroupConversation
       if (this.socketHandler) {
@@ -389,12 +390,12 @@ class ConversationController {
         this.socketHandler.emitToConversation(
           conversationId,
           SOCKET_EVENTS.TOGGLE_JOIN_APPROVAL,
-          { conversationId, isStatus }
+          { conversationId, isStatus: isStatusBool }
         );
       }
       res.status(200).json({
         conversation,
-        isStatus,
+        isStatus: Boolean(isStatusBool),
       });
     } catch (error) {
       res.status(400).json({ message: error.message });

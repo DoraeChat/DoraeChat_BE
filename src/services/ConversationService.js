@@ -545,7 +545,7 @@ const ConversationService = {
     return { removedManager: managerMember, notifyMessage };
   },
   // Thay đổi chế độ phê duyệt thành viên
-  async toggleJoinApproval(conversationId, userId, isJoinFromLink) {
+  async toggleJoinApproval(conversationId, userId, isStatus) {
     const conversation = await Conversation.findById(conversationId);
     if (!conversation || !conversation.type) {
       throw new Error("Group conversation not found");
@@ -561,10 +561,23 @@ const ConversationService = {
       );
     }
 
-    conversation.isJoinFromLink = isJoinFromLink === "true"; // Chuyển đổi string thành boolean
+    conversation.isJoinFromLink = isStatus;
+    const channelId = await this.getDefaultChannelId(conversationId);
+    const notifyMessage = await Message.create({
+      memberId: member._id,
+      content: `${member.name} đã thay đổi chế độ phê duyệt thành viên`,
+      type: "NOTIFY",
+      action: "UPDATE",
+      conversationId,
+      channelId,
+    });
+    conversation.lastMessageId = notifyMessage._id;
     await conversation.save();
 
-    return conversation;
+    return {
+      conversation,
+      notifyMessage,
+    };
   },
   // Chấp nhận yêu cầu gia nhập nhóm từ một user
   async acceptJoinRequest(conversationId, userId, requestingUserId) {

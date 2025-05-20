@@ -373,12 +373,29 @@ class ConversationController {
       const { id: conversationId, isStatus } = req.params;
       const userId = req._id;
 
-      const conversation = await ConversationService.toggleJoinApproval(
-        conversationId,
-        userId,
-        isStatus
-      );
-      res.status(200).json(conversation);
+      const { conversation, notifyMessage } =
+        await ConversationService.toggleJoinApproval(
+          conversationId,
+          userId,
+          isStatus
+        );
+      // Phát sự kiện socket real-time createGroupConversation
+      if (this.socketHandler) {
+        this.socketHandler.emitToConversation(
+          conversationId,
+          SOCKET_EVENTS.RECEIVE_MESSAGE,
+          notifyMessage
+        );
+        this.socketHandler.emitToConversation(
+          conversationId,
+          SOCKET_EVENTS.TOGGLE_JOIN_APPROVAL,
+          { conversationId, isStatus }
+        );
+      }
+      res.status(200).json({
+        conversation,
+        isStatus,
+      });
     } catch (error) {
       res.status(400).json({ message: error.message });
     }

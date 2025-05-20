@@ -729,15 +729,20 @@ messageSchema.statics.getListForIndividualConversation = async function (
   };
 
   // Thêm điều kiện hideBeforeTime (nếu có)
-  if (hideBeforeTime) {
-    query.createdAt = { $gt: hideBeforeTime };
-  }
+  // if (hideBeforeTime) {
+  //   query.createdAt = { $gt: hideBeforeTime };
+  // }
 
   // Nếu có beforeTimestamp, thêm điều kiện lọc trước thời gian đó
   if (beforeTimestamp) {
-    query.createdAt = query.createdAt
-      ? { $gt: hideBeforeTime, $lt: new Date(beforeTimestamp) }
-      : { $lt: new Date(beforeTimestamp) };
+    if (hideBeforeTime) {
+      query.createdAt = {
+        $gt: new Date(hideBeforeTime),
+        $lt: new Date(beforeTimestamp),
+      };
+    } else {
+      query.createdAt = { $lt: new Date(beforeTimestamp) };
+    }
   }
 
   const messages = await this.find(query)
@@ -776,6 +781,8 @@ messageSchema.statics.getListForIndividualConversation = async function (
         return message;
       })
     );
+
+  console.log("messages", messages);
 
   return messages;
 };

@@ -46,7 +46,10 @@ const ConVersationRouter = (socketHandler) => {
     "/:id/groupRequest/reject",
     conversationController.rejectAllJoinRequests
   );
-  router.get("/:id/groupRequest", conversationController.getJoinRequests);
+  router.get(
+    "/:conversationId/groupRequest",
+    conversationController.getJoinRequests
+  );
   router.post("/:id/invite", conversationController.inviteUserToGroup);
   router.post("/:id/invite/link", conversationController.createInviteLink);
   router.post("/join/:token", conversationController.acceptInvite);

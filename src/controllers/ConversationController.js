@@ -395,7 +395,7 @@ class ConversationController {
       }
       res.status(200).json({
         conversation,
-        isStatus: Boolean(isStatusBool),
+        isStatus: isStatusBool,
       });
     } catch (error) {
       res.status(400).json({ message: error.message });
@@ -498,7 +498,7 @@ class ConversationController {
   // GET /:id/groupRequest
   async getJoinRequests(req, res) {
     try {
-      const { id: conversationId } = req.params;
+      const { conversationId } = req.params;
       const userId = req._id;
 
       const joinRequests = await ConversationService.getJoinRequests(

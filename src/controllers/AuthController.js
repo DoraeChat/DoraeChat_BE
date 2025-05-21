@@ -22,7 +22,7 @@ class AuthController {
             if (result.message === 'User information saved successfully') {
                 res.status(200).json(result);
             } else {
-                res.status(200).json('Save user information failed');
+                res.status(200).json('Save user information success');
             }
         } catch (err) {
             next(err);

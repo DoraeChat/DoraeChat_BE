@@ -719,7 +719,7 @@ const ConversationService = {
     conversation.lastMessageId = notifyMessage._id;
     await conversation.save();
 
-    return { newMembers, notifyMessage };
+    return { conversation, notifyMessage };
   },
 
   // Từ chối tất cả yêu cầu gia nhập nhóm

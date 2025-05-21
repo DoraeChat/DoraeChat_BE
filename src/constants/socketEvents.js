@@ -24,7 +24,8 @@ const SOCKET_EVENTS = {
   UPDATE_NAME_CONVERSATION: "update-name-conversation",
   UPDATE_AVATAR_GROUP_CONVERSATION: "update-avatar-group-conversation",
   TOGGLE_JOIN_APPROVAL: "toggle-join-approval",
-
+  ACCEPT_JOIN_REQUEST: "accept-join-request",
+  REJECT_JOIN_REQUEST: "reject-join-request",
   //Messages
   RECEIVE_MESSAGE: "receive-message",
   MESSAGE_RECALLED: "message-recalled",

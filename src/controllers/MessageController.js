@@ -217,12 +217,12 @@ class MessageController {
 
   async sendImageMessage(req, res) {
     try {
+      
       const { conversationId, channelId, replyMessageId } = req.body;
       const userId = req._id;
 
       if (!conversationId || !req.files || req.files.length === 0)
         return res.status(400).json({ message: "Invalid image message" });
-      console.log(channelId);
       const messages = await MessageService.sendImageMessage(
         userId,
         conversationId,

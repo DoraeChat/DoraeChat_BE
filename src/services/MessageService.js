@@ -539,7 +539,7 @@ class MessageService {
       files
     );
     // Kiểm tra replyMessageId (nếu có)
-    if (replyMessageId) {
+    if (replyMessageId !== "undefined") {
       const replyMessage = await Message.findById(replyMessageId);
       if (
         !replyMessage ||
@@ -550,14 +550,20 @@ class MessageService {
     }
     const messages = await Promise.all(
       uploaded.map(async (img) => {
-        const message = await Message.create({
+        const messageData = {
           memberId: member._id,
           content: img.url,
           type: "IMAGE",
           conversationId,
           ...(validChannelId && { channelId: validChannelId }),
-          ...(replyMessageId && { replyMessageId }),
-        });
+        };
+
+        // Chỉ thêm replyMessageId nếu không phải undefined
+        if (replyMessageId !== "undefined") {
+          messageData.replyMessageId = replyMessageId;
+        }
+
+        const message = await Message.create(messageData);
         return Message.findById(message._id)
           .populate("memberId", "userId")
           .lean();
@@ -570,7 +576,6 @@ class MessageService {
       conversation.lastMessageId = last._id;
       await conversation.save();
     }
-
     return messages;
   }
 
@@ -804,7 +809,12 @@ class MessageService {
     }
   }
 
-  async sendLocationMessage(userId, conversationId, location, channelId = null) {
+  async sendLocationMessage(
+    userId,
+    conversationId,
+    location,
+    channelId = null
+  ) {
     const member = await Member.getByConversationIdAndUserId(
       conversationId,
       userId
@@ -836,10 +846,7 @@ class MessageService {
       ...(validChannelId && { channelId: validChannelId }),
     });
 
-    return Message.findById(message._id)
-      .populate("memberId", "userId")
-      .lean();
-
+    return Message.findById(message._id).populate("memberId", "userId").lean();
   }
 }
 

@@ -671,7 +671,7 @@ const ConversationService = {
     );
     await conversation.save();
 
-    return conversation;
+    return { conversation, requestingUserId };
   },
   // Chấp nhận tất cả yêu cầu gia nhập nhóm
   async acceptAllJoinRequests(conversationId, userId) {
@@ -684,7 +684,7 @@ const ConversationService = {
       conversationId,
       userId
     );
-    if (conversation.leaderId.toString() !== leader._id.toString()) {
+    if (!this.checkManager(conversation, leader._id.toString())) {
       throw new Error("Only the group leader can accept join requests");
     }
 
@@ -694,18 +694,30 @@ const ConversationService = {
 
     const newMembers = [];
     for (const reqUserId of conversation.joinRequests) {
-      const user = await User.findById(reqUserId).lean();
-      const newMember = await Member.create({
-        conversationId,
-        userId: reqUserId,
-        name: user.name,
-        active: true,
-      });
-      newMembers.push(newMember);
-      conversation.members.push(newMember._id);
+      let member = await Member.findOne({ conversationId, userId: reqUserId });
+
+      if (!member) {
+        const user = await User.findById(reqUserId).lean();
+        member = await Member.create({
+          conversationId,
+          userId: reqUserId,
+          name: user.name,
+          active: true,
+        });
+        conversation.members.push(member._id);
+      } else {
+        member.active = true;
+        member.leftAt = null;
+        await member.save();
+      }
+
+      newMembers.push(member);
     }
 
+    // Xoá tất cả joinRequests
     conversation.joinRequests = [];
+
+    // Gửi tin nhắn NOTIFY
     const channelId = await this.getDefaultChannelId(conversationId);
     const notifyMessage = await Message.create({
       memberId: leader._id,
@@ -721,7 +733,6 @@ const ConversationService = {
 
     return { conversation, notifyMessage };
   },
-
   // Từ chối tất cả yêu cầu gia nhập nhóm
   async rejectAllJoinRequests(conversationId, userId) {
     const conversation = await Conversation.findById(conversationId);

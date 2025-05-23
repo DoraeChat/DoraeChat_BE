@@ -417,7 +417,7 @@ class ConversationController {
 
       this.socketHandler.emitToConversation(
         conversationId,
-        SOCKET_EVENTS.RECEIVE_MESSAGE,
+        SOCKET_EVENTS.ACCEPT_JOIN_REQUEST,
         { newMember, notifyMessage }
       );
 
@@ -441,8 +441,8 @@ class ConversationController {
 
       this.socketHandler.emitToUser(
         requestingUserId,
-        SOCKET_EVENTS.RECEIVE_MESSAGE,
-        { conversationId }
+        SOCKET_EVENTS.REJECT_JOIN_REQUEST,
+        { conversationId, requestingUserId }
       );
 
       res.status(200).json(conversation);
@@ -462,7 +462,7 @@ class ConversationController {
 
       this.socketHandler.emitToConversation(
         conversationId,
-        SOCKET_EVENTS.RECEIVE_MESSAGE,
+        SOCKET_EVENTS.ACCEPT_JOIN_REQUEST,
         { newMembers, notifyMessage }
       );
 
@@ -485,7 +485,7 @@ class ConversationController {
 
       this.socketHandler.emitToConversation(
         conversationId,
-        SOCKET_EVENTS.RECEIVE_MESSAGE,
+        SOCKET_EVENTS.REJECT_JOIN_REQUEST,
         { conversationId }
       );
 

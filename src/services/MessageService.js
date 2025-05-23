@@ -539,7 +539,7 @@ class MessageService {
       files
     );
     // Kiểm tra replyMessageId (nếu có)
-    if (replyMessageId !== "undefined") {
+    if (replyMessageId !== "undefined" && replyMessageId !== null) {
       const replyMessage = await Message.findById(replyMessageId);
       if (
         !replyMessage ||

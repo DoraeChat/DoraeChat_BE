@@ -54,7 +54,7 @@ class AuthService {
         const randomIndex = Math.floor(Math.random() * colors.length);
         return colors[randomIndex];
     }
-    
+
     async saveUserInfo(submitInformation) {
         try {
             // Kiểm tra toàn bộ thông tin đầu vào
@@ -217,14 +217,15 @@ class AuthService {
             // Xác thực thông tin đăng nhập
             userValidate.validateLogin(username, password);
 
-            const user = await User.findByCredentials(username, password);
-            if (!user) {
-                throw new CustomError('Thông tin đăng nhập không hợp lệ', 401);
-            }
-
-            // Kiểm tra tài khoản đã được kích hoạt chưa
-            if (!user.isActived) {
-                throw new CustomError('Tài khoản chưa được kích hoạt', 401);
+            let user;
+            try {
+                user = await User.findByCredentials(username, password);
+            } catch (error) {
+                if (error.message.includes('Tài khoản chưa được kích hoạt')) {
+                    await this.generateAndSendOTP(username);
+                    throw new CustomError('Tài khoản chưa được kích hoạt. Đã gửi lại OTP.', 400);
+                }
+                throw error;
             }
 
             // Tạo token

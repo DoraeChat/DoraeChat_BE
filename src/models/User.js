@@ -124,16 +124,14 @@ userSchema.pre("save", async function (next) {
 
 userSchema.statics.findByCredentials = async (username, password) => {
   try {
-    const user = await User.findOne({
-      username,
-      isActived: true,
-    }).select("+password");
+    const user = await User.findOne({ username }).select("+password");
 
-    if (!user) throw new CustomError("Invalid login information", 401);
+    if (!user) throw new CustomError("Invalid login information", 400);
+    if (!user.isActived) throw new CustomError("Tài khoản chưa được kích hoạt", 400);
 
     const isPasswordMatch = await bcrypt.compare(password, user.password);
     if (!isPasswordMatch)
-      throw new CustomError("Invalid login information", 401);
+      throw new CustomError("Invalid login information", 400);
 
     const userData = user.toObject();
     delete userData.password;
@@ -141,7 +139,7 @@ userSchema.statics.findByCredentials = async (username, password) => {
   } catch (error) {
     throw error instanceof CustomError
       ? error
-      : new CustomError("Invalid login information", 401);
+      : new CustomError("Invalid login information", 400);
   }
 };
 userSchema.statics.existsById = async (_id) =>

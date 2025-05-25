@@ -408,7 +408,7 @@ class ConversationController {
       const { id: conversationId, userId: requestingUserId } = req.params;
       const userId = req._id;
 
-      const { newMember, notifyMessage } =
+      const { newMembers, notifyMessage } =
         await ConversationService.acceptJoinRequest(
           conversationId,
           userId,
@@ -418,10 +418,10 @@ class ConversationController {
       this.socketHandler.emitToConversation(
         conversationId,
         SOCKET_EVENTS.ACCEPT_JOIN_REQUEST,
-        { newMember, notifyMessage }
+        { newMembers, notifyMessage }
       );
 
-      res.status(200).json({ newMember, notifyMessage });
+      res.status(200).json({ newMembers, notifyMessage });
     } catch (error) {
       res.status(400).json({ message: error.message });
     }
@@ -439,8 +439,8 @@ class ConversationController {
         requestingUserId
       );
 
-      this.socketHandler.emitToUser(
-        requestingUserId,
+      this.socketHandler.emitToConversation(
+        conversationId,
         SOCKET_EVENTS.REJECT_JOIN_REQUEST,
         { conversationId, requestingUserId }
       );

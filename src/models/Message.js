@@ -179,6 +179,7 @@ const messageSchema = new Schema(
         "ADD_MANAGER",
         "JOIN_GROUP",
         "LEAVE_GROUP",
+        "ACCEPT_ALL_JOIN",
         "INVITE",
         "ACCEPT_JOIN",
         "KICK",

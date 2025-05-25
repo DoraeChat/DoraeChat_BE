@@ -605,16 +605,16 @@ const ConversationService = {
       conversationId,
       userId: requestingUserId,
     });
-    const newMember = requestingMember;
-    if (!newMember) {
+    const newMembers = requestingMember;
+    if (!newMembers) {
       // Tạo member mới
-      newMember = await Member.create({
+      newMembers = await Member.create({
         conversationId,
         userId: requestingUserId,
         name: (await User.findById(requestingUserId).lean()).name,
         active: true,
       });
-      conversation.members.push(newMember._id);
+      conversation.members.push(newMembers._id);
     } else {
       // Nếu đã là thành viên, chỉ cần kích hoạt lại
       requestingMember.active = true;
@@ -631,7 +631,7 @@ const ConversationService = {
     const channelId = await this.getDefaultChannelId(conversationId);
     const notifyMessage = await Message.create({
       memberId: leader._id,
-      content: `${leader.name} đã chấp nhận ${newMember.name} gia nhập nhóm`,
+      content: `${leader.name} đã chấp nhận ${newMembers.name} gia nhập nhóm`,
       type: "NOTIFY",
       action: "ACCEPT_JOIN",
       conversationId,
@@ -641,7 +641,7 @@ const ConversationService = {
     conversation.lastMessageId = notifyMessage._id;
     await conversation.save();
 
-    return { newMember, notifyMessage };
+    return { newMembers, notifyMessage };
   },
   // Từ chối yêu cầu gia nhập nhóm từ một user
   async rejectJoinRequest(conversationId, userId, requestingUserId) {
@@ -731,7 +731,7 @@ const ConversationService = {
     conversation.lastMessageId = notifyMessage._id;
     await conversation.save();
 
-    return { conversation, notifyMessage };
+    return { newMembers, notifyMessage };
   },
   // Từ chối tất cả yêu cầu gia nhập nhóm
   async rejectAllJoinRequests(conversationId, userId) {

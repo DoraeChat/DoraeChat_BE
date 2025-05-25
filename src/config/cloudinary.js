@@ -63,7 +63,7 @@ const getFileTypeCategory = (mimetype) => {
 const fileTypeConfigs = {
   image: {
     maxSize: 10 * 1024 * 1024, // 10MB
-    allowedMimeTypes: ["image/jpeg", "image/png", "image/webp", "image/gif", "audio/x-m4a"],
+    allowedMimeTypes: ["image/jpeg", "image/png", "image/webp", "image/gif"],
   },
   video: {
     maxSize: 100 * 1024 * 1024, // 100MB
@@ -77,7 +77,7 @@ const fileTypeConfigs = {
   },
   audio: {
     maxSize: 10 * 1024 * 1024, // 10MB
-    allowedMimeTypes: ["audio/mpeg", "audio/wav", "audio/ogg", "audio/aac"],
+    allowedMimeTypes: ["audio/mpeg", "audio/wav", "audio/ogg", "audio/aac", "audio/x-m4a", "audio/m4a"],
   },
   pdf: {
     maxSize: 10 * 1024 * 1024, // 10MB

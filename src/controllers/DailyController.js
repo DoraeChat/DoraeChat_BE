@@ -2,13 +2,14 @@ const DailyService = require("../services/DailyService");
 const {
   setCurrentCall,
   getCurrentCall,
+  clearCurrentCall
 } = require("../config/redis");
 
 exports.createDailyRoom = async (req, res) => {
   try {
     const { conversationId } = req.body;
-    const userId = req.id;
-
+    const userId = req._id;
+    console.log(userId);
     const existingRoomId = await getCurrentCall(userId);
     console.log("existingRoomId: ", existingRoomId);
     if (existingRoomId) {
@@ -25,6 +26,17 @@ exports.createDailyRoom = async (req, res) => {
     res.json(data);
   } catch (e) {
     console.error("createDailyRoom error:", e);
+    res.status(500).json({ error: e.message });
+  }
+};
+
+exports.leaveDailyRoom = async (req, res) => {
+  try {
+    const userId = req._id;
+    await clearCurrentCall(userId);
+    res.json({ message: "Left the call" });
+  } catch (e) {
+    console.error("leaveDailyRoom error:", e);
     res.status(500).json({ error: e.message });
   }
 };

@@ -286,7 +286,7 @@ const uploadImages = async (files, userId, type) => {
         );
         
         fs.unlinkSync(file.path);
-  
+        
         return {
           url: result.secure_url,
           publicId: result.public_id,

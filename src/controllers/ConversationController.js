@@ -219,7 +219,7 @@ class ConversationController {
           .json({ message: "userIds must be a non-empty array" });
       }
 
-      const { addedMembers, notifyMessages } =
+      const { joinRequestUserIds, addedMembers, notifyMessages } =
         await ConversationService.addMembersToConversation(
           conversationId,
           userId,
@@ -227,32 +227,44 @@ class ConversationController {
         );
 
       if (this.socketHandler) {
-        notifyMessages.forEach((message) => {
-          const targetMember = addedMembers.find((m) => {
-            return m._id.toString() == message.actionData.targetId.toString();
+        if (addedMembers && addedMembers.length > 0) {
+          notifyMessages.forEach((message) => {
+            const targetMember = addedMembers.find((m) => {
+              return m._id.toString() == message.actionData.targetId.toString();
+            });
+            const contentForSelf = `Bạn đã được ${message.memberId.name} thêm vào nhóm`;
+            content: targetMember.userId.toString() === userId.toString()
+              ? contentForSelf
+              : message.content,
+              this.socketHandler.emitToConversation(
+                conversationId,
+                SOCKET_EVENTS.RECEIVE_MESSAGE,
+                {
+                  ...message.toObject(),
+                  content: message.content,
+                }
+              );
           });
-          const contentForSelf = `Bạn đã được ${message.memberId.name} thêm vào nhóm`;
-          content: targetMember.userId.toString() === userId.toString()
-            ? contentForSelf
-            : message.content,
-            this.socketHandler.emitToConversation(
-              conversationId,
-              SOCKET_EVENTS.RECEIVE_MESSAGE,
-              {
-                ...message.toObject(),
-                content: message.content,
-              }
-            );
-        });
 
-        this.socketHandler.emitToConversation(
-          conversationId,
-          SOCKET_EVENTS.MEMBER_ADDED,
-          {
+          this.socketHandler.emitToConversation(
             conversationId,
-            addedMembers,
-          }
-        );
+            SOCKET_EVENTS.MEMBER_ADDED,
+            {
+              conversationId,
+              addedMembers,
+            }
+          );
+        }
+        if (joinRequestUserIds && joinRequestUserIds.length > 0) {
+          this.socketHandler.emitToConversation(
+            conversationId,
+            SOCKET_EVENTS.JOIN_REQUEST_APPROVED,
+            {
+              conversationId,
+              joinRequestUserIds,
+            }
+          );
+        }
       }
 
       res.status(201).json(addedMembers);

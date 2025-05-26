@@ -1,16 +1,9 @@
 // routes/daily.js
 const express = require("express");
 const router = express.Router();
-const { getOrCreateRoom } = require("../services/DailyService");
+const { createDailyRoom } = require("../controllers/DailyController");
 
-router.post("/create-room", async (req, res) => {
-  try {
-    const { conversationId } = req.body;
-    const room = await getOrCreateRoom(conversationId);
-    res.json({ url: room.url });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
+router.post("/create-room", createDailyRoom);
+
 
 module.exports = router;

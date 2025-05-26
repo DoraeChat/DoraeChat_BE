@@ -144,7 +144,7 @@ class MessageController {
     try {
       const { conversationId } = req.params;
       const userId = req._id; //userId được lấy từ middleware xác thực
-      const { skip = 0, limit = 100, beforeTimestamp = null } = req.query; // Phân trang mặc định
+      const { skip = 0, limit = 1000, beforeTimestamp = null } = req.query; // Phân trang mặc định
       if (!conversationId) {
         return res.status(400).json({ message: "Conversation ID is required" });
       }
@@ -167,7 +167,7 @@ class MessageController {
     try {
       const { channelId } = req.params;
       const userId = req._id; //userId được lấy từ middleware xác thực
-      const { skip = 0, limit = 100, beforeTimestamp = null } = req.query; // Phân trang mặc định
+      const { skip = 0, limit = 1000, beforeTimestamp = null } = req.query; // Phân trang mặc định
 
       if (!channelId) {
         return res.status(400).json({ message: "Channel ID is required" });

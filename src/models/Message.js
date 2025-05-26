@@ -722,7 +722,7 @@ messageSchema.statics.getListByChannelIdAndUserId = async function (
 messageSchema.statics.getListForIndividualConversation = async function (
   conversationId,
   memberId,
-  { skip = 0, limit = 100, beforeTimestamp = null, hideBeforeTime = null } = {}
+  { skip = 0, limit = 1000, beforeTimestamp = null, hideBeforeTime = null } = {}
 ) {
   const query = {
     conversationId: new ObjectId(conversationId),

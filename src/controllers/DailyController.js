@@ -1,6 +1,7 @@
 const DailyService = require("../services/DailyService");
 const {
   setCurrentCall,
+  getCurrentCall,
 } = require("../config/redis");
 
 exports.createDailyRoom = async (req, res) => {
@@ -9,6 +10,7 @@ exports.createDailyRoom = async (req, res) => {
     const userId = req.id;
 
     const existingRoomId = await getCurrentCall(userId);
+    console.log("existingRoomId: ", existingRoomId);
     if (existingRoomId) {
       return res.status(409).json({
         error: "User is already in another call",

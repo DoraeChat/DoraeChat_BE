@@ -254,6 +254,9 @@ const ConversationService = {
     const users = await User.find({ _id: { $in: newUserIds }, isActived: true })
       .select("_id name avatar")
       .lean();
+    const avatarMap = new Map(
+      users.map((user) => [user._id.toString(), user.avatar])
+    );
 
     if (users.length !== newUserIds.length) {
       throw new Error("One or more users not found or inactive");
@@ -328,53 +331,38 @@ const ConversationService = {
         _id: member._id,
         userId: member.userId,
         name: member.name,
+        avatar: avatarMap.get(member.userId.toString()) || null,
         active: member.active,
       }));
 
       return { addedMembers, notifyMessages };
     } else {
-      // Chế độ phê duyệt bật, thành viên thường: tạo join request
-      const joinRequestsToCreate = newUserIds.map((newUserId) => ({
-        conversationId,
-        userId: newUserId,
-        status: "pending",
-        createdAt: new Date(),
-      }));
-
-      // Kiểm tra yêu cầu đã tồn tại
-      const existingRequests = await JoinRequest.find({
-        conversationId,
-        userId: { $in: newUserIds },
-        status: "pending",
-      });
-
-      const existingRequestUserIds = existingRequests.map((r) =>
-        r.userId.toString()
+      const existingRequestUserIds = conversation.joinRequests.map((id) =>
+        id.toString()
       );
-      const newJoinRequests = joinRequestsToCreate.filter(
-        (req) => !existingRequestUserIds.includes(req.userId.toString())
+      const newJoinRequestUserIds = newUserIds.filter(
+        (id) => !existingRequestUserIds.includes(id.toString())
       );
 
-      if (newJoinRequests.length === 0) {
+      if (newJoinRequestUserIds.length === 0) {
         throw new Error(
           "All provided users already have pending join requests"
         );
       }
-
-      // Tạo join requests
-      const createdRequests = await JoinRequest.insertMany(newJoinRequests);
-
+      // Cập nhật conversation.joinRequests
+      conversation.joinRequests.push(...newJoinRequestUserIds);
+      await conversation.save();
       // Tạo tin nhắn NOTIFY cho yêu cầu tham gia
       const channelId = await this.getDefaultChannelId(conversationId);
       const notifyMessages = await Promise.all(
-        createdRequests.map(async (request) => {
-          const userName = userMap.get(request.userId.toString()) || "Unknown";
+        newJoinRequestUserIds.map(async (userId) => {
+          const userName = userMap.get(userId.toString()) || "Unknown";
           const message = await Message.createMessage({
             memberId: requestingMember._id,
             content: `${requestingMember.name} đã mời ${userName} tham gia nhóm. Đang chờ phê duyệt.`,
             type: "NOTIFY",
-            action: "REQUEST",
-            actionData: { targetId: request.userId },
+            action: "ADD",
+            actionData: { targetId: userId },
             conversationId,
             channelId,
           });
@@ -386,14 +374,7 @@ const ConversationService = {
         notifyMessages[notifyMessages.length - 1]._id;
       await conversation.save();
 
-      // Phát sự kiện socket
-      this.socketHandler.emitToConversation(
-        conversationId,
-        SOCKET_EVENTS.RECEIVE_MESSAGE,
-        { joinRequests: createdRequests, notifyMessages }
-      );
-
-      return { joinRequests: createdRequests, notifyMessages };
+      return { joinRequestUserIds: newJoinRequestUserIds, notifyMessages };
     }
   },
   // Xóa thành viên khỏi hội thoại

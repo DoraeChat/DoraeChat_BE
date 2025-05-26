@@ -40,6 +40,7 @@ const pinMessageRoutes = require("./routes/PinMessageRoutes")(socketHandler);
 const voteRoutes = require("./routes/VoteRoutes")(socketHandler);
 const memberRoutes = require("./routes/MemberRoutes")(socketHandler);
 const channelRoutes = require("./routes/ChannelRoutes")(socketHandler);
+const dailyRoutes = require("./routes/DailyRoutes");
 
 (async () => {
   try {
@@ -59,6 +60,7 @@ const channelRoutes = require("./routes/ChannelRoutes")(socketHandler);
     app.use("/api/uploads", auth, cloudinaryRoutes);
     app.use('/api/metered', meteredRoutes);
     app.use("/api/members", auth, memberRoutes);
+    app.use("/api/daily", dailyRoutes);
     app.use(handleError);
     server.listen(port, () => {
       console.log(`Backend Nodejs App listening on port ${port}`);

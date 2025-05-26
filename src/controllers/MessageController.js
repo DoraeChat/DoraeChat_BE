@@ -299,6 +299,7 @@ class MessageController {
 
       res.status(201).json(message);
     } catch (error) {
+      console.log("Send file error: ", error);
       res.status(400).json({ message: error.message });
     }
   }

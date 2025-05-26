@@ -559,7 +559,11 @@ class MessageService {
         };
 
         // Chỉ thêm replyMessageId nếu không phải undefined
-        if (replyMessageId !== "undefined") {
+        if (replyMessageId &&
+      replyMessageId !== "undefined" &&
+      replyMessageId !== "null" &&
+      replyMessageId !== null &&
+      replyMessageId !== undefined) {
           messageData.replyMessageId = replyMessageId;
         }
 
@@ -691,8 +695,16 @@ class MessageService {
       conversationId,
       file
     );
+    console.log("replyMessageId trc", replyMessageId);
+    console.log("typeof replyMessageId trc", replyMessageId);
     // Kiểm tra replyMessageId (nếu có)
-    if (replyMessageId) {
+    if (replyMessageId &&
+      replyMessageId !== "undefined" &&
+      replyMessageId !== "null" &&
+      replyMessageId !== null &&
+      replyMessageId !== undefined) {
+      console.log("replyMessageId", replyMessageId);
+      console.log("typeof replyMessageId", replyMessageId);
       const replyMessage = await Message.findById(replyMessageId);
       if (
         !replyMessage ||
@@ -701,7 +713,8 @@ class MessageService {
         throw new CustomError("Invalid or non-existent reply message", 400);
       }
     }
-    const message = await Message.create({
+
+    const messageData = {
       memberId: member._id,
       content: uploaded.url,
       type: "FILE",
@@ -709,8 +722,19 @@ class MessageService {
       fileName: file.originalname,
       fileSize: file.size,
       ...(validChannelId && { channelId: validChannelId }),
-      ...(replyMessageId && { replyMessageId }),
-    });
+    };
+
+    if (
+      replyMessageId &&
+      replyMessageId !== "undefined" &&
+      replyMessageId !== "null" &&
+      replyMessageId !== null &&
+      replyMessageId !== undefined
+    ) {
+      messageData.replyMessageId = replyMessageId;
+    }
+
+    const message = await Message.create(messageData);
 
     // Cập nhật lastMessageId cho cuộc trò chuyện
     conversation.lastMessageId = message._id;

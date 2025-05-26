@@ -141,6 +141,35 @@ async function zcard(key) {
   }
 }
 
+/**
+ * Lưu trạng thái user đang join phòng (currentCall)
+ * @param {string} userId - ID người dùng
+ * @param {string} roomId - ID phòng
+ */
+async function setCurrentCall(userId, roomId) {
+  const key = `current_call:${userId}`;
+  await set(key, roomId);
+}
+
+/**
+ * Lấy phòng mà user đang tham gia (nếu có)
+ * @param {string} userId - ID người dùng
+ * @returns {Promise<string|null>} - roomId hoặc null
+ */
+async function getCurrentCall(userId) {
+  const key = `current_call:${userId}`;
+  return await get(key);
+}
+
+/**
+ * Xoá trạng thái join phòng của user (khi user leave)
+ * @param {string} userId - ID người dùng
+ */
+async function clearCurrentCall(userId) {
+  const key = `current_call:${userId}`;
+  await del(key);
+}
+
 initializeRedis();
 
 module.exports = {
@@ -154,4 +183,8 @@ module.exports = {
   expire,
   zrangebyscore,
   zcard,
+  setCurrentCall,
+  getCurrentCall,
+  clearCurrentCall,
+
 };

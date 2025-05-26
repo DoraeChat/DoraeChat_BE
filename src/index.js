@@ -60,7 +60,7 @@ const dailyRoutes = require("./routes/DailyRoutes");
     app.use("/api/uploads", auth, cloudinaryRoutes);
     app.use('/api/metered', meteredRoutes);
     app.use("/api/members", auth, memberRoutes);
-    app.use("/api/daily", dailyRoutes);
+    app.use("/api/daily", auth, dailyRoutes);
     app.use(handleError);
     server.listen(port, () => {
       console.log(`Backend Nodejs App listening on port ${port}`);

@@ -245,6 +245,15 @@ class ConversationController {
             }
           );
         });
+
+        this.socketHandler.emitToConversation(
+          conversationId,
+          SOCKET_EVENTS.MEMBER_ADDED,
+          {
+            conversationId,
+            addedMembers,
+          }
+        );
       }
 
       res.status(201).json(addedMembers);
@@ -259,7 +268,7 @@ class ConversationController {
       const memberIdToRemove = req.params.memberId;
       const userId = req._id;
 
-      const { removedMember, notifyMessage } =
+      const { removedMember, notifyMessage, memberIdRemoved } =
         await ConversationService.removeMemberFromConversation(
           conversationId,
           userId,
@@ -279,10 +288,11 @@ class ConversationController {
                 : notifyMessage.content,
           }
         );
-        // this.io.to(removedMember.userId.toString()).emit("member-removed", {
-        //   conversationId,
-        //   message: "You have been removed from the group",
-        // });
+        this.socketHandler.emitToConversation(
+          conversationId,
+          SOCKET_EVENTS.MEMBER_REMOVED,
+          memberIdRemoved
+        );
       }
 
       res.status(200).json({ removedMember });

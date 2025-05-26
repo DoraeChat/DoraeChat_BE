@@ -252,7 +252,7 @@ const ConversationService = {
     const isAuthorized = isLeader || isManager;
     // Kiểm tra xem các userId có tồn tại và hoạt động không
     const users = await User.find({ _id: { $in: newUserIds }, isActived: true })
-      .select("_id name")
+      .select("_id name avatar")
       .lean();
 
     if (users.length !== newUserIds.length) {
@@ -458,6 +458,10 @@ const ConversationService = {
         name: memberToRemove.name,
       },
       notifyMessage,
+      memberIdRemoved: {
+        conversationId: conversation._id,
+        memberId: memberToRemove._id,
+      },
     };
   },
   // Thêm phó nhóm vào hội thoại

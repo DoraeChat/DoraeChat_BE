@@ -136,6 +136,7 @@ conversationSchema.statics.getListByUserId = async (userId) => {
   const members = await Member.find({ userId }).lean();
   const memberIds = members.map((m) => m._id);
   const memberIdMap = {};
+
   members.forEach((m) => {
     memberIdMap[m.conversationId.toString()] = m._id;
   });
@@ -167,7 +168,7 @@ conversationSchema.statics.getListByUserId = async (userId) => {
 
   // Truy vấn Member + User 1 lần, giảm số query
   const membersData = await Member.find({ _id: { $in: allMemberIds } })
-    .select("name userId")
+    .select("name userId active")
     .populate({ path: "userId", select: "avatar" })
     .lean();
 
@@ -178,6 +179,7 @@ conversationSchema.statics.getListByUserId = async (userId) => {
       name: m.name,
       userId: m.userId,
       avatar: m.userId?.avatar || null,
+      active: m.active !== false, // mặc định true nếu không có
     };
   });
 
@@ -203,9 +205,21 @@ conversationSchema.statics.getListByUserId = async (userId) => {
         const info = memberMap[memberId.toString()] || {};
         return {
           _id: memberId,
-          userId: info.userId?._id,
+          userId: info.userId?._id || null,
           name: info.name || null,
           avatar: info.avatar || null,
+          active: info.active ?? true,
+        };
+      });
+    } else {
+      conversation.members = conversation.members.map((memberId) => {
+        const info = memberMap[memberId.toString()] || {};
+        return {
+          _id: memberId,
+          userId: info.userId._id || null,
+          name: info.name || null,
+          avatar: info.avatar || null,
+          active: info.active ?? true,
         };
       });
     }

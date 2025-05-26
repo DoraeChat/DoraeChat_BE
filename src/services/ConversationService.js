@@ -251,7 +251,7 @@ const ConversationService = {
     }
     // Kiểm tra xem các userId có tồn tại và hoạt động không
     const users = await User.find({ _id: { $in: newUserIds }, isActived: true })
-      .select("_id name")
+      .select("_id name avatar")
       .lean();
 
     if (users.length !== newUserIds.length) {
@@ -292,6 +292,18 @@ const ConversationService = {
       membersToCreate.length > 0
         ? await Member.insertMany(membersToCreate)
         : [];
+    // add field avatar for each new member by mapping userId to get avatar from User
+    newMembers.forEach((member) => {
+      const user = users.find((u) => u._id.toString() === member.userId.toString());
+      if (user) {
+        member.avatar = user.avatar;
+        member.avatarColor = user.avatarColor;
+      } else {
+        member.avatar = null; // Hoặc một giá trị mặc định nếu không tìm thấy
+        member.avatarColor = null; // Hoặc một giá trị mặc định nếu không tìm thấy
+      }
+      member.save(); // Lưu lại để cập nhật avatar
+    });
     const allAddedMembers = [...membersToReactivate, ...newMembers];
     conversation.members.push(...newMembers.map((m) => m._id));
     if (allAddedMembers.length === 0) {
@@ -325,6 +337,7 @@ const ConversationService = {
       memberId: member._id,
       userId: member.userId,
       name: member.name,
+      avatar: member.avatar,
     }));
 
     return { addedMembers, notifyMessages };
@@ -391,6 +404,10 @@ const ConversationService = {
         name: memberToRemove.name,
       },
       notifyMessage,
+      memberIdRemoved: {
+        conversationId: conversation._id,
+        memberId: memberToRemove._id,
+      },
     };
   },
   // Thêm phó nhóm vào hội thoại

@@ -16,6 +16,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
+    image: ${DOCKER_USERNAME}/dorachat:latest
     container_name: dorachat_backend
     ports:
       - "3001:3001"

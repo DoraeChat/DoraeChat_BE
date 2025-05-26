@@ -7,7 +7,7 @@ on:
     branches: [ "feature/ci-cd-setup" ]
 
 jobs:
-  build-push-dorachat-backend:
+  build-push-dorachat:
     runs-on: ubuntu-latest
 
     steps:
@@ -20,7 +20,7 @@ jobs:
         username: ${{ secrets.DOCKER_USERNAME }}
         password: ${{ secrets.DOCKER_PASSWORD }}
         
-    - name: Build and push dorachat backend image
+    - name: Build and push dorachat image
       env:
         DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
       run: | 

@@ -139,7 +139,6 @@ class MessageController {
     }
   }
 
-
   // [GET] /api/messages/:conversationId - Lấy danh sách tin nhắn theo conversationId 1-1
   async getMessagesByConversation(req, res) {
     try {
@@ -217,7 +216,6 @@ class MessageController {
 
   async sendImageMessage(req, res) {
     try {
-      
       const { conversationId, channelId, replyMessageId } = req.body;
       const userId = req._id;
 
@@ -272,6 +270,7 @@ class MessageController {
 
       res.status(201).json(message);
     } catch (error) {
+      console.log("Send video error: ", error);
       res.status(400).json({ message: error.message });
     }
   }

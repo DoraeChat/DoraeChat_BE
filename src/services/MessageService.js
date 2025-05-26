@@ -612,7 +612,17 @@ class MessageService {
       file
     );
     // Kiểm tra replyMessageId (nếu có)
-    if (replyMessageId) {
+    console.log("replyMessageId trc", replyMessageId);
+    console.log("typeof replyMessageId trc", replyMessageId);
+    if (
+      replyMessageId &&
+      replyMessageId !== "undefined" &&
+      replyMessageId !== "null" &&
+      replyMessageId !== null &&
+      replyMessageId !== undefined
+    ) {
+      console.log("replyMessageId", replyMessageId);
+      console.log("typeof replyMessageId", replyMessageId);
       const replyMessage = await Message.findById(replyMessageId);
       if (
         !replyMessage ||
@@ -622,14 +632,25 @@ class MessageService {
       }
     }
 
-    const message = await Message.create({
+    const messageData = {
       memberId: member._id,
       content: uploaded.url,
       type: "VIDEO",
       conversationId,
       ...(validChannelId && { channelId: validChannelId }),
-      ...(replyMessageId && { replyMessageId }),
-    });
+    };
+
+    if (
+      replyMessageId &&
+      replyMessageId !== "undefined" &&
+      replyMessageId !== "null" &&
+      replyMessageId !== null &&
+      replyMessageId !== undefined
+    ) {
+      messageData.replyMessageId = replyMessageId;
+    }
+
+    const message = await Message.create(messageData);
 
     // Cập nhật lastMessageId cho cuộc trò chuyện
     conversation.lastMessageId = message._id;

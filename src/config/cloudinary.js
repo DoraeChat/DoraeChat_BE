@@ -77,7 +77,7 @@ const fileTypeConfigs = {
   },
   audio: {
     maxSize: 10 * 1024 * 1024, // 10MB
-    allowedMimeTypes: ["audio/mpeg", "audio/wav", "audio/ogg", "audio/aac", "audio/x-m4a", "audio/m4a"],
+    allowedMimeTypes: ["audio/mpeg", "audio/wav", "audio/ogg", "audio/aac", "audio/x-m4a", "audio/m4a", "audio/mp3"],
   },
   pdf: {
     maxSize: 10 * 1024 * 1024, // 10MB

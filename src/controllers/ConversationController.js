@@ -229,21 +229,20 @@ class ConversationController {
       if (this.socketHandler) {
         notifyMessages.forEach((message) => {
           const targetMember = addedMembers.find((m) => {
-            m._id.toString() === message.actionData.targetId.toString();
+            return m._id.toString() == message.actionData.targetId.toString();
           });
           const contentForSelf = `Bạn đã được ${message.memberId.name} thêm vào nhóm`;
-          // content:
-          //   targetMember.userId.toString() === userId.toString()
-          //     ? contentForSelf
-          //     : message.content,
-          this.socketHandler.emitToConversation(
-            conversationId,
-            SOCKET_EVENTS.RECEIVE_MESSAGE,
-            {
-              ...message.toObject(),
-              content: message.content,
-            }
-          );
+          content: targetMember.userId.toString() === userId.toString()
+            ? contentForSelf
+            : message.content,
+            this.socketHandler.emitToConversation(
+              conversationId,
+              SOCKET_EVENTS.RECEIVE_MESSAGE,
+              {
+                ...message.toObject(),
+                content: message.content,
+              }
+            );
         });
 
         this.socketHandler.emitToConversation(

@@ -228,20 +228,20 @@ class ConversationController {
 
       if (this.socketHandler) {
         notifyMessages.forEach((message) => {
-          const targetMember = addedMembers.find(
-            (m) =>
-              m.memberId.toString() === message.actionData.targetId.toString()
-          );
+          const targetMember = addedMembers.find((m) => {
+            m._id.toString() === message.actionData.targetId.toString();
+          });
           const contentForSelf = `Bạn đã được ${message.memberId.name} thêm vào nhóm`;
+          // content:
+          //   targetMember.userId.toString() === userId.toString()
+          //     ? contentForSelf
+          //     : message.content,
           this.socketHandler.emitToConversation(
             conversationId,
             SOCKET_EVENTS.RECEIVE_MESSAGE,
             {
               ...message.toObject(),
-              content:
-                targetMember.userId.toString() === userId.toString()
-                  ? contentForSelf
-                  : message.content,
+              content: message.content,
             }
           );
         });
@@ -258,6 +258,7 @@ class ConversationController {
 
       res.status(201).json(addedMembers);
     } catch (error) {
+      console.error("Error adding members:", error);
       res.status(400).json({ message: error.message });
     }
   }

@@ -233,148 +233,175 @@ const ConversationService = {
   // Thêm thành viên vào hội thoại
   async addMembersToConversation(conversationId, userId, newUserIds) {
     // Kiểm tra xem hội thoại có tồn tại không
-    const conversation = await Conversation.findById(conversationId);
-    if (!conversation) {
-      throw new Error("Conversation not found");
-    }
-    if (!conversation.type) {
-      throw new Error("Cannot add members to an individual conversation");
-    }
-    // Kiểm tra xem người dùng có phải là thành viên không
-    const requestingMember = await Member.findOne({ conversationId, userId });
-    if (!requestingMember) {
-      throw new Error("You are not a member of this conversation");
-    }
+    try {
+      const conversation = await Conversation.findById(conversationId);
+      if (!conversation) {
+        throw new Error("Conversation not found");
+      }
+      if (!conversation.type) {
+        throw new Error("Cannot add members to an individual conversation");
+      }
+      // Kiểm tra xem người dùng có phải là thành viên không
+      const requestingMember = await Member.findOne({ conversationId, userId });
+      if (!requestingMember) {
+        throw new Error("You are not a member of this conversation");
+      }
 
-    // Kiểm tra vai trò: leader hoặc manager
-    const isLeader = conversation.leaderId.toString() === userId.toString();
-    const isManager = conversation.managers.includes(userId.toString());
-    const isAuthorized = isLeader || isManager;
-    // Kiểm tra xem các userId có tồn tại và hoạt động không
-    const users = await User.find({ _id: { $in: newUserIds }, isActived: true })
-      .select("_id name avatar")
-      .lean();
-    const avatarMap = new Map(
-      users.map((user) => [user._id.toString(), user.avatar])
-    );
-
-    if (users.length !== newUserIds.length) {
-      throw new Error("One or more users not found or inactive");
-    }
-    // Tạo map để ánh xạ userId với name
-    const userMap = new Map(
-      users.map((user) => [user._id.toString(), user.name])
-    );
-    if (conversation.isJoinFromLink || isAuthorized) {
-      // Kiểm tra xem các thành viên đã tồn tại trong hội thoại chưa
-      const existingMembers = await Member.find({
-        conversationId,
-        userId: { $in: newUserIds },
-      });
-      // Lấy danh sách userId của các thành viên đã tồn tại
-      const existingUserIds = existingMembers.map((m) => m.userId.toString());
-      const userIdsToAdd = newUserIds.filter(
-        (id) => !existingUserIds.includes(id.toString())
+      // Kiểm tra vai trò: leader hoặc manager
+      const isLeader = conversation.leaderId.toString() === userId.toString();
+      const isManager = conversation.managerIds.includes(userId.toString());
+      const isAuthorized = isLeader || isManager;
+      // Kiểm tra xem các userId có tồn tại và hoạt động không
+      const users = await User.find({
+        _id: { $in: newUserIds },
+        isActived: true,
+      })
+        .select("_id name avatar")
+        .lean();
+      console.log("test 1");
+      const avatarMap = new Map(
+        users.map((user) => [user._id.toString(), user.avatar])
       );
-      const membersToReactivate = existingMembers.filter((m) => !m.active);
+      console.log("avatarMap", avatarMap);
 
-      // Tái kích hoạt các Member đã tồn tại nhưng không active
-      if (membersToReactivate.length > 0) {
-        await Member.updateMany(
-          { _id: { $in: membersToReactivate.map((m) => m._id) } },
-          { active: true }
+      if (users.length !== newUserIds.length) {
+        throw new Error("One or more users not found or inactive");
+      }
+      console.log("test 2");
+      // Tạo map để ánh xạ userId với name
+      const userMap = new Map(
+        users.map((user) => [user._id.toString(), user.name])
+      );
+      if (conversation.isJoinFromLink || isAuthorized) {
+        // Kiểm tra xem các thành viên đã tồn tại trong hội thoại chưa
+        const existingMembers = await Member.find({
+          conversationId,
+          userId: { $in: newUserIds },
+        });
+        console.log("test 3");
+        // Lấy danh sách userId của các thành viên đã tồn tại
+        const existingUserIds = existingMembers.map((m) => m.userId.toString());
+        console.log("existingUserIds", existingUserIds);
+        const userIdsToAdd = newUserIds.filter(
+          (id) => !existingUserIds.includes(id.toString())
         );
-      }
-      // Tạo các thành viên mới
-      const membersToCreate = userIdsToAdd.map((userId) => ({
-        conversationId,
-        userId,
-        name: userMap.get(userId.toString()) || "Unknown",
-        active: true,
-      }));
-      // Tạo các thành viên mới trong cơ sở dữ liệu
-      const newMembers =
-        membersToCreate.length > 0
-          ? await Member.insertMany(membersToCreate)
-          : [];
-      const allAddedMembers = [...membersToReactivate, ...newMembers];
-      conversation.members.push(...newMembers.map((m) => m._id));
-      if (allAddedMembers.length === 0) {
-        throw new Error("All provided users are already active members");
-      }
-      // Cập nhật danh sách thành viên trong hội thoại
-      const channelId = await this.getDefaultChannelId(conversationId);
+        console.log("test 4");
+        const membersToReactivate = existingMembers.filter((m) => !m.active);
 
-      // Tạo tin nhắn NOTIFY riêng cho từng thành viên được thêm
-      const notifyMessages = await Promise.all(
-        allAddedMembers.map(async (newMember) => {
-          const message = await Message.createMessage({
-            memberId: requestingMember._id, // Người gửi (A)
-            content: `${requestingMember.name} đã thêm ${newMember.name} vào nhóm`,
-            type: "NOTIFY",
-            action: "ADD",
-            actionData: {
-              targetId: newMember._id, // Người được thêm (B)
-            },
-            conversationId,
-            channelId,
-          });
-          return message;
-        })
-      );
+        // Tái kích hoạt các Member đã tồn tại nhưng không active
+        if (membersToReactivate.length > 0) {
+          await Member.updateMany(
+            { _id: { $in: membersToReactivate.map((m) => m._id) } },
+            { active: true }
+          );
+        }
+        console.log("test 5");
+        // Tạo các thành viên mới
+        const membersToCreate = userIdsToAdd.map((userId) => ({
+          conversationId,
+          userId,
+          name: userMap.get(userId.toString()) || "Unknown",
+          active: true,
+        }));
+        // Tạo các thành viên mới trong cơ sở dữ liệu
+        const newMembers =
+          membersToCreate.length > 0
+            ? await Member.insertMany(membersToCreate)
+            : [];
+        const allAddedMembers = [...membersToReactivate, ...newMembers];
+        conversation.members.push(...newMembers.map((m) => m._id));
+        if (allAddedMembers.length === 0) {
+          throw new Error("All provided users are already active members");
+        }
+        // Cập nhật danh sách thành viên trong hội thoại
+        const channelId = await this.getDefaultChannelId(conversationId);
 
-      conversation.lastMessageId =
-        notifyMessages[notifyMessages.length - 1]._id;
-      await conversation.save();
-
-      const addedMembers = allAddedMembers.map((member) => ({
-        _id: member._id,
-        userId: member.userId,
-        name: member.name,
-        avatar: avatarMap.get(member.userId.toString()) || null,
-        active: member.active,
-      }));
-
-      return { addedMembers, notifyMessages };
-    } else {
-      const existingRequestUserIds = conversation.joinRequests.map((id) =>
-        id.toString()
-      );
-      const newJoinRequestUserIds = newUserIds.filter(
-        (id) => !existingRequestUserIds.includes(id.toString())
-      );
-
-      if (newJoinRequestUserIds.length === 0) {
-        throw new Error(
-          "All provided users already have pending join requests"
+        // Tạo tin nhắn NOTIFY riêng cho từng thành viên được thêm
+        const notifyMessages = await Promise.all(
+          allAddedMembers.map(async (newMember) => {
+            const message = await Message.createMessage({
+              memberId: requestingMember._id, // Người gửi (A)
+              content: `${requestingMember.name} đã thêm ${newMember.name} vào nhóm`,
+              type: "NOTIFY",
+              action: "ADD",
+              actionData: {
+                targetId: newMember._id, // Người được thêm (B)
+              },
+              conversationId,
+              channelId,
+            });
+            return message;
+          })
         );
+
+        conversation.lastMessageId =
+          notifyMessages[notifyMessages.length - 1]._id;
+        await conversation.save();
+
+        console.log("test 6");
+
+        const addedMembers = allAddedMembers.map((member) => {
+          // Lấy avatar từ avatarMap
+          const avatar = avatarMap.get(member.userId.toString()) || null;
+          return {
+            _id: member._id,
+            userId: member.userId,
+            name: member.name,
+            active: member.active,
+            avatar,
+          };
+        });
+
+        return { addedMembers, notifyMessages };
+      } else {
+        console.log("test 7");
+        const existingRequestUserIds = conversation.joinRequests.map((id) =>
+          id.toString()
+        );
+        console.log("test 8");
+        const newJoinRequestUserIds = newUserIds.filter(
+          (id) => !existingRequestUserIds.includes(id.toString())
+        );
+
+        if (newJoinRequestUserIds.length === 0) {
+          throw new Error(
+            "All provided users already have pending join requests"
+          );
+        }
+        console.log("test 9");
+        // Cập nhật conversation.joinRequests
+        conversation.joinRequests.push(...newJoinRequestUserIds);
+        await conversation.save();
+        // Tạo tin nhắn NOTIFY cho yêu cầu tham gia
+        const channelId = await this.getDefaultChannelId(conversationId);
+        const notifyMessages = await Promise.all(
+          newJoinRequestUserIds.map(async (userId) => {
+            const userName = userMap.get(userId.toString()) || "Unknown";
+            const message = await Message.createMessage({
+              memberId: requestingMember._id,
+              content: `${requestingMember.name} đã mời ${userName} tham gia nhóm. Đang chờ phê duyệt.`,
+              type: "NOTIFY",
+              action: "ADD",
+              actionData: { targetId: userId },
+              conversationId,
+              channelId,
+            });
+            return message;
+          })
+        );
+
+        console.log("test 10");
+        conversation.lastMessageId =
+          notifyMessages[notifyMessages.length - 1]._id;
+        await conversation.save();
+
+        return { joinRequestUserIds: newJoinRequestUserIds, notifyMessages };
       }
-      // Cập nhật conversation.joinRequests
-      conversation.joinRequests.push(...newJoinRequestUserIds);
-      await conversation.save();
-      // Tạo tin nhắn NOTIFY cho yêu cầu tham gia
-      const channelId = await this.getDefaultChannelId(conversationId);
-      const notifyMessages = await Promise.all(
-        newJoinRequestUserIds.map(async (userId) => {
-          const userName = userMap.get(userId.toString()) || "Unknown";
-          const message = await Message.createMessage({
-            memberId: requestingMember._id,
-            content: `${requestingMember.name} đã mời ${userName} tham gia nhóm. Đang chờ phê duyệt.`,
-            type: "NOTIFY",
-            action: "ADD",
-            actionData: { targetId: userId },
-            conversationId,
-            channelId,
-          });
-          return message;
-        })
+    } catch (error) {
+      console.error("Error in addMembersToConversation:", error);
+      throw new Error(
+        "Failed to add members to conversation: " + error.message
       );
-
-      conversation.lastMessageId =
-        notifyMessages[notifyMessages.length - 1]._id;
-      await conversation.save();
-
-      return { joinRequestUserIds: newJoinRequestUserIds, notifyMessages };
     }
   },
   // Xóa thành viên khỏi hội thoại

@@ -539,7 +539,13 @@ class MessageService {
       files
     );
     // Kiểm tra replyMessageId (nếu có)
-    if (replyMessageId !== "undefined" && replyMessageId !== null) {
+    if (
+      replyMessageId &&
+      replyMessageId !== "undefined" &&
+      replyMessageId !== "null" &&
+      replyMessageId !== null &&
+      replyMessageId !== undefined
+    ) {
       const replyMessage = await Message.findById(replyMessageId);
       if (
         !replyMessage ||
@@ -559,11 +565,13 @@ class MessageService {
         };
 
         // Chỉ thêm replyMessageId nếu không phải undefined
-        if (replyMessageId &&
-      replyMessageId !== "undefined" &&
-      replyMessageId !== "null" &&
-      replyMessageId !== null &&
-      replyMessageId !== undefined) {
+        if (
+          replyMessageId &&
+          replyMessageId !== "undefined" &&
+          replyMessageId !== "null" &&
+          replyMessageId !== null &&
+          replyMessageId !== undefined
+        ) {
           messageData.replyMessageId = replyMessageId;
         }
 
@@ -616,8 +624,6 @@ class MessageService {
       file
     );
     // Kiểm tra replyMessageId (nếu có)
-    console.log("replyMessageId trc", replyMessageId);
-    console.log("typeof replyMessageId trc", replyMessageId);
     if (
       replyMessageId &&
       replyMessageId !== "undefined" &&
@@ -625,8 +631,6 @@ class MessageService {
       replyMessageId !== null &&
       replyMessageId !== undefined
     ) {
-      console.log("replyMessageId", replyMessageId);
-      console.log("typeof replyMessageId", replyMessageId);
       const replyMessage = await Message.findById(replyMessageId);
       if (
         !replyMessage ||
@@ -695,16 +699,14 @@ class MessageService {
       conversationId,
       file
     );
-    console.log("replyMessageId trc", replyMessageId);
-    console.log("typeof replyMessageId trc", replyMessageId);
     // Kiểm tra replyMessageId (nếu có)
-    if (replyMessageId &&
+    if (
+      replyMessageId &&
       replyMessageId !== "undefined" &&
       replyMessageId !== "null" &&
       replyMessageId !== null &&
-      replyMessageId !== undefined) {
-      console.log("replyMessageId", replyMessageId);
-      console.log("typeof replyMessageId", replyMessageId);
+      replyMessageId !== undefined
+    ) {
       const replyMessage = await Message.findById(replyMessageId);
       if (
         !replyMessage ||

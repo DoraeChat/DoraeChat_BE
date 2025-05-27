@@ -131,8 +131,18 @@ class MessageService {
       .populate({
         path: "memberId",
         select: "userId name",
+        populate: {
+          path: "userId",
+          select: "avatar",
+        },
       })
       .lean();
+
+    if (populatedMessage?.memberId?.userId) {
+      populatedMessage.memberId.avatar =
+        populatedMessage.memberId.userId.avatar;
+      populatedMessage.memberId.userId = populatedMessage.memberId.userId._id;
+    }
 
     // Cập nhật lastMessageId trong conversation
     conversation.lastMessageId = newMessage._id;

@@ -1,4 +1,5 @@
 const Member = require("../models/Member");
+const UserService = require("./UserService");
 
 const MemberService = {
   async getById(id) {
@@ -46,7 +47,10 @@ const MemberService = {
   async getByMemberId(memberId) {
     const member = await Member.findById(memberId);
     if (!member) throw new NotFoundError("Member");
-    return member;
+    const user = await UserService.getById(member.userId);
+    const memberSummary = member.toObject();
+    memberSummary.avatar = user.avatar;
+    return memberSummary;
   },
 
   async updateMemberName(memberId, name) {

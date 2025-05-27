@@ -1,6 +1,12 @@
 const Member = require("../models/Member");
 
 const MemberService = {
+  async getById(id) {
+    const member = await Member.findOne({ _id: id }).lean();
+    if (!member) throw new NotFoundError("Member");
+    return member;
+  },
+
   async isMember(conversationId, userId) {
     const member = await Member.isMember(conversationId, userId);
     if (!member) return false;

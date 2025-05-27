@@ -5,6 +5,8 @@ const NotFoundError = require("../exceptions/NotFoundError");
 const Channel = require("./Channel");
 const Member = require("./Member");
 const { Types } = require("mongoose");
+const MemberService = require("../services/MemberService");
+const UserService = require("../services/UserService");
 
 const commonLookupStages = {
   userLookup: {
@@ -833,6 +835,11 @@ messageSchema.statics.getVotesByChannelId = async function (
 };
 
 messageSchema.statics.createVote = async function (vote) {
+  const memberCreatedVote = await MemberService.getById(vote.memberId);
+  const userCreatedVote = await UserService.getById(
+    memberCreatedVote.userId.toString()
+  );
+
   const newVote = new Message({
     channelId: vote.channelId,
     memberId: vote.memberId,
@@ -859,7 +866,18 @@ messageSchema.statics.createVote = async function (vote) {
     },
   });
 
-  return await newVote.save();
+  const saveResult = await newVote.save();
+
+  const resultToReturn = saveResult.toObject();
+  resultToReturn.memberId = {
+    _id: memberCreatedVote._id,
+    name: userCreatedVote.name,
+    avatar: userCreatedVote.avatar,
+    avatarColor: userCreatedVote.avatarColor,
+    userId: userCreatedVote._id,
+  };
+
+  return resultToReturn;
 };
 
 messageSchema.statics.lockVote = async function (voteId, memberId) {

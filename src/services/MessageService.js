@@ -190,13 +190,27 @@ class MessageService {
     const populatedMessage = await Message.findById(messageId)
       .populate({
         path: "memberId",
+        populate: {
+          path: "userId",
+          select: "avatar",
+        },
         select: "userId name",
       })
       .populate({
         path: "reacts.memberId",
-        select: "name",
+        populate: {
+          path: "userId",
+          select: "avatar",
+        },
+        select: "name userId",
       })
       .lean();
+
+    if (populatedMessage?.memberId?.userId?.avatar) {
+      populatedMessage.memberId.avatar =
+        populatedMessage.memberId.userId.avatar;
+      populatedMessage.memberId.userId = populatedMessage.memberId.userId._id;
+    }
 
     return populatedMessage;
   }

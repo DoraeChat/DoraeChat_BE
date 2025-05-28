@@ -2,7 +2,8 @@ const CustomError = require('../exceptions/CustomError');
 
 const userValidate = {
     validateEmail: (email) => {
-        if (!email) return false;
+        if (!email || !email.trim())
+            return false;
 
         const regex =
             /^(([^<>()[\]\\.,;:\s@"]+(\.[^<>()[\]\\.,;:\s@"]+)*)|(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/;
@@ -23,6 +24,7 @@ const userValidate = {
         return true;
     },
     validatePassword: (password) => {
+        if (!password || !password.trim() || typeof password !== 'string') return false;
         const passwordRegex =
             /^(?=.*[A-Z])(?=.*[a-z])(?=.*\d)(?=.*[!@#$%^&*()_+=-]).{8,}$/;
         if (!password) return false;
@@ -70,12 +72,14 @@ const userValidate = {
 
     validateSubmitInfo: function (submitInformation) {
         const { contact, firstName, lastName, password, dateOfBirth, gender } = submitInformation;
+        if (!gender) throw new CustomError('Gender invalid', 400);
         if (!this.validateUsername(contact)) throw new CustomError('Contact invalid', 400);
         if (!this.validatePassword(password)) throw new CustomError('Password invalid', 400);
         if (!this.validateDateOfBirth(dateOfBirth)) throw new CustomError('Date of birth invalid', 400);
-        if (!firstName || firstName.length < 0 || firstName.length > 50)
+        const nameRegex = /^[a-zA-ZÀ-ỹ\s'-]+$/;
+        if (!firstName || !firstName.trim() || firstName.length < 1 || firstName.length > 50 || !nameRegex.test(firstName))
             throw new CustomError('First name invalid', 400);
-        if (!lastName || lastName.length < 0 || lastName.length > 50)
+        if (!lastName || !lastName.trim() || lastName.length < 1 || lastName.length > 50 || !nameRegex.test(lastName))
             throw new CustomError('Last name invalid', 400);
         return true;
     }

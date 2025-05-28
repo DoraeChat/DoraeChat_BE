@@ -414,27 +414,7 @@ class SocketHandler {
 
   async emitToConversation(conversationId, event, data) {
     console.log(`Emitting to conversation ${conversationId}: ${event}`, data);
-    try {
-      const conv = await Conversation.findById(conversationId).populate("members");
-      if (!conv) return;
-
-      const receivers = conv.members
-        .map(m => m.userId.toString())
-        .filter(id => id !== data.memberId.userId);
-
-      for (const rid of receivers) {
-        const userID = new mongoose.Types.ObjectId(rid);
-        const member = await Member.getByConversationIdAndUserId(data.conversationId, userID);
-        console.log(member);
-        if (member && member.active) {
-          this.io.to(rid).emit(event, data);
-        } else {
-          console.log(`User ${rid} is not active in conversation ${conversationId}`);
-        }
-      }
-    } catch (err) {
-      console.error(`Failed to emit to conversation ${conversationId}:`, err.message);
-    }
+    this.io.to(conversationId).emit(event, data);
   }
 
   emitToAll(event, data) {

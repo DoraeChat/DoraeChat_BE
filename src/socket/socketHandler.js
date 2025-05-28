@@ -5,6 +5,7 @@ const Member = require("../models/Member");
 const User = require("../models/User");
 const Conversation = require("../models/Conversation");
 const { validateCallPermission } = require("../validates/callValidate");
+const mongoose = require("mongoose");
 
 const REDIS_TTL = 86400;
 
@@ -411,9 +412,29 @@ class SocketHandler {
     });
   }
 
-  emitToConversation(conversationId, event, data) {
+  async emitToConversation(conversationId, event, data) {
     console.log(`Emitting to conversation ${conversationId}: ${event}`, data);
-    this.io.to(conversationId).emit(event, data);
+    try {
+      const conv = await Conversation.findById(conversationId).populate("members");
+      if (!conv) return;
+
+      const receivers = conv.members
+        .map(m => m.userId.toString())
+        .filter(id => id !== data.memberId.userId);
+
+      for (const rid of receivers) {
+        const userID = new mongoose.Types.ObjectId(rid);
+        const member = await Member.getByConversationIdAndUserId(data.conversationId, userID);
+        console.log(member);
+        if (member && member.active) {
+          this.io.to(rid).emit(event, data);
+        } else {
+          console.log(`User ${rid} is not active in conversation ${conversationId}`);
+        }
+      }
+    } catch (err) {
+      console.error(`Failed to emit to conversation ${conversationId}:`, err.message);
+    }
   }
 
   emitToAll(event, data) {

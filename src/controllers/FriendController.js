@@ -207,17 +207,19 @@ class FriendController {
         );
       const conversationToSocket = await Conversation.getById(conversation._id);
 
-      // Gửi JOIN_CONVERSATION
-      this.socketHandler.emitToUser(
-        userId,
-        SOCKET_EVENTS.JOIN_CONVERSATION,
-        conversationToSocket
-      );
-      this.socketHandler.emitToUser(
-        _id,
-        SOCKET_EVENTS.JOIN_CONVERSATION,
-        conversationToSocket
-      );
+      if (!conversationToSocket) {
+        this.socketHandler.emitToUser(
+          userId,
+          SOCKET_EVENTS.JOIN_CONVERSATION,
+          conversationToSocket
+        );
+        this.socketHandler.emitToUser(
+          _id,
+          SOCKET_EVENTS.JOIN_CONVERSATION,
+          conversationToSocket
+        );
+      }
+
 
       // Gửi ACCEPT_FRIEND
       this.socketHandler.emitToUser(userId, SOCKET_EVENTS.ACCEPT_FRIEND, {

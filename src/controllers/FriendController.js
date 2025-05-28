@@ -200,14 +200,17 @@ class FriendController {
       const user = await MeService.getById(_id);
       const { name, avatar } = user;
 
-      const conversation =
-        await ConversationService.findOrCreateIndividualConversation(
-          _id,
-          userId
-        );
-      const conversationToSocket = await Conversation.getById(conversation._id);
+      const conversationExists =
+        await ConversationService.findIndividualConversation(_id, userId);
 
-      if (!conversationToSocket) {
+      if (!conversationExists) {
+        const conversation =
+          await ConversationService.findOrCreateIndividualConversation(
+            _id,
+            userId
+          );
+        const conversationToSocket = await Conversation.getById(conversation._id);
+
         this.socketHandler.emitToUser(
           userId,
           SOCKET_EVENTS.JOIN_CONVERSATION,
@@ -219,7 +222,6 @@ class FriendController {
           conversationToSocket
         );
       }
-
 
       // Gửi ACCEPT_FRIEND
       this.socketHandler.emitToUser(userId, SOCKET_EVENTS.ACCEPT_FRIEND, {
@@ -255,6 +257,7 @@ class FriendController {
       );
 
       res.status(201).json();
+
     } catch (err) {
       next(err);
     }

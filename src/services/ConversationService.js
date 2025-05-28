@@ -11,6 +11,15 @@ const ConversationService = {
     // đã conver member
     return await Conversation.getListByUserId(userId);
   },
+  async findIndividualConversation(userId1, userId2) {
+    // Kiểm tra nếu đã có cuộc trò chuyện 1-1 giữa hai user
+    // đã conver member
+    let conversation = await Conversation.existsIndividualConversation(
+      userId1,
+      userId2
+    );
+    return conversation;
+  },
   // 🔍 Kiểm tra xem cuộc trò chuyện cá nhân giữa 2 user có tồn tại không
   async findOrCreateIndividualConversation(userId1, userId2) {
     // Kiểm tra nếu đã có cuộc trò chuyện 1-1 giữa hai user

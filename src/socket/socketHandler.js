@@ -299,9 +299,13 @@ class SocketHandler {
       socket.on(SOCKET_EVENTS.END_CALL, ({ conversationId }) =>
         this.handleEndCall(socket, conversationId)
       );
-      socket.on(SOCKET_EVENTS.LEAVE_CALL, (conversationId) =>
-        socket.leave(`call:${conversationId}`)
-      );
+
+      socket.on(SOCKET_EVENTS.LEAVE_CALL, async (conversationId) => {
+        const room = `call:${conversationId}`;
+        socket.leave(room);
+        await redisDb.clearCurrentCall(socket.userId);
+        console.log(`User ${socket.userId} left room ${room} and cleared currentCall`);
+      });
 
       socket.on(
         SOCKET_EVENTS.REJECT_CALL, async ({ conversationId, userId, reason }) => {
@@ -378,6 +382,17 @@ class SocketHandler {
           console.error("Error handling GROUP_CALL_ENDED:", err);
         }
       });
+
+      socket.on(SOCKET_EVENTS.GET_CURRENT_CALL, async (cb) => {
+        if (!socket.userId || typeof cb !== "function") return;
+        try {
+          const currentCall = await redisDb.getCurrentCall(socket.userId);
+          cb({ currentCall });
+        } catch (err) {
+          console.error("Error fetching current call via socket:", err);
+          cb({ error: "Internal Server Error" });
+        }
+      });
     });
 
 
@@ -408,17 +423,21 @@ class SocketHandler {
   // --- Subscription for both audio/video ---
   async handleSubscribeCall({ conversationId, peerId }, type, socket) {
     const userId = socket.userId;
-    console.log(
-      `User ${userId} is subscribing to call in conversation ${conversationId}`
-    );
-    const hasPermission = await validateCallPermission(
-      conversationId,
-      userId,
-      null
-    );
-    console.log(
-      `Permission check passed for user ${userId} in conversation ${conversationId}: ${hasPermission}`
-    );
+    console.log(`User ${userId} is subscribing to call in conversation ${conversationId}`);
+
+    // --- Check currentCall của chính user ---
+    const currentCall = await redisDb.getCurrentCall(userId);
+    if (currentCall) {
+      console.warn(`❌ User ${userId} already in another call: ${currentCall}`);
+      socket.emit(SOCKET_EVENTS.CALL_REJECTED, {
+        conversationId,
+        userId,
+        reason: "already_in_call",
+      });
+      return;
+    }
+
+    const hasPermission = await validateCallPermission(conversationId, userId, null);
     if (!hasPermission) {
       console.warn(
         `❌ User ${userId} has no permissions in the conversation ${conversationId}`
@@ -431,12 +450,14 @@ class SocketHandler {
       });
       return;
     }
-    console.log(`User ${userId} joined call room: ${conversationId}`);
 
     const room = `call:${conversationId}`;
     socket.join(room);
 
-    // 1) NEW_USER_CALL broadcast
+    // Lưu trạng thái current call
+    await redisDb.setCurrentCall(userId, room);
+
+    // 1) Emit cho chính user
     socket.emit(SOCKET_EVENTS.NEW_USER_CALL, {
       conversationId,
       peerId,
@@ -444,25 +465,30 @@ class SocketHandler {
       type,
       initiator: true,
     });
-    socket.broadcast.to(room).emit(SOCKET_EVENTS.NEW_USER_CALL, {
-      conversationId,
-      peerId,
-      userId,
-      type,
-      initiator: false,
-    });
 
-    // 2) CALL_USER direct to all other members
+    // 2) Gửi NEW_USER_CALL tới những người khác trong phòng nhưng chỉ nếu họ không ở call khác
     try {
-      const conv = await Conversation.findById(conversationId).populate(
-        "members"
-      );
+      const conv = await Conversation.findById(conversationId).populate("members");
       if (!conv) return;
+
       const receivers = conv.members
         .map((m) => m.userId.toString())
         .filter((id) => id !== userId);
+
       const fromName = (await User.findById(userId))?.name || "";
+
       for (const rid of receivers) {
+        const currentCallOfReceiver = await redisDb.getCurrentCall(rid);
+        if (currentCallOfReceiver && currentCallOfReceiver !== room) {
+          console.log(`🚫 Không gửi NEW_USER_CALL tới ${rid} vì đang ở call khác: ${currentCallOfReceiver}`);
+          socket.emit(SOCKET_EVENTS.CALL_REJECTED, {
+            conversationId,
+            userId,
+            reason: "already_in_call",
+          });
+          continue;
+        }
+
         this.io.to(rid).emit(SOCKET_EVENTS.CALL_USER, {
           from: userId,
           conversationId,
@@ -470,11 +496,20 @@ class SocketHandler {
           type,
           fromName,
         });
+
+        socket.broadcast.to(room).emit(SOCKET_EVENTS.NEW_USER_CALL, {
+          conversationId,
+          peerId,
+          userId,
+          type,
+          initiator: false,
+        });
       }
-    } catch (e) {
-      console.error("Error in handleSubscribeCall:", e);
+    } catch (err) {
+      console.error("Error in handleSubscribeCall:", err);
     }
   }
+
 
   // --- Signaling: broadcast offer/answer into proper room ---
   handleSignal(socket, signal, conversationId) {
@@ -486,12 +521,15 @@ class SocketHandler {
   }
 
   // --- End call: notify & cleanup room ---
-  handleEndCall(socket, conversationId) {
+  async handleEndCall(socket, conversationId) {
     const room = `call:${conversationId}`;
     console.log(`User ${socket.userId} ended call in ${room}`);
     socket.broadcast.to(room).emit(SOCKET_EVENTS.CALL_ENDED, {
       userId: socket.userId,
     });
+
+    // 🟩 Xoá trạng thái current call
+    await redisDb.clearCurrentCall(socket.userId);
   }
 }
 

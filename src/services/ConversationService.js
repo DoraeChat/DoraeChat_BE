@@ -258,7 +258,6 @@ const ConversationService = {
       })
         .select("_id name avatar")
         .lean();
-      console.log("test 1");
       const avatarMap = new Map(
         users.map((user) => [user._id.toString(), user.avatar])
       );
@@ -267,7 +266,6 @@ const ConversationService = {
       if (users.length !== newUserIds.length) {
         throw new Error("One or more users not found or inactive");
       }
-      console.log("test 2");
       // Tạo map để ánh xạ userId với name
       const userMap = new Map(
         users.map((user) => [user._id.toString(), user.name])
@@ -278,14 +276,12 @@ const ConversationService = {
           conversationId,
           userId: { $in: newUserIds },
         });
-        console.log("test 3");
         // Lấy danh sách userId của các thành viên đã tồn tại
         const existingUserIds = existingMembers.map((m) => m.userId.toString());
         console.log("existingUserIds", existingUserIds);
         const userIdsToAdd = newUserIds.filter(
           (id) => !existingUserIds.includes(id.toString())
         );
-        console.log("test 4");
         const membersToReactivate = existingMembers.filter((m) => !m.active);
 
         // Tái kích hoạt các Member đã tồn tại nhưng không active
@@ -295,7 +291,6 @@ const ConversationService = {
             { active: true }
           );
         }
-        console.log("test 5");
         // Tạo các thành viên mới
         const membersToCreate = userIdsToAdd.map((userId) => ({
           conversationId,
@@ -338,7 +333,6 @@ const ConversationService = {
           notifyMessages[notifyMessages.length - 1]._id;
         await conversation.save();
 
-        console.log("test 6");
 
         const addedMembers = allAddedMembers.map((member) => {
           // Lấy avatar từ avatarMap
@@ -354,11 +348,9 @@ const ConversationService = {
 
         return { addedMembers, notifyMessages };
       } else {
-        console.log("test 7");
         const existingRequestUserIds = conversation.joinRequests.map((id) =>
           id.toString()
         );
-        console.log("test 8");
         const newJoinRequestUserIds = newUserIds.filter(
           (id) => !existingRequestUserIds.includes(id.toString())
         );
@@ -368,7 +360,6 @@ const ConversationService = {
             "All provided users already have pending join requests"
           );
         }
-        console.log("test 9");
         // Cập nhật conversation.joinRequests
         conversation.joinRequests.push(...newJoinRequestUserIds);
         await conversation.save();
@@ -390,7 +381,6 @@ const ConversationService = {
           })
         );
 
-        console.log("test 10");
         conversation.lastMessageId =
           notifyMessages[notifyMessages.length - 1]._id;
         await conversation.save();

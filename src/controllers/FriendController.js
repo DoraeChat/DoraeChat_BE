@@ -222,7 +222,11 @@ class FriendController {
           conversationToSocket
         );
       }
-
+      const conversation =
+        await ConversationService.findOrCreateIndividualConversation(
+          _id,
+          userId
+        );
       // Gửi ACCEPT_FRIEND
       this.socketHandler.emitToUser(userId, SOCKET_EVENTS.ACCEPT_FRIEND, {
         _id,

@@ -227,16 +227,16 @@ class ConversationController {
         );
 
       if (this.socketHandler) {
-        // if (addedMembers && addedMembers.length > 0) {
+        if (addedMembers && addedMembers.length > 0) {
           notifyMessages.forEach((message) => {
-              this.socketHandler.emitToConversation(
-                conversationId.toString(),
-                SOCKET_EVENTS.RECEIVE_MESSAGE,
-                {
-                  ...(message.toObject ? message.toObject() : message),
-                  content: message.content,
-                }
-              );
+            this.socketHandler.emitToConversation(
+              conversationId.toString(),
+              SOCKET_EVENTS.RECEIVE_MESSAGE,
+              {
+                ...(message.toObject ? message.toObject() : message),
+                content: message.content,
+              }
+            );
           });
 
           this.socketHandler.emitToConversation(
@@ -247,8 +247,18 @@ class ConversationController {
               addedMembers,
             }
           );
-        // }
+        }
         if (joinRequestUserIds && joinRequestUserIds.length > 0) {
+          notifyMessages.forEach((message) => {
+            this.socketHandler.emitToConversation(
+              conversationId.toString(),
+              SOCKET_EVENTS.RECEIVE_MESSAGE,
+              {
+                ...(message.toObject ? message.toObject() : message),
+                content: message.content,
+              }
+            );
+          });
           this.socketHandler.emitToConversation(
             conversationId,
             SOCKET_EVENTS.JOIN_REQUEST_APPROVED,

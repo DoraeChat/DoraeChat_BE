@@ -227,20 +227,13 @@ class ConversationController {
         );
 
       if (this.socketHandler) {
-        if (addedMembers && addedMembers.length > 0) {
+        // if (addedMembers && addedMembers.length > 0) {
           notifyMessages.forEach((message) => {
-            const targetMember = addedMembers.find((m) => {
-              return m._id.toString() == message.actionData.targetId.toString();
-            });
-            const contentForSelf = `Bạn đã được ${message.memberId.name} thêm vào nhóm`;
-            content: targetMember.userId.toString() === userId.toString()
-              ? contentForSelf
-              : message.content,
               this.socketHandler.emitToConversation(
                 conversationId.toString(),
                 SOCKET_EVENTS.RECEIVE_MESSAGE,
                 {
-                  ...message.toObject(),
+                  ...(message.toObject ? message.toObject() : message),
                   content: message.content,
                 }
               );
@@ -254,7 +247,7 @@ class ConversationController {
               addedMembers,
             }
           );
-        }
+        // }
         if (joinRequestUserIds && joinRequestUserIds.length > 0) {
           this.socketHandler.emitToConversation(
             conversationId,

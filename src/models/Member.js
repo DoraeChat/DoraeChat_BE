@@ -148,7 +148,7 @@ memberSchema.statics.getByConversationId = async (conversationId) => {
       const user = await User.findById(member.userId).lean();
       return {
         ...member,
-        avatar: user.avatar,
+        avatar: user?.avatar,
       };
     })
   );
@@ -161,6 +161,7 @@ memberSchema.statics.getByConversationIdAndUserId = async (
   userId
 ) => {
   if (!ObjectId.isValid(conversationId) || !ObjectId.isValid(userId)) {
+    console.log("Invalid conversationId or userId", conversationId, userId);
     throw new CustomError("Invalid conversationId or userId", 400);
   }
 

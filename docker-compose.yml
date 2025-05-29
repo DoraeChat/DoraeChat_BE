@@ -1,7 +1,6 @@
-# version: '3.8'
 services:
   redis:
-    image: redis:latest
+    image: redis:alpine
     container_name: redis_container
     ports:
       - "6379:6379"
@@ -11,6 +10,22 @@ services:
     networks:
       - redis_network
     command: redis-server /usr/local/etc/redis/redis.conf
+    restart: always
+
+  dorachat-backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: ${DOCKER_USERNAME}/dorachat:latest
+    container_name: dorachat_backend
+    ports:
+      - "3001:3001"
+    depends_on:
+      - redis
+    networks:
+      - redis_network
+    env_file:
+      - .env
     restart: always
 
 volumes:

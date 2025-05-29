@@ -373,6 +373,7 @@ const ConversationService = {
         await conversation.save();
         // Tạo tin nhắn NOTIFY cho yêu cầu tham gia
         const channelId = await this.getDefaultChannelId(conversationId);
+        const requestingUser = await User.findById(requestingMember.userId).lean();
         const notifyMessages = await Promise.all(
           newJoinRequestUserIds.map(async (userId) => {
             const userName = userMap.get(userId.toString()) || "Unknown";
@@ -385,7 +386,15 @@ const ConversationService = {
               conversationId,
               channelId,
             });
-            return message;
+            const tempMessage = message.toObject();
+            delete tempMessage.memberId;
+            tempMessage.memberId = {
+              _id: requestingMember._id,
+              userId: requestingMember.userId,
+              name: requestingUser.name,
+              avatar: requestingUser.avatar,
+            };
+            return tempMessage;
           })
         );
 

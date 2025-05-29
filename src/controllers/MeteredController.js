@@ -1,4 +1,4 @@
-const meteredService = require("../services/meteredService");
+const meteredService = require("../services/MeteredService");
 
 async function createMeetingRoom(req, res) {
     try {

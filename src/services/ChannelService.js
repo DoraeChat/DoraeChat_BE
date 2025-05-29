@@ -69,6 +69,11 @@ class ChannelService {
       if (!conversation.type)
         throw new CustomError("Conversation is not a group", 400);
 
+      // find channels by conversationId
+      const channels = await Channel.getAllChannelByConversationId(conversationId);
+      if (channels.length <= 1) {
+        throw new CustomError("Cannot delete channel General", 400);
+      }
       return await Channel.deleteChannel(channelId);
     } catch (err) {
       if (err instanceof NotFoundError || err instanceof CustomError) throw err;

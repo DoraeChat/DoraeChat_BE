@@ -342,7 +342,6 @@ const ConversationService = {
           notifyMessages[notifyMessages.length - 1]._id;
         await conversation.save();
 
-
         const addedMembers = allAddedMembers.map((member) => {
           // Lấy avatar từ avatarMap
           const avatar = avatarMap.get(member.userId.toString()) || null;
@@ -482,7 +481,7 @@ const ConversationService = {
     }
 
     const requestingMember = await Member.findOne({ conversationId, userId });
-    if (!requestingMember) {
+    if (!requestingMember || !requestingMember.active) {
       throw new Error("You are not a member of this conversation");
     }
 
@@ -1186,7 +1185,8 @@ const ConversationService = {
     });
     if (
       !currentAdmin ||
-      conversation.leaderId.toString() !== currentAdmin._id.toString()
+      conversation.leaderId.toString() !== currentAdmin._id.toString() ||
+      !currentAdmin.active
     ) {
       throw new Error("You are not authorized to transfer admin role");
     }
@@ -1195,7 +1195,7 @@ const ConversationService = {
     const newAdmin = await Member.findOne({
       _id: newAdminId,
     });
-    if (!newAdmin) {
+    if (!newAdmin || !newAdmin.active) {
       throw new Error("New admin is not a valid member of this group");
     }
     // Cập nhật role

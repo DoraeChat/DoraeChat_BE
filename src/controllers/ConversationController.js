@@ -237,7 +237,7 @@ class ConversationController {
               ? contentForSelf
               : message.content,
               this.socketHandler.emitToConversation(
-                conversationId,
+                conversationId.toString(),
                 SOCKET_EVENTS.RECEIVE_MESSAGE,
                 {
                   ...message.toObject(),

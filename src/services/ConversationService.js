@@ -373,7 +373,9 @@ const ConversationService = {
         await conversation.save();
         // Tạo tin nhắn NOTIFY cho yêu cầu tham gia
         const channelId = await this.getDefaultChannelId(conversationId);
-        const requestingUser = await User.findById(requestingMember.userId).lean();
+        const requestingUser = await User.findById(
+          requestingMember.userId
+        ).lean();
         const notifyMessages = await Promise.all(
           newJoinRequestUserIds.map(async (userId) => {
             const userName = userMap.get(userId.toString()) || "Unknown";
@@ -857,8 +859,13 @@ const ConversationService = {
       conversationId,
       userId
     );
-    if (conversation.leaderId.toString() !== member._id.toString()) {
-      throw new Error("Only the group leader can view join requests");
+    if (
+      conversation.leaderId.toString() !== member._id.toString() &&
+      !conversation.managerIds.includes(member._id.toString())
+    ) {
+      throw new Error(
+        "Only the group leader and managers can view join requests"
+      );
     }
 
     const joinRequests = await User.find({

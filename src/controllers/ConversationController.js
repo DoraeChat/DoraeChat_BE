@@ -337,24 +337,22 @@ class ConversationController {
 
       if (this.socketHandler) {
         notifyMessages.forEach((message) => {
-          const targetManager = addedManagers.find(
-            (m) =>
-              m.memberId.toString() === message.actionData.targetId.toString()
-          );
-          const contentForSelf = `Bạn đã được ${message.memberId.name} thêm làm phó nhóm`;
-
           this.socketHandler.emitToConversation(
             conversationId,
             SOCKET_EVENTS.RECEIVE_MESSAGE,
-            {
-              ...message.toObject(),
-              content:
-                targetManager.userId.toString() === userId.toString()
-                  ? contentForSelf
-                  : message.content,
-            }
+            message
           );
         });
+        this.socketHandler.emitToConversation(
+          conversationId,
+          SOCKET_EVENTS.UPDATE_MANAGERS,
+          {
+            conversationId,
+            addedManagers: addedManagers.map((manager) => ({
+              memberId: manager.memberId,
+            })),
+          }
+        );
       }
 
       res.status(201).json(addedManagers);
@@ -383,11 +381,18 @@ class ConversationController {
         );
 
       // Phát sự kiện socket
-      this.socketHandler.emitToConversation(
-        conversationId,
-        SOCKET_EVENTS.RECEIVE_MESSAGE,
-        notifyMessage
-      );
+      if (this.socketHandler) {
+        this.socketHandler.emitToConversation(
+          conversationId,
+          SOCKET_EVENTS.RECEIVE_MESSAGE,
+          notifyMessage
+        );
+        this.socketHandler.emitToConversation(
+          conversationId,
+          SOCKET_EVENTS.DEMOTE_MANAGER,
+          { conversationId, managerId: removedManager._id }
+        );
+      }
 
       res.status(200).json({ removedManager, notifyMessage });
     } catch (error) {

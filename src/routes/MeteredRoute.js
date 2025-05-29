@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const meteredController = require('../controllers/meteredController');
+const meteredController = require('../controllers/MeteredController');
 
 router.post('/create-meeting-room', meteredController.createMeetingRoom);
 router.get('/validate-meeting', meteredController.validateMeetingRoom);

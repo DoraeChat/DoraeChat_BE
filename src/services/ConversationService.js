@@ -1029,7 +1029,7 @@ const ConversationService = {
       token,
       expiresAt,
     });
-
+  
     const inviteLink = `${process.env.APP_URL}/join/${token}`;
     return { inviteLink, invite };
   },

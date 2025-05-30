@@ -257,9 +257,13 @@ const ConversationService = {
       }
 
       // Kiểm tra vai trò: leader hoặc manager
-      const isLeader = conversation.leaderId.toString() === userId.toString();
-      const isManager = conversation.managerIds.includes(userId.toString());
+      const isLeader =
+        conversation.leaderId.toString() === requestingMember._id.toString();
+      const isManager = conversation.managerIds.includes(
+        requestingMember._id.toString()
+      );
       const isAuthorized = isLeader || isManager;
+      console.log("isAuthorized", isAuthorized);
       // Kiểm tra xem các userId có tồn tại và hoạt động không
       const users = await User.find({
         _id: { $in: newUserIds },
@@ -270,7 +274,6 @@ const ConversationService = {
       const avatarMap = new Map(
         users.map((user) => [user._id.toString(), user.avatar])
       );
-      console.log("avatarMap", avatarMap);
 
       if (users.length !== newUserIds.length) {
         throw new Error("One or more users not found or inactive");
@@ -693,7 +696,17 @@ const ConversationService = {
       conversationId,
       userId: requestingUserId,
     });
-    const newMembers = requestingMember;
+    const user = await User.findOne({
+      _id: requestingUserId,
+      isActived: true,
+    })
+      .select("_id name avatar")
+      .lean();
+
+    if (!user) {
+      throw new Error("User not found or not active");
+    }
+    let newMembers = requestingMember;
     if (!newMembers) {
       // Tạo member mới
       newMembers = await Member.create({
@@ -701,6 +714,7 @@ const ConversationService = {
         userId: requestingUserId,
         name: (await User.findById(requestingUserId).lean()).name,
         active: true,
+        avatar: user.avatar || null,
       });
       conversation.members.push(newMembers._id);
     } else {
@@ -713,7 +727,6 @@ const ConversationService = {
     conversation.joinRequests = conversation.joinRequests.filter(
       (id) => id.toString() !== requestingUserId.toString()
     );
-    await conversation.save();
 
     // Tạo tin nhắn NOTIFY
     const channelId = await this.getDefaultChannelId(conversationId);
@@ -728,8 +741,16 @@ const ConversationService = {
 
     conversation.lastMessageId = notifyMessage._id;
     await conversation.save();
+    console.log("user", user.avatar);
+    const responseMember = {
+      _id: newMembers._id,
+      userId: newMembers.userId,
+      name: newMembers.name,
+      active: newMembers.active,
+      avatar: user.avatar || null,
+    };
 
-    return { newMembers, notifyMessage };
+    return { newMembers: responseMember, notifyMessage };
   },
   // Từ chối yêu cầu gia nhập nhóm từ một user
   async rejectJoinRequest(conversationId, userId, requestingUserId) {
@@ -780,16 +801,31 @@ const ConversationService = {
       throw new Error("No join requests to accept");
     }
 
+    const users = await User.find({
+      _id: { $in: conversation.joinRequests },
+      isActived: true,
+    })
+      .select("_id name avatar")
+      .lean();
+
+    const avatarMap = new Map(
+      users.map((user) => [user._id.toString(), user.avatar])
+    );
+    const nameMap = new Map(
+      users.map((user) => [user._id.toString(), user.name])
+    );
+
     const newMembers = [];
+
     for (const reqUserId of conversation.joinRequests) {
       let member = await Member.findOne({ conversationId, userId: reqUserId });
+      const userIdStr = reqUserId.toString();
 
       if (!member) {
-        const user = await User.findById(reqUserId).lean();
         member = await Member.create({
           conversationId,
           userId: reqUserId,
-          name: user.name,
+          name: nameMap.get(userIdStr) || "Unknown",
           active: true,
         });
         conversation.members.push(member._id);
@@ -799,10 +835,16 @@ const ConversationService = {
         await member.save();
       }
 
-      newMembers.push(member);
+      newMembers.push({
+        _id: member._id,
+        userId: member.userId,
+        name: member.name,
+        active: member.active,
+        avatar: avatarMap.get(userIdStr) || null,
+      });
     }
 
-    // Xoá tất cả joinRequests
+    // Xoá joinRequests
     conversation.joinRequests = [];
 
     // Gửi tin nhắn NOTIFY

@@ -189,11 +189,10 @@ const upload = multer({
 
     // multer's limits
     if (file.size && file.size > config.maxSize) {
+      const maxSizeInMB = Number(config.maxSize) / (1024 * 1024);
       return cb(
         new Error(
-          `File size exceeds the limit for ${fileCategory} files (${
-            config.maxSize / (1024 * 1024)
-          }MB)`
+          `File size exceeds the limit for ${fileCategory} files (${maxSizeInMB}MB)`
         ),
         false
       );
@@ -294,7 +293,7 @@ const uploadImages = async (files, userId, type) => {
         );
 
         fs.unlinkSync(file.path);
-        
+
         return {
           url: result.secure_url,
           publicId: result.public_id,

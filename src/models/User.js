@@ -26,25 +26,69 @@ const userSchema = new Schema(
     avatar: {
       type: String,
       default: function () {
-        const firstChar = this.name ? this.name.charAt(0).toUpperCase() : 'A';
+        const firstChar = this.name ? this.name.charAt(0).toUpperCase() : "A";
         const width = 150;
         const height = 150;
-        const format = 'png';
+        const format = "png";
 
         const lightColors = [
-          'F0F8FF', 'FAEBD7', 'F5F5DC', 'FFFACD', 'FAF0E6',
-          'FFE4C4', 'FFDAB9', 'EEE8AA', 'F0FFF0', 'F5FFFA',
-          'F0FFFF', 'F8F8FF', 'F5F5F5', 'FFFFE0', 'FFFFF0',
-          'FFFAFA', '7FFFD4', 'ADD8E6', 'B0E0E6', 'AFEEEE',
-          'E0FFFF', '87CEFA', 'B0C4DE', 'D3D3D3', '98FB98',
-          'F5F5DC', 'FAF0E6', 'FFF8DC', 'FFEBCD', 'FFF5EE',
+          "F0F8FF",
+          "FAEBD7",
+          "F5F5DC",
+          "FFFACD",
+          "FAF0E6",
+          "FFE4C4",
+          "FFDAB9",
+          "EEE8AA",
+          "F0FFF0",
+          "F5FFFA",
+          "F0FFFF",
+          "F8F8FF",
+          "F5F5F5",
+          "FFFFE0",
+          "FFFFF0",
+          "FFFAFA",
+          "7FFFD4",
+          "ADD8E6",
+          "B0E0E6",
+          "AFEEEE",
+          "E0FFFF",
+          "87CEFA",
+          "B0C4DE",
+          "D3D3D3",
+          "98FB98",
+          "F5F5DC",
+          "FAF0E6",
+          "FFF8DC",
+          "FFEBCD",
+          "FFF5EE",
         ];
         const darkColors = [
-          '8B0000', 'A0522D', '800000', '8B4513', '4682B4',
-          '00008B', '191970', '008080', '006400', '556B2F',
-          '808000', '8B8682', '2F4F4F', '000000', '228B22',
-          '3CB371', '2E8B57', '483D8B', '6A5ACD', '7B68EE',
-          '4169E1', '6495ED', '00CED1', '40E0D0', '008B8B',
+          "8B0000",
+          "A0522D",
+          "800000",
+          "8B4513",
+          "4682B4",
+          "00008B",
+          "191970",
+          "008080",
+          "006400",
+          "556B2F",
+          "808000",
+          "8B8682",
+          "2F4F4F",
+          "000000",
+          "228B22",
+          "3CB371",
+          "2E8B57",
+          "483D8B",
+          "6A5ACD",
+          "7B68EE",
+          "4169E1",
+          "6495ED",
+          "00CED1",
+          "40E0D0",
+          "008B8B",
         ];
 
         const allColors = [...lightColors, ...darkColors];
@@ -59,10 +103,10 @@ const userSchema = new Schema(
         };
 
         const luminance = getRelativeLuminance(backgroundColor);
-        const textColor = luminance > 0.5 ? '000000' : 'ffffff';
+        const textColor = luminance > 0.5 ? "000000" : "ffffff";
 
         return `https://placehold.jp/70/${backgroundColor}/${textColor}/${width}x${height}.${format}?text=${firstChar}&css=%7B%22font-weight%22%3A%22%20bold%22%7D`;
-      }
+      },
     },
     avatarColor: {
       type: String,
@@ -127,7 +171,8 @@ userSchema.statics.findByCredentials = async (username, password) => {
     const user = await User.findOne({ username }).select("+password");
 
     if (!user) throw new CustomError("Invalid login information", 400);
-    if (!user.isActived) throw new CustomError("Tài khoản chưa được kích hoạt", 400);
+    if (!user.isActived)
+      throw new CustomError("Tài khoản chưa được kích hoạt", 400);
 
     const isPasswordMatch = await bcrypt.compare(password, user.password);
     if (!isPasswordMatch)
@@ -317,7 +362,12 @@ userSchema.statics.getByMemberId = async (memberId) => {
     avatar: user.avatar,
     avatarColor: user.avatarColor,
     avatar: user.avatar,
-  }
+    dateOfBirth: dateUtils.toObject(user.dateOfBirth),
+    gender: user.gender,
+    phoneNumber: user.phoneNumber,
+    email: user.email,
+    coverImage: user.coverImage,
+  };
 };
 
 const User = mongoose.model("User", userSchema);
